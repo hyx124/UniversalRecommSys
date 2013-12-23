@@ -1,0 +1,10 @@
+*.class
+*.git
+*.jar
+*.jar
+
+.git/
+.project
+.settings/
+.classpath
+target/

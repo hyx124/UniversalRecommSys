@@ -1,0 +1,5 @@
+#surefire
+#Mon Dec 23 12:12:40 CST 2013
+user.dir=/Users/xiangyu/Documents/Code/storm-stream/UniversalRecommSys
+localRepository=/Users/xiangyu/.m2/repository
+basedir=/Users/xiangyu/Documents/Code/storm-stream/UniversalRecommSys
