@@ -1,0 +1,113 @@
+package com.tencent.urs.protobuf;
+
+enum ActiveType
+{
+	Unknown   	= 0;  //未知的
+	Impress  	= 1;  //曝光
+	Click 		= 2;  //点击
+	PageView   	= 3;  //浏览
+	Read    	= 4;  //阅读
+	Save	 	= 5;  //收藏
+	BuyCart 	= 6;  //购物车
+	Deal		= 7;  //订单
+	Score		= 8;  //评分
+	Comments	= 9;  //评论
+	Reply		= 10; //回复评论
+	Ups			= 11; //顶
+	Praise		= 12; //赞
+	Share		= 13; //转
+}
+	
+message RecommendResult
+{
+	enum ChargeType
+	{
+		NormalFee =0;  		//收费
+		Free  =1;  			//免费
+		VipFree =2;  		//vip免费
+	}
+	
+    message Result
+    {
+        required string Item= 1;
+		optional uint32 BigType = 2;
+		optional uint32 MiddleType = 3;  
+		optional uint32 SmallType = 4;
+		optional double Weight = 5;
+
+		optional ChargeType FreeFlag = 6 [default = NormalFee];
+		optional uint64 Price = 7;
+		optional uint64 UpdateTime = 8;
+		optional uint64 ExpireTime = 9;
+		optional string Comment = 10;
+    }
+     repeated Result Results  = 1;
+}
+
+message UserActiveHistory
+{	
+    message ActiveRecord
+    {
+        required string Item        = 1;                            //item
+		optional uint32 BigType      = 2;   						//item所属大类目
+		optional uint32 MiddleType   = 3;  							//item所属中类目
+		optional uint32 SmallType   = 4;  							//item所属小类目
+		
+		optional ActiveType ActType = 5 [default = Unknown]; 		//item行为类型
+		optional string ActResult =	6;								//item行为的结果
+        optional uint64 ActTime	 = 7; 								//item行为发生时间戳(s)
+		optional uint64 ExpireTime = 8; 							//item行为失效时间
+		optional string TablID = 9;									//item行为发生的场景
+		optional string AlgID = 10;									//itme行为被推荐的算法
+		optional string PlatForm = 11;								//item行为产生的平台
+		optional string LBSInfo = 12;								//item行为产生时的LBS信息
+		
+		optional double Weight = 13 [default = 0.0];              	//行为权重
+    }
+
+    repeated ActiveRecord ActRecords  = 1;
+}
+
+message ItemInfo
+{
+	enum ValidType
+	{
+		INVALID =0;  	//无效
+		VALID  =1;  	//有效
+		UNKNOWN =2;		//未知
+	}
+	
+	required uint64 UpdateTime = 1;
+	optional uint32 BigType = 2;   								//item所属大类目
+	optional uint32 MiddleType = 3;  							//item所属中类目
+	optional uint32 SmallType = 4;  							//item所属小类目
+	required ValidType VFlag = 5 [default = UNKNOWN];			//item是否有效
+}
+
+message UserActiveDetail
+{	
+	message ActType
+    {
+		required ActiveType actType = 1 [default = Unknown]; 			//item行为类型
+		message TimeSegment {								
+			message Item{
+				required string Item        = 1;                        //item
+				optional uint32 BigCtg      = 2;   						//item所属大类目
+				optional uint32 MiddleCtg   = 3;  						//item所属中类目
+				optional uint32 SmallCtg    = 4;  						//item所属小类目
+				optional uint64 LastUpdateTime = 5; 					//item行为发生时间戳(s)
+				optional uint64 Count = 6;								//该事件片段内，用户该行为产生的次数	
+			}	
+			required uint64 TimeSegment = 1;	
+			repeated Item items  = 2;
+		}			
+		
+		repeated TimeSegment tsegs  = 2;
+		
+    }
+
+    repeated ActType types  = 1;
+}
+
+
+option optimize_for = LITE_RUNTIME;
