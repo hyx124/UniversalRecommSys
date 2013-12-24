@@ -1,17 +1,4 @@
 package com.tencent.urs.asyncupdate;
-import java.util.HashMap;
-import java.util.HashSet;
-import java.util.List;
-import java.util.concurrent.Future;
-
-import com.taobao.tair.client.Result;
-import com.taobao.tair.client.TairClient.TairOption;
-import com.taobao.tair.client.error.TairFlowLimit;
-import com.taobao.tair.client.error.TairQueueOverflow;
-import com.taobao.tair.client.error.TairRpcError;
-import com.taobao.tair.client.impl.MutiThreadCallbackClient.MutiClientCallBack;
-import com.tencent.monitor.MonitorEntry;
-import com.tencent.urs.tdengine.TDEngineClientFactory.ClientAttr;
 
 	
 public class UpdateAsyncAdpter  {

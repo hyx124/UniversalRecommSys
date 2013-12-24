@@ -6,11 +6,9 @@ import java.util.Map;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
-
-import com.taobao.tair.client.TairClient.TairOption;
-
-import com.taobao.tair.client.impl.MutiThreadCallbackClient;
 import com.tencent.monitor.MonitorTools;
+import com.tencent.tde.client.TairClient.TairOption;
+import com.tencent.tde.client.impl.MutiThreadCallbackClient;
 import com.tencent.urs.combine.CombineKey;
 import com.tencent.urs.combine.CombineValue;
 import com.tencent.urs.tdengine.TDEngineClientFactory;

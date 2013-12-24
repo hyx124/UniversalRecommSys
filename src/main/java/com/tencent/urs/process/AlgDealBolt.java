@@ -1,23 +1,12 @@
 package com.tencent.urs.process;
 
-import java.util.HashMap;
-import java.util.List;
 import java.util.Map;
 
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
-import com.taobao.tair.client.Result;
-import com.taobao.tair.client.TairClient.TairOption;
-import com.taobao.tair.client.impl.MutiThreadCallbackClient;
 import com.tencent.urs.algorithms.AlgAdpter;
 import com.tencent.urs.statistics.SaveBaseInfo;
-import com.tencent.urs.tdengine.TDEngineClientFactory;
-import com.tencent.urs.tdengine.TDEngineClientFactory.ClientAttr;
-import com.tencent.urs.utils.Constants;
-import com.tencent.urs.utils.LRUCache;
-import com.tencent.urs.utils.Utils;
-import com.tencent.urs.algorithms.CollectorFilter;
 
 import backtype.storm.task.OutputCollector;
 import backtype.storm.task.TopologyContext;
@@ -25,7 +14,6 @@ import backtype.storm.topology.IRichBolt;
 import backtype.storm.topology.OutputFieldsDeclarer;
 import backtype.storm.tuple.Fields;
 import backtype.storm.tuple.Tuple;
-import backtype.storm.tuple.Values;
 
 /**
  * @author root

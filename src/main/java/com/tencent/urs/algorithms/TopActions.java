@@ -14,14 +14,14 @@ import backtype.storm.tuple.Tuple;
 import backtype.storm.tuple.Values;
 
 import com.google.protobuf.InvalidProtocolBufferException;
-import com.taobao.tair.client.Result;
-import com.taobao.tair.client.TairClient.TairOption;
-import com.taobao.tair.client.error.TairFlowLimit;
-import com.taobao.tair.client.error.TairQueueOverflow;
-import com.taobao.tair.client.error.TairRpcError;
-import com.taobao.tair.client.impl.MutiThreadCallbackClient.MutiClientCallBack;
 import com.tencent.monitor.MonitorTools;
 
+import com.tencent.tde.client.Result;
+import com.tencent.tde.client.TairClient.TairOption;
+import com.tencent.tde.client.error.TairFlowLimit;
+import com.tencent.tde.client.error.TairQueueOverflow;
+import com.tencent.tde.client.error.TairRpcError;
+import com.tencent.tde.client.impl.MutiThreadCallbackClient.MutiClientCallBack;
 import com.tencent.urs.algorithms.AlgAdpter;
 import com.tencent.urs.protobuf.Recommend;
 import com.tencent.urs.tdengine.TDEngineClientFactory;

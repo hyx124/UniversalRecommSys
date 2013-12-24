@@ -5,11 +5,11 @@ import java.util.concurrent.Future;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
-import com.taobao.tair.client.Result;
-import com.taobao.tair.client.Result.ResultCode;
-import com.taobao.tair.client.impl.MutiThreadCallbackClient.MutiClientCallBack;
 import com.tencent.monitor.MonitorEntry;
 import com.tencent.monitor.MonitorTools;
+import com.tencent.tde.client.Result;
+import com.tencent.tde.client.Result.ResultCode;
+import com.tencent.tde.client.impl.MutiThreadCallbackClient.MutiClientCallBack;
 import com.tencent.urs.utils.Constants;
 
 
