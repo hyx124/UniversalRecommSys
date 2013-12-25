@@ -49,11 +49,11 @@ public class TopActions implements AlgAdpter{
 
 	}
 
-	private class TopActionsUpdateAysncCallback implements MutiClientCallBack{
+	private class TopActionsUpdateCallBack implements MutiClientCallBack{
 		private final String key;
 		private final byte[] values;
 
-		public TopActionsUpdateAysncCallback(String key, byte[] values) {
+		public TopActionsUpdateCallBack(String key, byte[] values) {
 			this.key = key ; 
 			this.values = values;								
 		}
@@ -160,6 +160,6 @@ public class TopActions implements AlgAdpter{
 		// TODO Auto-generated method stub
 		String key = input.getStringByField("qq");
 		byte[] newVal = null;
-		new TopActionsUpdateAysncCallback(key, newVal).excute();	
+		new TopActionsUpdateCallBack(key, newVal).excute();	
 	}
 }

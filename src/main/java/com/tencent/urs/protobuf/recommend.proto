@@ -41,7 +41,7 @@ message RecommendResult
 		optional uint64 ExpireTime = 9;
 		optional string Comment = 10;
     }
-     repeated Result Results  = 1;
+    repeated Result Results  = 1;
 }
 
 message UserActiveHistory
