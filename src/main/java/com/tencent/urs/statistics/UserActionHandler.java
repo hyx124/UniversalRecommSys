@@ -43,6 +43,9 @@ public class UserActionHandler implements AlgAdpter{
 	private UpdateCallBack putCallBack;
 	private ConcurrentHashMap<String, ActionCombinerValue> combinerMap;
 	private int nsTableID;
+	private int dataExpireTime;
+	private int cacheExpireTime;
+	private int combinerExpireTime;
 	
 	private static Logger logger = LoggerFactory
 			.getLogger(UserActionHandler.class);
@@ -72,23 +75,32 @@ public class UserActionHandler implements AlgAdpter{
 	}
 	
 	private void combinerKeys(String key,ActionCombinerValue value) {
-		//combinerMap.(key,value);
+		if(combinerMap.containsKey(key)){
+			ActionCombinerValue oldvalue = combinerMap.get(key);
+			value.incrument(oldvalue);
+		}
+		
+		synchronized (combinerMap) {
+			combinerMap.put(key, value);
+		}
 	}	
 
 	@SuppressWarnings("rawtypes")
 	public UserActionHandler(Map conf){
 		this.nsTableID = Utils.getInt(conf, "tableid", 11);
+		
 		this.mtClientList = TDEngineClientFactory.createMTClientList(conf);
 		this.mt = MonitorTools.getMonitorInstance(conf);
 		this.cacheMap = new DataCache(conf);
 		this.combinerMap = new ConcurrentHashMap<String,ActionCombinerValue>(1024);
-				
-		
 		this.putCallBack = new UpdateCallBack(mt, Constants.systemID, Constants.tde_interfaceID, this.getClass().getName());
+	
 		
-		int expireTime = Utils.getInt(conf, "expireTime",5*3600);
-		setCombinerTime(expireTime, this);
-
+		this.combinerExpireTime = Utils.getInt(conf, "combiner.expireTime",5);
+		this.dataExpireTime = Utils.getInt(conf, "table.expireTime", 7*24*3600);
+		this.cacheExpireTime = Utils.getInt(conf, "cache.expireTime", 3600);
+		
+		setCombinerTime(combinerExpireTime, this);
 	}
 
 	private class ActionDetailUpdateAysncCallback implements MutiClientCallBack{
@@ -109,7 +121,7 @@ public class UserActionHandler implements AlgAdpter{
 				}else{
 					ClientAttr clientEntry = mtClientList.get(0);		
 					TairOption opt = new TairOption(clientEntry.getTimeout());
-					Future<Result<byte[]>> future = clientEntry.getClient().getAsync((short)12,key.getBytes(),opt);
+					Future<Result<byte[]>> future = clientEntry.getClient().getAsync((short)nsTableID,key.getBytes(),opt);
 					clientEntry.getClient().notifyFuture(future, this,clientEntry);	
 				}			
 				
@@ -127,8 +139,27 @@ public class UserActionHandler implements AlgAdpter{
 		}
 
 		private void Save(String key,SoftReference<UserActiveHistory> value){	
-			int cahceExpireTime = 5;
-			cacheMap.set(key, value, cahceExpireTime);
+			Future<Result<Void>> future = null;
+			for(ClientAttr clientEntry:mtClientList ){
+				TairOption putopt = new TairOption(clientEntry.getTimeout(),(short)0, dataExpireTime);
+				try {
+					future = clientEntry.getClient().putAsync((short)nsTableID, key.getBytes(), value.toString().getBytes(), putopt);
+					clientEntry.getClient().notifyFuture(future, putCallBack, 
+							new UpdateCallBackContext(clientEntry,key,value.toString().getBytes(),putopt));
+					synchronized(cacheMap){
+						cacheMap.set(key, value, cacheExpireTime);
+					}
+					
+					if(mt!=null){
+						MonitorEntry mEntryPut = new MonitorEntry(Constants.SUCCESSCODE,Constants.SUCCESSCODE);
+						mEntryPut.addExtField("TDW_IDC", clientEntry.getGroupname());
+						mEntryPut.addExtField("tbl_name", "FIFO1");
+						mt.addCountEntry(Constants.systemID, Constants.tde_put_interfaceID, mEntryPut, 1);
+					}
+				} catch (Exception e){
+					logger.error(e.toString());
+				}
+			}
 		}
 
 		@Override

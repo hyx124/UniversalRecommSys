@@ -17,16 +17,62 @@ enum ActiveType
 	Praise		= 12; //赞
 	Share		= 13; //转
 }
-	
-message RecommendResult
+
+enum ChargeType
 {
-	enum ChargeType
-	{
 		NormalFee =0;  		//收费
 		Free  =1;  			//免费
 		VipFree =2;  		//vip免费
-	}
+}
 	
+	
+message ItemDetailInfo
+{
+	enum PublicType
+	{
+		NotPublic =0;  		//未上架
+		OnSell  =1;  		//已在架
+		SellOut =2;  		//已下架
+	}
+
+	required string Item = 1;
+	required uint64 ImpDate = 2;
+
+
+	optional uint64 BigType = 3;
+	optional string BigTypeName = 4;
+	
+	optional uint64 MiddleType = 5;  
+	optional string MiddleTypeName = 6;  
+	
+	optional uint64 SmallType = 7;
+	optional string SmallTypeName = 8;
+
+	optional ChargeType FreeFlag = 9 [default = NormalFee];
+	optional PublicType PublicFlag = 10 [default = NotPublic];
+	
+	optional float Price = 11;
+	optional string Text = 12;
+	optional uint64 ItemTime = 13;
+	optional uint64 Platform = 14;
+	optional uint64 Score = 15;	
+}
+
+message UserDetailInfo
+{
+	required string QQNum = 1;
+	required uint64 ImpDate = 2;
+
+	optional string Imei = 3;
+	optional string Uid = 4;
+	
+	optional uint64 Level = 5;  
+	optional uint64 RegDate = 6;  
+	optional uint64 RegTime = 7;
+}
+
+message RecommendResult
+{	
     message Result
     {
         required string Item= 1;

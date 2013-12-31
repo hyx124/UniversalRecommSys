@@ -23,6 +23,7 @@ import com.taobao.metamorphosis.exception.MetaClientException;
 import com.taobao.metamorphosis.utils.ZkUtils.ZKConfig;
 
 import com.tencent.monitor.MonitorTools;
+import com.tencent.urs.conf.DataFilterConf;
 import com.tencent.urs.tdbank.msg.TDMsg;
 import backtype.storm.spout.SpoutOutputCollector;
 import backtype.storm.task.TopologyContext;
@@ -50,8 +51,13 @@ public class TdbankSpout implements IRichSpout {
 
 	private transient MessageSessionFactory sessionFactory;
 	protected SpoutOutputCollector collector;
-	private transient BlockingQueue<ArrayList<String>> messageQueue;
+	private transient BlockingQueue<Message> messageQueue;
 	private MonitorTools mt;
+	private DataFilterConf dfConf;
+
+	public TdbankSpout(DataFilterConf dataFilterConf) {
+		this.dfConf = dataFilterConf;
+	}
 
 	/*
 	 * (non-Javadoc)
@@ -66,7 +72,7 @@ public class TdbankSpout implements IRichSpout {
 			this.collector = collector;
 			MAX_PENDING = Utils.getInt(conf, "tdbank.max.pending",
 					DEFAULT_MAX_PENDING);
-			messageQueue = new LinkedBlockingQueue<ArrayList<String>>();
+			messageQueue = new LinkedBlockingQueue<Message>();
 			this.mt = MonitorTools.getMonitorInstance(conf);
 
 			setUpMeta(conf);
@@ -87,9 +93,9 @@ public class TdbankSpout implements IRichSpout {
 				this.collector.emit("",new Values("",""));
 				
 			}else{	
-				ArrayList<String> inputTuples = messageQueue.poll();
-				if (inputTuples != null) {
-					routeToAlgModule(inputTuples);
+				Message msg = messageQueue.poll();
+				if (msg != null) {
+					processMessage(msg);
 				}
 			}
 		} catch (Exception e) {
@@ -97,10 +103,8 @@ public class TdbankSpout implements IRichSpout {
 		}
 	}
 
-	private ArrayList<ArrayList<String>> processMessage(Message message)
-			throws InvalidProtocolBufferException {
-		ArrayList<ArrayList<String>> res = new ArrayList<ArrayList<String>>();
-		
+	private void processMessage(Message message)
+			throws InvalidProtocolBufferException {		
 		TDMsg tdmsg = TDMsg.parseFrom(message.getData());
 		for (String attr : tdmsg.getAttrs()) {
 			Iterator<byte[]> it = tdmsg.getIterator(attr);
@@ -109,7 +113,7 @@ public class TdbankSpout implements IRichSpout {
 				int length = rawMessage.length;
 				if (length <= 0) {
 					logger.info("Msg message length is <0:");
-					return null;
+					return ;
 				} else {
 					String msg = "";
 					int bodyIndex = searchIndex(rawMessage, SPEARATOR);
@@ -131,23 +135,29 @@ public class TdbankSpout implements IRichSpout {
 						}
 
 						String[] msg_array = msg.split("\t");
-						res.add((ArrayList<String>) Arrays.asList(msg_array));
+						if(!isNeedFilter(msg_array)){
+							RouteData(msg_array);
+						}
 					}
 				}
 			}
 		}
-		return res;
 	}
 
-	private boolean isNeedFilter(ArrayList<String> inputTuples){
+	private boolean isNeedFilter(String[] inputTuples){
 		return true;
 	}
 	
-	private void routeToAlgModule(ArrayList<String> inputTuples){		
-		this.collector.emit("",new Values("",""));
+	private void RouteData(String[] inputTuples){	
+		String algName = "ads";
+		if(inputTuples[0].equals("")){
+			String uin = inputTuples[1];			
+		}
+		
+		this.collector.emit(Constants.actions_stream,new Values(algName,""));
 		return;
 	}
-	
+
 	private void setUpMeta(@SuppressWarnings("rawtypes") Map conf)
 			throws Exception {
 		// read config
@@ -175,26 +185,13 @@ public class TdbankSpout implements IRichSpout {
 		Thread.sleep(t);
 		messageConsumer.subscribe(topicName, maxsize, new MessageListener() {
 			public void recieveMessages(Message message) {	
-				ArrayList<ArrayList<String>> inputs;
-				try {
-					inputs = processMessage(message);
-				} catch (InvalidProtocolBufferException e1) {
-					// TODO Auto-generated catch block
-					e1.printStackTrace();
-					return;
-				}
-				
-				for(ArrayList<String> eachMsg:inputs){
-					if(!isNeedFilter(eachMsg)){
-						if (messageQueue.size() < MAX_PENDING) {
-							messageQueue.offer(eachMsg);
-						} else {
-							try {
-								Thread.sleep(1000L);
-							} catch (InterruptedException e) {
-								logger.error(e.getMessage(), e);
-							}
-						}
+				if (messageQueue.size() < MAX_PENDING) {
+					messageQueue.offer(message);
+				} else {
+					try {
+						Thread.sleep(1000L);
+					} catch (InterruptedException e) {
+						logger.error(e.getMessage(), e);
 					}
 				}
 			}
@@ -265,30 +262,28 @@ public class TdbankSpout implements IRichSpout {
 	}
 
 	public void declareOutputFields(OutputFieldsDeclarer declarer) {
-		declarer.declareStream(Constants.actions_stream, 
-				new Fields("alg_name","bid","qq","uid","imei","item_id","lbs_info","ad_pos","action_time","action_type","action_result"));
 		
 		declarer.declareStream(Constants.user_info_stream, 
-				new Fields("alg_name","bid","imp_date","qq","imei","uid","level","reg_date","reg_time"));
+				new Fields("topic","bid","imp_date","qq","imei","uid","level","reg_date","reg_time"));
 		
 		declarer.declareStream(Constants.item_info_stream, 
-				new Fields("alg_name","bid","imp_date","item_id","categroy_id1","categroy_id2","categroy_id3",
+				new Fields("topic","bid","imp_date","item_id","categroy_id1","categroy_id2","categroy_id3",
 						"category_name1","category_name2","category_name3",
 						"free","publish","price","text","item_time","expire_time","platform","score"));
 		
 		declarer.declareStream(Constants.item_category_stream, 
-				new Fields("alg_name","bid","imp_date","category_id","name","level","father_id"));
+				new Fields("topic","bid","imp_date","category_id","name","level","father_id"));
 		
 		declarer.declareStream(Constants.action_weight_stream, 
-				new Fields("alg_name","bid","imp_date","type_id","weight"));
+				new Fields("topic","bid","imp_date","type_id","weight"));
+		
+		declarer.declareStream(Constants.actions_stream, 
+				new Fields("topic","bid","qq","uid","imei","item_id","lbs_info","ad_pos","action_time","action_type","action_result"));
 		
 		
 		
 		declarer.declareStream("filter_data", new Fields(""));
 	}
-	
-
-	
 
 	/**
 	 * @param args

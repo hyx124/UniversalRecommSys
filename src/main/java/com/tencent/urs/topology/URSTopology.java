@@ -16,6 +16,8 @@ import backtype.storm.tuple.Fields;
 
 import com.tencent.urs.utils.Constants;
 import com.tencent.urs.conf.AlgModuleConf;
+import com.tencent.urs.conf.AlgModuleConf.AlgModuleInfo;
+import com.tencent.urs.conf.DataFilterConf;
 import com.tencent.urs.process.AlgDealBolt;
 import com.tencent.urs.process.PretreatmentBolt;
 import com.tencent.urs.spout.TdbankSpout;
@@ -31,8 +33,16 @@ public class URSTopology {
 			IOException {
 
 		Config conf = new Config();
+		AlgModuleConf algConf = new AlgModuleConf();
+		DataFilterConf dfConf = new DataFilterConf();
+		
 		Properties property = new Properties();
 		property.load(new FileInputStream(args[0]));
+		
+		dfConf.load(new FileInputStream(args[1]));
+		algConf.load(new FileInputStream(args[2]));
+	
+		
 		for (String key : property.stringPropertyNames()) {
 			conf.put(key, property.getProperty(key));
 		}
@@ -42,16 +52,17 @@ public class URSTopology {
 		conf.put(Config.TOPOLOGY_MAX_SPOUT_PENDING, 100000);
 
 		TopologyBuilder builder = new TopologyBuilder();
-		builder.setSpout("TDBankSpout", new TdbankSpout(),
+		builder.setSpout("TDBankSpout", new TdbankSpout(dfConf),
 				getInt(conf.get("topology.pv_spout.parallel").toString()));
-	
 		
-		ArrayList<AlgModuleConf> algList = new ArrayList<AlgModuleConf>();
-		
-		for(AlgModuleConf alg: algList){
-			builder.setBolt(alg.getAlgName(), new AlgDealBolt(alg.getAlgName()),
+		builder.setBolt("PretreatBolt", new PretreatmentBolt(algConf),
+				getInt(conf.get("topology.pre_treatment.parallel").toString()))
+				.fieldsGrouping("TDBankSpout","all_stream", new Fields("uid"));				
+			
+		for(AlgModuleInfo alg: algConf.getAlgList()){
+			builder.setBolt(alg.getAlgName(), new AlgDealBolt(alg),
 					getInt(conf.get("topology."+alg.getAlgName()+".parallel").toString()))
-					.fieldsGrouping("InputComputer",alg.getInputStream(), new Fields(alg.getHashKey()));		
+					.fieldsGrouping("PretreatBolt",alg.getInputStream(), new Fields(alg.getHashKey()));		
 		}
 		
 		try {

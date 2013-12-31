@@ -4,7 +4,6 @@ import com.tencent.urs.protobuf.Recommend;
 import com.tencent.urs.protobuf.Recommend.UserActiveHistory;
 
 import java.lang.ref.SoftReference;
-import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
@@ -38,7 +37,7 @@ import com.tencent.urs.utils.Utils;
 public class ItemPairActionHandler implements AlgAdpter{
 	private List<ClientAttr> mtClientList;	
 	private MonitorTools mt;
-	private DataCache<Recommend.UserActiveHistory> cacheMap;
+	private DataCache<Recommend.UserActiveHistory> userActionCache;
 	private DataCache<Integer> pairItemCache;
 	private UpdateCallBack putCallBack;
 	private ConcurrentHashMap<UpdateKey, ActionCombinerValue> actionCombinerMap;
@@ -84,7 +83,7 @@ public class ItemPairActionHandler implements AlgAdpter{
 		this.nsTableID = Utils.getInt(conf, "tableid", 11);
 		this.mtClientList = TDEngineClientFactory.createMTClientList(conf);
 		this.mt = MonitorTools.getMonitorInstance(conf);
-		this.cacheMap = new DataCache(conf);
+		this.userActionCache = new DataCache(conf);
 		this.actionCombinerMap = new ConcurrentHashMap<UpdateKey,ActionCombinerValue>(1024);
 				
 		
@@ -105,7 +104,7 @@ public class ItemPairActionHandler implements AlgAdpter{
 			this.key = key ; 
 			this.item = item;		
 			this.incrWeight = incrWeight;
-			this.putKey = key.getItemId()+"#"+item+"#"+key.getAdpos()+"#"+key.getGroupId();
+			this.putKey = key.getItemId()+"#"+item+"#"+key.getGroupId();
 		}
 		
 		public void excute() {
@@ -155,13 +154,13 @@ public class ItemPairActionHandler implements AlgAdpter{
 	
 	private class ActionDetailCheckCallBack implements MutiClientCallBack{
 		private final UpdateKey key;
-		private final String userCheckKey;
+		private final String checkKey;
 		private final ActionCombinerValue values;
 
 		public ActionDetailCheckCallBack(UpdateKey key, ActionCombinerValue values){
 			this.key = key ; 
 			this.values = values;		
-			this.userCheckKey = this.key.getUin()+"#"+"AlgID";
+			this.checkKey = this.key.getUin()+"#"+"AlgID";
 		}
 
 		private void next(HashMap<String,Integer> itemMap){
@@ -172,13 +171,13 @@ public class ItemPairActionHandler implements AlgAdpter{
 		
 		public void excute() {
 			try {
-				if(cacheMap.hasKey(userCheckKey)){		
-					SoftReference<UserActiveHistory> oldValueHeap = cacheMap.get(key.getUin());	
+				if(userActionCache.hasKey(checkKey)){		
+					SoftReference<UserActiveHistory> oldValueHeap = userActionCache.get(checkKey);	
 					next(getChangedItems(oldValueHeap));
 				}else{
 					ClientAttr clientEntry = mtClientList.get(0);		
 					TairOption opt = new TairOption(clientEntry.getTimeout());
-					Future<Result<byte[]>> future = clientEntry.getClient().getAsync((short)nsTableID,userCheckKey.getBytes(),opt);
+					Future<Result<byte[]>> future = clientEntry.getClient().getAsync((short)nsTableID,checkKey.getBytes(),opt);
 					clientEntry.getClient().notifyFuture(future, this,clientEntry);	
 				}			
 				
@@ -216,18 +215,19 @@ public class ItemPairActionHandler implements AlgAdpter{
 
 	@Override
 	public void deal(Tuple input) {
-		// TODO Auto-generated method stub		
-		String uin = input.getStringByField("uin");
-		String groupId = input.getStringByField("group_id");
+		// TODO Auto-generated method stub	
+		Long uin = input.getLongByField("uin");
+		Integer groupId = input.getIntegerByField("group_id");
 		String adpos = input.getStringByField("adpos");
 		String itemId = input.getStringByField("itemId");
-		String action_type = input.getStringByField("action_type");		
+		Utils.actionType action_type = (Utils.actionType) input.getValueByField("action_type");
+		
 		
 		ActionCombinerValue value = new ActionCombinerValue();
-		value.init(Utils.actionType.BuyCart);
+		value.init(action_type);
 				
 		if(Utils.isGroupIdVaild(groupId)){
-			groupId = "0";
+			groupId = 0;
 		}
 		
 		UpdateKey key = new UpdateKey(uin,groupId,adpos,itemId);

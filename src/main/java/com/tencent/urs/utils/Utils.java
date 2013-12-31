@@ -34,27 +34,27 @@ public class Utils {
 		}
 	}
 	
-	private static HashSet<String> groupIdSet = new HashSet<String>();
+	private static HashSet<Integer> groupIdSet = new HashSet<Integer>();
 	static{
-		groupIdSet.add("11");
-		groupIdSet.add("12");
-		groupIdSet.add("21");
-		groupIdSet.add("22");
-		groupIdSet.add("31");
-		groupIdSet.add("32");
-		groupIdSet.add("41");
-		groupIdSet.add("42");
-		groupIdSet.add("51");
-		groupIdSet.add("52");
-		groupIdSet.add("61");
-		groupIdSet.add("62");
-		groupIdSet.add("71");
-		groupIdSet.add("72");
-		groupIdSet.add("81");
-		groupIdSet.add("82");
-		groupIdSet.add("91");
-		groupIdSet.add("92");
-		groupIdSet.add("10");
+		groupIdSet.add(11);
+		groupIdSet.add(12);
+		groupIdSet.add(21);
+		groupIdSet.add(22);
+		groupIdSet.add(31);
+		groupIdSet.add(32);
+		groupIdSet.add(41);
+		groupIdSet.add(42);
+		groupIdSet.add(51);
+		groupIdSet.add(52);
+		groupIdSet.add(61);
+		groupIdSet.add(62);
+		groupIdSet.add(71);
+		groupIdSet.add(72);
+		groupIdSet.add(81);
+		groupIdSet.add(82);
+		groupIdSet.add(91);
+		groupIdSet.add(92);
+		groupIdSet.add(10);
 	}
 	
 	public static String get(Map conf, String key, String default_value) {
@@ -102,7 +102,7 @@ public class Utils {
 		return true;
 	}
 	
-	public static boolean isGroupIdVaild(String groupId){
+	public static boolean isGroupIdVaild(Integer groupId){
 		if(groupIdSet.contains(groupId)){
 			return true;
 		}else{

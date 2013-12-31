@@ -1,0 +1,16 @@
+<alg_conf>
+	<alg_mod>
+		<name>detail</name>
+		<topic>*—detail</topic>
+		<input_fields>bid,uin,action_type,item_id</input_fields>
+		<input_tables>
+			<table_name>hha</table_name>
+		</input_tables>
+		
+		<timewind_days>7</timewind_days>
+		<output_count>1000</output_count>
+		<output_table_id>312</output_table_id>
+		<need_groupId></need_groupId>
+	</alg_mod>
+	
+</alg_conf>

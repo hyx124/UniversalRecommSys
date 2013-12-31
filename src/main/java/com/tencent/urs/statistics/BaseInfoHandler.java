@@ -1,6 +1,5 @@
 package com.tencent.urs.statistics;
 
-import java.util.ArrayList;
 import java.util.List;
 import java.util.Map;
 import java.util.Set;
@@ -22,7 +21,7 @@ import com.tencent.tde.client.error.TairRpcError;
 import com.tencent.urs.algorithms.AlgAdpter;
 import com.tencent.urs.asyncupdate.UpdateCallBack;
 import com.tencent.urs.asyncupdate.UpdateCallBackContext;
-import com.tencent.urs.combine.UpdateKey;
+import com.tencent.urs.conf.AlgModuleConf.AlgModuleInfo;
 import com.tencent.urs.tdengine.TDEngineClientFactory;
 import com.tencent.urs.tdengine.TDEngineClientFactory.ClientAttr;
 import com.tencent.urs.utils.Constants;
@@ -32,21 +31,21 @@ public class BaseInfoHandler implements AlgAdpter{
 	private List<ClientAttr> mtClientList;	
 	private MonitorTools mt;
 	private UpdateCallBack putCallBack;
-	private ConcurrentHashMap<String, ArrayList<String>> combinerMap;
+	private ConcurrentHashMap<String, byte[]> combinerMap;
 	private int nsTableID;
 	
 	private static Logger logger = LoggerFactory
 			.getLogger(BaseInfoHandler.class);
 	
 	@SuppressWarnings("rawtypes")
-	public BaseInfoHandler(Map conf){
+	public BaseInfoHandler(Map conf,AlgModuleInfo algInfo){
 		this.nsTableID = Utils.getInt(conf, "tableid", 11);
 		
 		this.mtClientList = TDEngineClientFactory.createMTClientList(conf);
 		this.mt = MonitorTools.getMonitorInstance(conf);
 		this.putCallBack = new UpdateCallBack(mt, Constants.systemID, Constants.tde_interfaceID, this.getClass().getName());
 			
-		this.combinerMap = new ConcurrentHashMap<String,ArrayList<String>>(1024);
+		this.combinerMap = new ConcurrentHashMap<String,byte[]>(1024);
 		int expireTime = Utils.getInt(conf, "expireTime",5*3600);
 		setCombinerTime(expireTime, this);
 		
@@ -61,7 +60,7 @@ public class BaseInfoHandler implements AlgAdpter{
 						Thread.sleep(second * 1000);
 						Set<String> keySet = combinerMap.keySet();
 						for (String key : keySet) {
-							ArrayList<String> expireTimeValue  = combinerMap.remove(key);
+							byte[] expireTimeValue  = combinerMap.remove(key);
 							try{
 								update(key,expireTimeValue);
 							}catch(Exception e){
@@ -76,11 +75,12 @@ public class BaseInfoHandler implements AlgAdpter{
 		}).start();
 	}
 	
-	private void combinerKeys(String key,ArrayList<String> value) {
+	//基础属性的value不需要合并，直接覆盖
+	private void combinerKeys(String key,byte[] value) {
 		combinerMap.put(key,value);
 	}	
 	
-	private void update(String key,ArrayList<String> values) 
+	private void update(String key,byte[] values) 
 			throws TairRpcError, TairFlowLimit, TairQueueOverflow{	
 		for(ClientAttr clientEntry:mtClientList){
 			TairOption opt = new TairOption(clientEntry.getTimeout());
@@ -92,29 +92,21 @@ public class BaseInfoHandler implements AlgAdpter{
 	@Override
 	public void deal(Tuple input) {
 		// TODO Auto-generated method stub
-		String topic = input.getStringByField("topic");
-		String key=null;
-		ArrayList<String> values = new ArrayList<String>();
-		if(topic.equals("user_info")){
-			String qq = input.getStringByField("qq");
-			String item_id = input.getStringByField("item_id");
-			String attr = input.getStringByField("attr");
-			values.add(attr);
-			
-		}else if(topic.equals("item_info")){
-			//key = item_id;
-			
-		}else if(topic.equals("item_category_info")){
-			//key = item_id;
-			
-			
+		String alg_name = input.getStringByField("alg_name");
+		String bid = input.getStringByField("bid");
+		String key = bid+"#"+alg_name;
+		byte[] value = input.getBinaryByField("pb_info");
+		
+		if(alg_name.equals("user_detail_info")){
+			key = input.getStringByField("qq") + key;
+		}else if(alg_name.equals("item_detail_info")){
+			key = input.getStringByField("item_id") + key;		
+		}else if(alg_name.equals("item_category_info")){
+			key = input.getStringByField("item_id") + key;
 		}else{
 			return;
 		}
 		
-		if(key!=null){
-			combinerKeys(key,values);
-		}
-		
+		combinerKeys(key,value);		
 	}
 }

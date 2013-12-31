@@ -176,7 +176,7 @@ public class GroupActionHandler implements AlgAdpter{
 		public void excute() {
 			try {
 				if(userActionCache.hasKey(userCheckKey)){		
-					SoftReference<UserActiveHistory> oldValueHeap = userActionCache.get(key.getUin());	
+					SoftReference<UserActiveHistory> oldValueHeap = userActionCache.get(userCheckKey);	
 					next(getIncreasedWeight(oldValueHeap));
 				}else{
 					ClientAttr clientEntry = mtClientList.get(0);		
@@ -218,17 +218,17 @@ public class GroupActionHandler implements AlgAdpter{
 	@Override
 	public void deal(Tuple input) {
 		// TODO Auto-generated method stub		
-		String uin = input.getStringByField("uin");
-		String groupId = input.getStringByField("group_id");
+		Long uin = input.getLongByField("uin");
+		Integer groupId = input.getIntegerByField("group_id");
 		String adpos = input.getStringByField("adpos");
 		String itemId = input.getStringByField("itemId");
-		String action_type = input.getStringByField("action_type");		
+		Utils.actionType action_type = (Utils.actionType) input.getValueByField("action_type");
 		
 		ActionCombinerValue value = new ActionCombinerValue();
-		value.init(Utils.actionType.BuyCart);
+		value.init(action_type);
 				
 		if(Utils.isGroupIdVaild(groupId)){
-			groupId = "0";
+			groupId = 0;
 		}
 		
 		UpdateKey key = new UpdateKey(uin,groupId,adpos,itemId);

@@ -6,6 +6,7 @@ import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
 import com.tencent.urs.algorithms.AlgAdpter;
+import com.tencent.urs.conf.AlgModuleConf.AlgModuleInfo;
 import com.tencent.urs.statistics.BaseInfoHandler;
 
 import backtype.storm.task.OutputCollector;
@@ -28,11 +29,12 @@ public class AlgDealBolt implements IRichBolt {
 	private String algName;
 	private OutputCollector collector;
 	private AlgAdpter algAdpter;
+	private AlgModuleInfo algInfo;
 	private static Logger logger = LoggerFactory
 			.getLogger(AlgDealBolt.class);
 	
-	public AlgDealBolt(String algName){
-		this.algName = algName;
+	public AlgDealBolt(AlgModuleInfo algModuleInfo){
+		this.algInfo = algModuleInfo;
 	}
 
 	/*
@@ -46,9 +48,12 @@ public class AlgDealBolt implements IRichBolt {
 	public void prepare(Map stormConf, TopologyContext context,
 			OutputCollector collector) {
 		this.collector = collector;
-		if(algName.equals("SaveBaseInfo")){
-			this.algAdpter = new BaseInfoHandler(stormConf);
+		if(algName.equals("BaseInfoAlg")){
+			this.algAdpter = new BaseInfoHandler(stormConf,this.algInfo);
+		}else if(algName.equals("actionxxx")){
+			
 		}		
+		
 	}
 
 /*
