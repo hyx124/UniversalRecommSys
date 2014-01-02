@@ -29,6 +29,7 @@ import com.tencent.urs.algorithms.AlgAdpter;
 import com.tencent.urs.asyncupdate.UpdateCallBack;
 import com.tencent.urs.asyncupdate.UpdateCallBackContext;
 import com.tencent.urs.combine.ActionCombinerValue;
+import com.tencent.urs.conf.AlgModuleConf.AlgModuleInfo;
 import com.tencent.urs.tdengine.TDEngineClientFactory;
 import com.tencent.urs.tdengine.TDEngineClientFactory.ClientAttr;
 import com.tencent.urs.utils.Constants;
@@ -150,7 +151,7 @@ public class CtrActionHandler implements AlgAdpter{
 	}
 
 	@Override
-	public void deal(Tuple input) {
+	public void deal(AlgModuleInfo algInfo,Tuple input) {
 		// TODO Auto-generated method stub
 		//只处理浏览数据
 		

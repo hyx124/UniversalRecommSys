@@ -27,6 +27,7 @@ import com.tencent.urs.algorithms.AlgAdpter;
 import com.tencent.urs.asyncupdate.UpdateCallBack;
 import com.tencent.urs.combine.ActionCombinerValue;
 import com.tencent.urs.combine.UpdateKey;
+import com.tencent.urs.conf.AlgModuleConf.AlgModuleInfo;
 import com.tencent.urs.tdengine.TDEngineClientFactory;
 import com.tencent.urs.tdengine.TDEngineClientFactory.ClientAttr;
 import com.tencent.urs.utils.Constants;
@@ -216,13 +217,14 @@ public class GroupActionHandler implements AlgAdpter{
 	}
 
 	@Override
-	public void deal(Tuple input) {
+	public void deal(AlgModuleInfo algInfo,Tuple input) {
 		// TODO Auto-generated method stub		
 		Long uin = input.getLongByField("uin");
 		Integer groupId = input.getIntegerByField("group_id");
 		String adpos = input.getStringByField("adpos");
 		String itemId = input.getStringByField("itemId");
 		Utils.actionType action_type = (Utils.actionType) input.getValueByField("action_type");
+		
 		
 		ActionCombinerValue value = new ActionCombinerValue();
 		value.init(action_type);

@@ -89,24 +89,36 @@ public class BaseInfoHandler implements AlgAdpter{
 		}
 	}
 
-	@Override
-	public void deal(Tuple input) {
-		// TODO Auto-generated method stub
-		String alg_name = input.getStringByField("alg_name");
+	private byte[] genPbBytes(Tuple input) {
+		return null;
+	}
+	
+	private String genKey(Tuple input) {
+		String topic = input.getStringByField("topic");
 		String bid = input.getStringByField("bid");
-		String key = bid+"#"+alg_name;
-		byte[] value = input.getBinaryByField("pb_info");
-		
-		if(alg_name.equals("user_detail_info")){
-			key = input.getStringByField("qq") + key;
-		}else if(alg_name.equals("item_detail_info")){
-			key = input.getStringByField("item_id") + key;		
-		}else if(alg_name.equals("item_category_info")){
-			key = input.getStringByField("item_id") + key;
+		String key = null;
+		if(topic.equals("")){
+			key =  bid+"#"+input.getStringByField("qq")+"#algName";
+		}else if(topic.equals("")){
+			key =  bid+"#"+input.getStringByField("item")+"#algName";
 		}else{
-			return;
+			key = null;
 		}
 		
-		combinerKeys(key,value);		
+		
+		return key;
 	}
+	
+	@Override
+	public void deal(AlgModuleInfo algInfo,Tuple input) {
+		// TODO Auto-generated method stub
+		String key = genKey(input);			
+		byte[] value = genPbBytes(input);
+		
+		if(key!=null && value!=null){
+			combinerKeys(key,value);
+		}
+				
+	}
+
 }

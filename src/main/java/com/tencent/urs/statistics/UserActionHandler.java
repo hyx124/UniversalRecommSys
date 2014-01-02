@@ -5,6 +5,7 @@ import com.tencent.urs.protobuf.Recommend.UserActiveHistory;
 
 import java.lang.ref.SoftReference;
 import java.util.ArrayList;
+import java.util.HashSet;
 import java.util.List;
 import java.util.Map;
 import java.util.Set;
@@ -18,6 +19,7 @@ import backtype.storm.tuple.Tuple;
 
 import com.tencent.monitor.MonitorEntry;
 import com.tencent.monitor.MonitorTools;
+import com.tencent.openta.protocbuf.Pb;
 
 import com.tencent.tde.client.Result;
 import com.tencent.tde.client.TairClient.TairOption;
@@ -29,6 +31,7 @@ import com.tencent.urs.algorithms.AlgAdpter;
 import com.tencent.urs.asyncupdate.UpdateCallBack;
 import com.tencent.urs.asyncupdate.UpdateCallBackContext;
 import com.tencent.urs.combine.ActionCombinerValue;
+import com.tencent.urs.conf.AlgModuleConf.AlgModuleInfo;
 import com.tencent.urs.tdengine.TDEngineClientFactory;
 import com.tencent.urs.tdengine.TDEngineClientFactory.ClientAttr;
 import com.tencent.urs.utils.Constants;
@@ -39,13 +42,15 @@ import com.tencent.urs.utils.Utils;
 public class UserActionHandler implements AlgAdpter{
 	private List<ClientAttr> mtClientList;	
 	private MonitorTools mt;
-	private DataCache<Recommend.UserActiveHistory> cacheMap;
+	private DataCache<Recommend.UserActiveDetail> cacheMap;
 	private UpdateCallBack putCallBack;
 	private ConcurrentHashMap<String, ActionCombinerValue> combinerMap;
 	private int nsTableID;
 	private int dataExpireTime;
 	private int cacheExpireTime;
 	private int combinerExpireTime;
+	
+	private AlgModuleInfo algInfo;
 	
 	private static Logger logger = LoggerFactory
 			.getLogger(UserActionHandler.class);
@@ -75,12 +80,11 @@ public class UserActionHandler implements AlgAdpter{
 	}
 	
 	private void combinerKeys(String key,ActionCombinerValue value) {
-		if(combinerMap.containsKey(key)){
-			ActionCombinerValue oldvalue = combinerMap.get(key);
-			value.incrument(oldvalue);
-		}
-		
 		synchronized (combinerMap) {
+			if(combinerMap.containsKey(key)){
+				ActionCombinerValue oldvalue = combinerMap.get(key);
+				value.incrument(oldvalue);
+			}
 			combinerMap.put(key, value);
 		}
 	}	
@@ -91,10 +95,9 @@ public class UserActionHandler implements AlgAdpter{
 		
 		this.mtClientList = TDEngineClientFactory.createMTClientList(conf);
 		this.mt = MonitorTools.getMonitorInstance(conf);
-		this.cacheMap = new DataCache(conf);
+		this.cacheMap = new DataCache<Recommend.UserActiveDetail>(conf);
 		this.combinerMap = new ConcurrentHashMap<String,ActionCombinerValue>(1024);
 		this.putCallBack = new UpdateCallBack(mt, Constants.systemID, Constants.tde_interfaceID, this.getClass().getName());
-	
 		
 		this.combinerExpireTime = Utils.getInt(conf, "combiner.expireTime",5);
 		this.dataExpireTime = Utils.getInt(conf, "table.expireTime", 7*24*3600);
@@ -116,7 +119,7 @@ public class UserActionHandler implements AlgAdpter{
 			try {
 				if(cacheMap.hasKey(key)){		
 					SoftReference<UserActiveHistory> oldValueHeap = cacheMap.get(key);	
-					SoftReference<UserActiveHistory> newValueHeap = mergeToHeap(values,oldValueHeap);
+					SoftReference<UserActiveHistory> newValueHeap = mergeToHeap(values,oldValueHeap.get());
 					Save(key,newValueHeap);
 				}else{
 					ClientAttr clientEntry = mtClientList.get(0);		
@@ -134,20 +137,42 @@ public class UserActionHandler implements AlgAdpter{
 			}
 		}
 		
-		private SoftReference<UserActiveHistory> mergeToHeap(ActionCombinerValue newVal,SoftReference<UserActiveHistory> oldVal){
-			return oldVal;
+		private void mergeToHeap(ActionCombinerValue newValList,
+				UserActiveHistory oldVal,
+				SoftReference<Recommend.UserActiveHistory.Builder> updatedBuilder){			
+			HashSet<String> alreadyIn = new HashSet<String>();
+			for(String newItemId: newValList.getActRecodeMap().keySet()){
+				if(updatedBuilder.get().getActRecordsCount() >= algInfo.getTopNum()){
+					break;
+				}
+				updatedBuilder.get().addActRecords(newValList.getActRecodeMap().get(newItemId));
+				alreadyIn.add(newItemId);
+			}
+					
+			for(Recommend.UserActiveHistory.ActiveRecord eachOldVal:oldVal.getActRecordsList()){
+				if(updatedBuilder.get().getActRecordsCount() >= algInfo.getTopNum()){
+					break;
+				}
+				
+				if(alreadyIn.contains(eachOldVal.getItem())){
+					continue;
+				}				
+
+				updatedBuilder.get().addActRecords(eachOldVal);
+			}
+			
 		}
 
-		private void Save(String key,SoftReference<UserActiveHistory> value){	
+		private void Save(String key,SoftReference<UserActiveHistory> newValueHeap){	
 			Future<Result<Void>> future = null;
 			for(ClientAttr clientEntry:mtClientList ){
 				TairOption putopt = new TairOption(clientEntry.getTimeout(),(short)0, dataExpireTime);
 				try {
-					future = clientEntry.getClient().putAsync((short)nsTableID, key.getBytes(), value.toString().getBytes(), putopt);
+					future = clientEntry.getClient().putAsync((short)nsTableID, key.getBytes(), newValueHeap.toString().getBytes(), putopt);
 					clientEntry.getClient().notifyFuture(future, putCallBack, 
-							new UpdateCallBackContext(clientEntry,key,value.toString().getBytes(),putopt));
+							new UpdateCallBackContext(clientEntry,key,newValueHeap.toString().getBytes(),putopt));
 					synchronized(cacheMap){
-						cacheMap.set(key, value, cacheExpireTime);
+						cacheMap.set(key, newValueHeap, cacheExpireTime);
 					}
 					
 					if(mt!=null){
@@ -171,7 +196,7 @@ public class UserActionHandler implements AlgAdpter{
 				oldVal = afuture.get().getResult();
 				SoftReference<UserActiveHistory> oldValueHeap = 
 						new SoftReference<UserActiveHistory>(Recommend.UserActiveHistory.parseFrom(oldVal));
-				SoftReference<UserActiveHistory> newValueHeap = mergeToHeap(this.values,oldValueHeap);
+				SoftReference<UserActiveHistory> newValueHeap = mergeToHeap(this.values,oldValueHeap.get());
 				Save(key,newValueHeap);
 			} catch (Exception e) {
 				
@@ -180,11 +205,17 @@ public class UserActionHandler implements AlgAdpter{
 		}
 	}
 
+	private ActionCombinerValue genCombinerValue(Tuple input){
+		return null;
+	}
+	
 	@Override
-	public void deal(Tuple input) {
-		// TODO Auto-generated method stub
+	public void deal(AlgModuleInfo algInfo,Tuple input) {
 		String key = input.getStringByField("qq");
-		ActionCombinerValue value = null;
+		ActionCombinerValue value = genCombinerValue(input);
+		this.algInfo = algInfo;
 		combinerKeys(key,value);	
 	}
+
+
 }

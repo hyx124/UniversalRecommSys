@@ -59,6 +59,26 @@ public class AlgModuleConf implements Serializable{
 			// TODO Auto-generated method stub
 			return null;
 		}
+
+		public int getTopNum() {
+			// TODO Auto-generated method stub
+			return 0;
+		}
+
+		public short getOutputTableId() {
+			// TODO Auto-generated method stub
+			return 0;
+		}
+
+		public int getDataExpireTime() {
+			// TODO Auto-generated method stub
+			return 0;
+		}
+
+		public int getCacheExpireTime() {
+			// TODO Auto-generated method stub
+			return 0;
+		}
 	}
 
 	public void load(FileInputStream fileInputStream){
