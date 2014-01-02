@@ -3,8 +3,6 @@ package com.tencent.urs.topology;
 import java.io.FileInputStream;
 import java.io.FileNotFoundException;
 import java.io.IOException;
-import java.util.ArrayList;
-import java.util.HashMap;
 import java.util.Properties;
 
 import backtype.storm.Config;
@@ -14,13 +12,13 @@ import backtype.storm.generated.InvalidTopologyException;
 import backtype.storm.topology.TopologyBuilder;
 import backtype.storm.tuple.Fields;
 
-import com.tencent.urs.utils.Constants;
 import com.tencent.urs.conf.AlgModuleConf;
 import com.tencent.urs.conf.AlgModuleConf.AlgModuleInfo;
 import com.tencent.urs.conf.DataFilterConf;
 import com.tencent.urs.process.AlgDealBolt;
 import com.tencent.urs.process.PretreatmentBolt;
-import com.tencent.urs.spout.TdbankSpout;
+import com.tencent.urs.spout.TDBankSpout;
+import com.tencent.urs.utils.Constants;
 
 public class URSTopology {
 
@@ -39,8 +37,8 @@ public class URSTopology {
 		Properties property = new Properties();
 		property.load(new FileInputStream(args[0]));
 		
-		dfConf.load(new FileInputStream(args[1]));
-		algConf.load(new FileInputStream(args[2]));
+		//dfConf.load(new FileInputStream(args[1]));
+		//algConf.load(new FileInputStream(args[2]));
 	
 		
 		for (String key : property.stringPropertyNames()) {
@@ -52,12 +50,16 @@ public class URSTopology {
 		conf.put(Config.TOPOLOGY_MAX_SPOUT_PENDING, 100000);
 
 		TopologyBuilder builder = new TopologyBuilder();
-		builder.setSpout("TDBankSpout", new TdbankSpout(dfConf),
-				getInt(conf.get("topology.pv_spout.parallel").toString()));
+		builder.setSpout("TDBankSpout", new TDBankSpout(dfConf),
+				getInt(conf.get("topology.tdbank_spout.parallel").toString()));
 		
 		builder.setBolt("PretreatBolt", new PretreatmentBolt(algConf),
 				getInt(conf.get("topology.pre_treatment.parallel").toString()))
-				.fieldsGrouping("TDBankSpout","all_stream", new Fields("uid"));				
+				.fieldsGrouping("TDBankSpout",Constants.user_info_stream, new Fields("bid","uid"))
+				.fieldsGrouping("TDBankSpout",Constants.item_info_stream, new Fields("bid","item_id"))
+				//.fieldsGrouping("TDBankSpout",Constants.item_category_stream, new Fields("bid","category_id"))
+				//.fieldsGrouping("TDBankSpout",Constants.action_weight_stream, new Fields("item_id","type_id"))
+				.fieldsGrouping("TDBankSpout",Constants.actions_stream, new Fields("bid","qq","uid"));	
 			
 		for(AlgModuleInfo alg: algConf.getAlgList()){
 			builder.setBolt(alg.getAlgName(), new AlgDealBolt(alg),

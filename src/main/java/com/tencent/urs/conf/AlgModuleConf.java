@@ -3,21 +3,26 @@ package com.tencent.urs.conf;
 import java.io.FileInputStream;
 import java.io.FileNotFoundException;
 import java.io.IOException;
+import java.io.Serializable;
 import java.util.ArrayList;
 import java.util.List;
 
 import org.jdom.*;
 import org.jdom.input.SAXBuilder;
 
-public class AlgModuleConf{
+public class AlgModuleConf implements Serializable{
 	
+
 	private ArrayList<AlgModuleInfo> algModuleList;
 	
-	public 
-
-	<AlgModuleInfo> getAlgList(){
+	public ArrayList<AlgModuleInfo> getAlgList(){
 		return this.algModuleList;
 	}
+	
+	public AlgModuleConf(){
+		this.algModuleList = new ArrayList<AlgModuleInfo>();
+	}
+	
 	
 	public class AlgModuleInfo{
 		private String algName;

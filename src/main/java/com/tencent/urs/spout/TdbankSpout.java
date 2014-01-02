@@ -1,5 +1,6 @@
 package com.tencent.urs.spout;
 
+import java.text.SimpleDateFormat;
 import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.Iterator;
@@ -40,10 +41,13 @@ import com.tencent.urs.utils.Utils;
  * 
  */
 
-@SuppressWarnings("serial")
-public class TdbankSpout implements IRichSpout {
+public class TDBankSpout implements IRichSpout {
+	/**
+	 * 
+	 */
+	private static final long serialVersionUID = 1L;
 	private static Logger logger = LoggerFactory
-			.getLogger(TdbankSpout.class);
+			.getLogger(TDBankSpout.class);
 	public final int DEFAULT_MAX_PENDING = 50000;
 	private int MAX_PENDING;
 	public static byte SPEARATOR = (byte) 0xe0;
@@ -55,7 +59,7 @@ public class TdbankSpout implements IRichSpout {
 	private MonitorTools mt;
 	private DataFilterConf dfConf;
 
-	public TdbankSpout(DataFilterConf dataFilterConf) {
+	public TDBankSpout(DataFilterConf dataFilterConf) {
 		this.dfConf = dataFilterConf;
 	}
 
@@ -70,8 +74,7 @@ public class TdbankSpout implements IRichSpout {
 			TopologyContext context, SpoutOutputCollector collector) {
 		try {
 			this.collector = collector;
-			MAX_PENDING = Utils.getInt(conf, "tdbank.max.pending",
-					DEFAULT_MAX_PENDING);
+			MAX_PENDING = Utils.getInt(conf, "tdbank.max.pending",DEFAULT_MAX_PENDING);
 			messageQueue = new LinkedBlockingQueue<Message>();
 			this.mt = MonitorTools.getMonitorInstance(conf);
 
@@ -90,7 +93,17 @@ public class TdbankSpout implements IRichSpout {
 		boolean debug = true;
 		try {
 			if(debug){
-				this.collector.emit("",new Values("",""));
+				Long ActionTime = System.currentTimeMillis();
+				String Date = new SimpleDateFormat("yyyyMMdd").format(ActionTime);
+
+				
+				//this.collector.emit("user_info",new Values("user_info","test_job",Date, "389687043","-----imei-----","12345",20,"",""));
+				//this.collector.emit("item_info",new Values("item_info","test_job",Date,"4205888", "389687043","-----imei-----","12345",20,"",""));
+				this.collector.emit(Constants.actions_stream,
+						new Values(Constants.actions_stream,"test_job",389687043,"134","","420581","","22222",ActionTime/1000L,"3",""));
+
+				logger.info(Constants.actions_stream);
+				Thread.sleep(1000);
 				
 			}else{	
 				Message msg = messageQueue.poll();

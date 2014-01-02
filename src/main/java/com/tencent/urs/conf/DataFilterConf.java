@@ -3,13 +3,14 @@ package com.tencent.urs.conf;
 import java.io.File;
 import java.io.FileInputStream;
 import java.io.IOException;
+import java.io.Serializable;
 import java.util.ArrayList;
 import java.util.List;
 
 import org.jdom.*;
 import org.jdom.input.SAXBuilder;
 
-public class DataFilterConf{
+public class DataFilterConf implements Serializable{
 	private String algName;
 	private String inputStream;
 	private String hashKey;

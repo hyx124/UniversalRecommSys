@@ -61,7 +61,7 @@ public class PretreatmentBolt implements IRichBolt {
 		this.groupIdCache = new DataCache(stormConf);
 		this.collector = collector;
 		
-		this.mtClientList = TDEngineClientFactory.createMTClientList(stormConf);
+		//this.mtClientList = TDEngineClientFactory.createMTClientList(stormConf);
 	}
 	
 	public class GetQQUpdateCallBack implements MutiClientCallBack{
@@ -176,6 +176,7 @@ public class PretreatmentBolt implements IRichBolt {
 	public void execute(Tuple input) {
 		String topic = input.getStringByField("topic");
 	
+		logger.info("input:"+input.getStringByField("topic")+","+input.getStringByField("bid")+","+input.getStringByField("imp_date")+","+input.getLongByField("qq"));
 		for(AlgModuleInfo alg : algConf.getAlgList()){
 			if(alg.getTopicName().equals(topic)){				
 				RouteToAlgModBolt(alg,input);
@@ -199,7 +200,7 @@ public class PretreatmentBolt implements IRichBolt {
 	}
 	
 	private void RouteToAlgModBolt(AlgModuleInfo alg, Tuple input) {
-		String qq = input.getStringByField("qq");
+		Long qq = input.getLongByField("qq");
 		boolean isNeedGroupId = alg.isNeedGroupId();
 		String outputStream =  alg.getOutputStream();
 		Values outputValues =  genOutputValues(alg,input);
@@ -215,7 +216,7 @@ public class PretreatmentBolt implements IRichBolt {
 
 	}
 
-	private String getGroupIdByUin(String uin) {
+	private String getGroupIdByQQ(Long qq) {
 		return null;
 	}
 

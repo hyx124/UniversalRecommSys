@@ -94,9 +94,8 @@ public class Utils {
 		return false;
 	}
 	
-	public static boolean isQNumValid(String uin){
-		if(uin.equals("") || !uin.matches("[0-9]+")  || Long.valueOf(uin) <10000 
-				|| Long.valueOf(uin) > 10000000000L){
+	public static boolean isQNumValid(Long uin){
+		if(uin <10000 || uin > 10000000000L){
 			return false;
 		}
 		return true;
