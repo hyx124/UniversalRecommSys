@@ -62,7 +62,7 @@ public class BaseInfoHandler implements AlgAdpter{
 						for (String key : keySet) {
 							byte[] expireTimeValue  = combinerMap.remove(key);
 							try{
-								update(key,expireTimeValue);
+								Save(key,expireTimeValue);
 							}catch(Exception e){
 								//mt.addCountEntry(systemID, interfaceID, item, count)
 							}
@@ -80,7 +80,7 @@ public class BaseInfoHandler implements AlgAdpter{
 		combinerMap.put(key,value);
 	}	
 	
-	private void update(String key,byte[] values) 
+	private void Save(String key,byte[] values) 
 			throws TairRpcError, TairFlowLimit, TairQueueOverflow{	
 		for(ClientAttr clientEntry:mtClientList){
 			TairOption opt = new TairOption(clientEntry.getTimeout());

@@ -143,7 +143,7 @@ message UserActiveDetail
     			optional uint64 Count = 2;		
     			optional uint64 LastUpdateTime = 3; 				//item行为发生时间戳(s)
     		}
-    		required ActType acts = 2;
+    		repeated ActType acts = 2;
 		}
 		repeated ItemInfo items = 2;
 	}				
@@ -153,8 +153,8 @@ message UserActiveDetail
 message CtrInfo
 {	
 	message TimeSegment {								
-		required Long click = 1;
-		optional Long impress = 2;
+		required uint64 click = 1;
+		optional uint64 impress = 2;
 	}
     repeated TimeSegment tsegs  = 1;
 }

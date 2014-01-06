@@ -153,20 +153,19 @@ public class TopActions implements AlgAdpter{
 		}
 
 		private void Save(String key,UserActiveHistory.Builder mergeValueBuilder){	
-			Future<Result<Void>> future = null;
+			UserActiveHistory putValue = mergeValueBuilder.build();
+			synchronized(cacheMap){
+				cacheMap.set(key, new SoftReference<UserActiveHistory>(putValue), algInfo.getCacheExpireTime());
+			}
+			
 			for(ClientAttr clientEntry:mtClientList ){
 				TairOption putopt = new TairOption(clientEntry.getTimeout(),(short)0, algInfo.getDataExpireTime());
 				try {
-					
-					UserActiveHistory putValue = mergeValueBuilder.build();
-
-					future = clientEntry.getClient().putAsync((short)algInfo.getOutputTableId(), 
+					Future<Result<Void>> future = clientEntry.getClient().putAsync((short)algInfo.getOutputTableId(), 
 										key.getBytes(), putValue.toByteArray(), putopt);
 					clientEntry.getClient().notifyFuture(future, putCallBack, 
 							new UpdateCallBackContext(clientEntry,key,putValue.toByteArray(),putopt));
-					synchronized(cacheMap){
-						cacheMap.set(key, new SoftReference<UserActiveHistory>(putValue), algInfo.getCacheExpireTime());
-					}
+					
 					
 					if(mt!=null){
 						MonitorEntry mEntryPut = new MonitorEntry(Constants.SUCCESSCODE,Constants.SUCCESSCODE);

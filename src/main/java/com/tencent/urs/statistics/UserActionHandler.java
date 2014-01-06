@@ -1,17 +1,14 @@
 package com.tencent.urs.statistics;
 
 import com.tencent.urs.protobuf.Recommend;
+import com.tencent.urs.protobuf.Recommend.ActiveType;
 import com.tencent.urs.protobuf.Recommend.UserActiveDetail;
-import com.tencent.urs.protobuf.Recommend.UserActiveDetail.ActType;
-import com.tencent.urs.protobuf.Recommend.UserActiveDetail.ActType.TimeSegment;
-import com.tencent.urs.protobuf.Recommend.UserActiveDetail.ActType.TimeSegment.Item;
+import com.tencent.urs.protobuf.Recommend.UserActiveDetail.TimeSegment.ItemInfo.ActType;
 import com.tencent.urs.protobuf.Recommend.UserActiveDetail.Builder;
-import com.tencent.urs.protobuf.Recommend.UserActiveHistory;
 import com.tencent.urs.protobuf.Recommend.UserActiveHistory.ActiveRecord;
 
 import java.lang.ref.SoftReference;
-import java.util.ArrayList;
-import java.util.HashSet;
+import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
 import java.util.Set;
@@ -41,13 +38,12 @@ import com.tencent.urs.tdengine.TDEngineClientFactory;
 import com.tencent.urs.tdengine.TDEngineClientFactory.ClientAttr;
 import com.tencent.urs.utils.Constants;
 import com.tencent.urs.utils.DataCache;
-import com.tencent.urs.utils.LRUCache;
 import com.tencent.urs.utils.Utils;
 
 public class UserActionHandler implements AlgAdpter{
 	private List<ClientAttr> mtClientList;	
 	private MonitorTools mt;
-	private DataCache<Recommend.UserActiveDetail> cacheMap;
+	private DataCache<HashMap<Long,HashMap<String,HashMap<Recommend.ActiveType,ActType>>>> cacheMap;
 	private UpdateCallBack putCallBack;
 	private ConcurrentHashMap<String, ActionCombinerValue> combinerMap;
 	private int nsTableID;
@@ -98,7 +94,7 @@ public class UserActionHandler implements AlgAdpter{
 		
 		this.mtClientList = TDEngineClientFactory.createMTClientList(conf);
 		this.mt = MonitorTools.getMonitorInstance(conf);
-		this.cacheMap = new DataCache<Recommend.UserActiveDetail>(conf);
+		this.cacheMap = new DataCache<HashMap<Long,HashMap<String,HashMap<Recommend.ActiveType,ActType>>>>(conf);
 		this.combinerMap = new ConcurrentHashMap<String,ActionCombinerValue>(1024);
 		this.putCallBack = new UpdateCallBack(mt, Constants.systemID, Constants.tde_interfaceID, this.getClass().getName());
 		
@@ -118,10 +114,9 @@ public class UserActionHandler implements AlgAdpter{
 		public void excute() {
 			try {
 				if(cacheMap.hasKey(key)){		
-					SoftReference<UserActiveDetail> oldValueHeap = cacheMap.get(key);	
-					UserActiveDetail.Builder mergeValueBuilder = UserActiveDetail.newBuilder();
-					mergeToHeap(values,oldValueHeap.get(),mergeValueBuilder);
-					Save(key,mergeValueBuilder);
+					SoftReference<HashMap<Long, HashMap<String, HashMap<ActiveType, ActType>>>> detailMap = cacheMap.get(key);	
+					mergeNewValueToMap(values,detailMap.get());
+					Save(key,detailMap.get());
 				}else{
 					ClientAttr clientEntry = mtClientList.get(0);		
 					TairOption opt = new TairOption(clientEntry.getTimeout());
@@ -138,88 +133,135 @@ public class UserActionHandler implements AlgAdpter{
 			}
 		}	
 		
-		private void addItemToBuilder(String itemId,ActiveRecord activeRecord, 
-				UserActiveDetail oldValList, Builder mergeValueBuilder ){
+		private void addOldRecordsToMap(UserActiveDetail oldValList,
+				HashMap<Long,HashMap<String,HashMap<Recommend.ActiveType,ActType>>> detailMap ){
+			Long expireTimeId =  System.currentTimeMillis()/1000;
 			
-			boolean find_act = false;
-			boolean find_time = false;			
-			Long now = System.currentTimeMillis()/1000;
-			
-			Item.Builder newItemBuilder = Item.newBuilder();
-			newItemBuilder.setItem(itemId).setCount(1).setLastUpdateTime(now);
-			
-			for(ActType actType: oldValList.getTypesList()){
-				ActType.Builder newActBuilder = ActType.newBuilder();
-				
-				if(actType.getActType() == activeRecord.getActType()){
-					find_act = true;
+			for(UserActiveDetail.TimeSegment tsegs: oldValList.getTsegsList()){
+				if(tsegs.getTimeId() <expireTimeId){
+					continue;
 				}
 				
-				for(TimeSegment timeSegList: actType.getTsegsList()){
-					TimeSegment.Builder newTimeBuilder = TimeSegment.newBuilder();
-					if(timeSegList.getTimeSegment() == now){
-						find_time = true;
-						for(Item item: timeSegList.getItemsList()){
-							if(item.getItem().equals(itemId) ){
-								newItemBuilder.setCount(newItemBuilder.getCount()+1);
-							}else{
-								newTimeBuilder.addItems(item);
-							}
-						}
-						
-						newTimeBuilder.addItems(0, newItemBuilder.build());
-						newActBuilder.addTsegs(0,newTimeBuilder.build());
-					}else if(timeSegList.getTimeSegment() > algInfo.getDataExpireTime() && timeSegList.getTimeSegment() < now){
-						newActBuilder.addTsegs(timeSegList);
+				HashMap<String,HashMap<Recommend.ActiveType,ActType>> itemMap;		
+				if(detailMap.containsKey(tsegs.getTimeId())){
+					itemMap = detailMap.get(tsegs.getTimeId());
+					
+				}else{				
+					itemMap = new HashMap<String,HashMap<Recommend.ActiveType,ActType>>();
+	
+				}
+				
+				
+				for(UserActiveDetail.TimeSegment.ItemInfo item: tsegs.getItemsList()){	
+					HashMap<Recommend.ActiveType,ActType> actMap;
+					if(itemMap.containsKey(item.getItem())){
+						actMap = itemMap.get(item.getItem());
 					}else{
-						continue;
-					}					
+						actMap = new HashMap<Recommend.ActiveType,ActType>();		
+					}	
+					
+					for(UserActiveDetail.TimeSegment.ItemInfo.ActType act: item.getActsList()){
+						Long count = act.getCount();
+						if(actMap.containsKey(act)){
+							count = count + actMap.get(act).getCount() ;
+						}	
+						ActType newActInfo = ActType.newBuilder()
+								.setActType(act.getActType())
+								.setCount(count)
+								.setLastUpdateTime(act.getLastUpdateTime())
+								.build();
+						
+						actMap.put(act.getActType(), newActInfo);
+					}
 				}
-				
-				
-				if(!find_time){
-					TimeSegment.Builder newTimeBuilder = TimeSegment.newBuilder();
-					newTimeBuilder.setTimeSegment(System.currentTimeMillis()/1000);
-					newTimeBuilder.addItems(0,newItemBuilder.build());
-					newActBuilder.addTsegs(0,newTimeBuilder.build());
-				}
-				
-				mergeValueBuilder.addTypes(0,newActBuilder.build());
-			}
-			
-		
-			if(! find_act){
-				ActType.Builder newActBuilder = ActType.newBuilder();
-				TimeSegment.Builder newTimeBuilder = TimeSegment.newBuilder();
-				newTimeBuilder.addItems(0,newItemBuilder.build());
-				newActBuilder.addTsegs(0,newTimeBuilder.build());
-				mergeValueBuilder.addTypes(0,newActBuilder.build());
 			}
 			
 		}
 		
-		private void mergeToHeap(ActionCombinerValue newValList,
-				UserActiveDetail oldValList,
-				UserActiveDetail.Builder mergeValueBuilder){			
-		
-			for(String item:newValList.getActRecodeMap().keySet()){
-				addItemToBuilder(item,newValList.getActRecodeMap().get(item),oldValList,mergeValueBuilder);
-			}
-		}
+		private void mergeNewRecordsToMap(String itemId, ActiveRecord activeRecord,
+				HashMap<Long,HashMap<String,HashMap<Recommend.ActiveType,ActType>>> detailMap ) {
 
-		private void Save(String key,UserActiveDetail.Builder mergeValueBuilder){	
+			Long nowTimeId = System.currentTimeMillis()/1000;
+			
+			HashMap<String,HashMap<Recommend.ActiveType,ActType>> itemMap;
+			if(detailMap.containsKey(nowTimeId)){
+				itemMap = detailMap.get(nowTimeId);
+			}else{				
+				itemMap = new HashMap<String,HashMap<Recommend.ActiveType,ActType>>();
+			}
+			
+			HashMap<Recommend.ActiveType,ActType> actMap;
+			if(itemMap.containsKey(itemId)){
+				actMap = itemMap.get(itemId);
+			}else{
+				actMap = new HashMap<Recommend.ActiveType,ActType>();		
+			}	
+				
+			Long count = 1L;
+			if(actMap.containsKey(activeRecord.getActType())){
+				count = count + actMap.get(activeRecord.getActType()).getCount() ;
+			}
+			ActType newActInfo = ActType.newBuilder()
+					.setActType(activeRecord.getActType())
+					.setCount(count)
+					.setLastUpdateTime(activeRecord.getActTime())
+					.build();
+			
+			actMap.put(activeRecord.getActType(), newActInfo);
+			detailMap.put(nowTimeId, itemMap);
+		}
+		
+		private void mergeNewValueToMap(ActionCombinerValue newValList,
+				HashMap<Long,HashMap<String,HashMap<Recommend.ActiveType,ActType>>> detailMap){						
+			for(String item:newValList.getActRecodeMap().keySet()){
+				mergeNewRecordsToMap(item,newValList.getActRecodeMap().get(item),detailMap);
+			}
+		}
+		
+		private void putToBuilder(
+				HashMap<Long, HashMap<String, HashMap<ActiveType, ActType>>> detailMap,
+				Builder pbValueBuilder) {
+			for(Long time: detailMap.keySet()){
+				Recommend.UserActiveDetail.TimeSegment.Builder timeBuilder =
+						Recommend.UserActiveDetail.TimeSegment.newBuilder();
+				timeBuilder.setTimeId(time);
+				
+				for(String item:detailMap.get(time).keySet()){
+					Recommend.UserActiveDetail.TimeSegment.ItemInfo.Builder itemBuilder =
+							Recommend.UserActiveDetail.TimeSegment.ItemInfo.newBuilder();
+					itemBuilder.setItem(item);
+					
+					for(ActiveType act: detailMap.get(time).get(item).keySet()){
+						ActType actValue = detailMap.get(time).get(item).get(act);
+						itemBuilder.addActs(actValue);
+					}
+					timeBuilder.addItems(itemBuilder);
+				}
+				pbValueBuilder.addTsegs(timeBuilder.build());
+			}
+		}
+		
+		private void Save(String key,HashMap<Long, HashMap<String, HashMap<ActiveType, ActType>>> detailMap){	
 			Future<Result<Void>> future = null;
+			
+			UserActiveDetail.Builder pbValueBuilder = UserActiveDetail.newBuilder();
+			putToBuilder(detailMap,pbValueBuilder);
+			
+			synchronized(cacheMap){
+				cacheMap.set(key, 
+							new SoftReference<HashMap<Long, HashMap<String, HashMap<ActiveType, ActType>>>>(detailMap), 
+							algInfo.getCacheExpireTime());
+			}
+			
+			
 			for(ClientAttr clientEntry:mtClientList ){
 				TairOption putopt = new TairOption(clientEntry.getTimeout(),(short)0, algInfo.getDataExpireTime());
 				try {
-					UserActiveDetail putValue = mergeValueBuilder.build();
-					
+					UserActiveDetail putValue = pbValueBuilder.build();					
 					future = clientEntry.getClient().putAsync((short)algInfo.getOutputTableId(), key.getBytes(),putValue.toByteArray(), putopt);
 					clientEntry.getClient().notifyFuture(future, putCallBack, 
 							new UpdateCallBackContext(clientEntry,key,putValue.toByteArray(),putopt));
-					synchronized(cacheMap){
-						cacheMap.set(key, new SoftReference<UserActiveDetail>(putValue), algInfo.getCacheExpireTime());
-					}
+					
 					
 					if(mt!=null){
 						MonitorEntry mEntryPut = new MonitorEntry(Constants.SUCCESSCODE,Constants.SUCCESSCODE);
@@ -232,7 +274,7 @@ public class UserActionHandler implements AlgAdpter{
 				}
 			}
 		}
-
+	
 		@Override
 		public void handle(Future<?> future, Object context) {			
 			@SuppressWarnings("unchecked")
@@ -241,10 +283,12 @@ public class UserActionHandler implements AlgAdpter{
 			try {
 				oldVal = afuture.get().getResult();
 				UserActiveDetail oldValueHeap = Recommend.UserActiveDetail.parseFrom(oldVal);
-				UserActiveDetail.Builder mergeValueBuilder = UserActiveDetail.newBuilder(); 
-						
-				mergeToHeap(this.values,oldValueHeap,mergeValueBuilder);
-				Save(key,mergeValueBuilder);
+				HashMap<Long, HashMap<String, HashMap<ActiveType, ActType>>> detailMap = 
+						new HashMap<Long, HashMap<String, HashMap<ActiveType, ActType>>>();	
+
+				addOldRecordsToMap(oldValueHeap,detailMap);
+				mergeNewValueToMap(values,detailMap);
+				Save(key,detailMap);
 			} catch (Exception e) {
 				
 			}

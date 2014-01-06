@@ -1,6 +1,10 @@
 package com.tencent.urs.statistics;
 
 import com.tencent.urs.protobuf.Recommend;
+import com.tencent.urs.protobuf.Recommend.UserActiveDetail.TimeSegment;
+import com.tencent.urs.protobuf.Recommend.UserActiveDetail.TimeSegment.ItemInfo;
+import com.tencent.urs.protobuf.Recommend.UserActiveDetail.TimeSegment.ItemInfo.ActType;
+
 import java.lang.ref.SoftReference;
 import java.util.List;
 import java.util.Map;
@@ -194,22 +198,25 @@ public class GroupActionHandler implements AlgAdpter{
 		private Integer getIncreasedWeight(Recommend.UserActiveDetail oldValueHeap){
 			int lastMaxCount = 0;		
 			int nowMaxCount = 0;			
-			for(Recommend.UserActiveDetail.ActType act:oldValueHeap.getTypesList()){
-				for(Recommend.UserActiveDetail.ActType.TimeSegment ts: act.getTsegsList()){
-					if(justExpireSoon(ts.getTimeSegment())){
-						for(Recommend.UserActiveDetail.ActType.TimeSegment.Item item:ts.getItemsList()){
-							if(item.getItem().equals(key.getItemId())){
+			for(TimeSegment ts:oldValueHeap.getTsegsList()){
+				if(justExpireSoon(ts.getTimeId())){
+					for(ItemInfo item:ts.getItemsList()){
+						if(item.getItem().equals(key.getItemId())){
+							for(ActType act: item.getActsList()){
 								lastMaxCount = Math.max(lastMaxCount, act.getActType().getNumber());
-								
-							}
-						}
-					}else if(justUpdateSoon(ts.getTimeSegment())){
-						for(Recommend.UserActiveDetail.ActType.TimeSegment.Item item:ts.getItemsList()){
-							if(item.getItem().equals(key.getItemId())){
-								nowMaxCount = Math.max(nowMaxCount, act.getActType().getNumber());
 							}
 						}
 					}
+				}else if(justUpdateSoon(ts.getTimeId())){
+					for(ItemInfo item:ts.getItemsList()){
+						if(item.getItem().equals(key.getItemId())){
+							for(ActType act: item.getActsList()){
+								nowMaxCount = Math.max(nowMaxCount, act.getActType().getNumber());
+							}							
+						}
+					}
+				}else{
+					continue;
 				}
 			}
 			return nowMaxCount - lastMaxCount;

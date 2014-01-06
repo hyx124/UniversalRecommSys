@@ -1,11 +1,16 @@
 package com.tencent.urs.statistics;
 
 import com.tencent.urs.protobuf.Recommend;
+import com.tencent.urs.protobuf.Recommend.CtrInfo;
+import com.tencent.urs.protobuf.Recommend.CtrInfo.Builder;
+import com.tencent.urs.protobuf.Recommend.UserActiveDetail.TimeSegment.ItemInfo.ActType;
+import com.tencent.urs.protobuf.Recommend.ActiveType;
 import com.tencent.urs.protobuf.Recommend.UserActiveDetail;
 import com.tencent.urs.protobuf.Recommend.UserActiveHistory;
 
 import java.lang.ref.SoftReference;
 import java.util.ArrayList;
+import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
 import java.util.Set;
@@ -43,10 +48,10 @@ import com.tencent.urs.utils.Utils.actionType;
 public class CtrActionHandler implements AlgAdpter{
 	private List<ClientAttr> mtClientList;	
 	private MonitorTools mt;
-	private DataCache<Recommend.UserActiveHistory> cacheMap;
+	private DataCache<Recommend.CtrInfo> cacheMap;
 	private UpdateCallBack putCallBack;
 	private ConcurrentHashMap<String, ActionCombinerValue> combinerMap;
-	private int nsTableID;
+	private AlgModuleInfo algInfo;
 	
 	private static Logger logger = LoggerFactory
 			.getLogger(CtrActionHandler.class);
@@ -86,11 +91,11 @@ public class CtrActionHandler implements AlgAdpter{
 	}	
 
 	@SuppressWarnings("rawtypes")
-	public CtrActionHandler(Map conf){
-		this.nsTableID = Utils.getInt(conf, "tableid", 11);
+	public CtrActionHandler(Map conf, AlgModuleInfo algInfo){
+		this.algInfo = algInfo;
 		this.mtClientList = TDEngineClientFactory.createMTClientList(conf);
 		this.mt = MonitorTools.getMonitorInstance(conf);
-		this.cacheMap = new DataCache(conf);
+		this.cacheMap = new DataCache<Recommend.CtrInfo>(conf);
 		this.combinerMap = new ConcurrentHashMap<String,ActionCombinerValue>(1024);
 				
 		
@@ -114,10 +119,10 @@ public class CtrActionHandler implements AlgAdpter{
 		public void excute() {
 			try {
 				if(cacheMap.hasKey(key)){		
-					SoftReference<UserActiveHistory> oldValueHeap = cacheMap.get(key);	
-					Recommmend.CtrInfo.Builder 
-					mergeToHeap(values,oldValueHeap);
-					Save(key,newValueHeap);
+					SoftReference<CtrInfo> oldValueHeap = cacheMap.get(key);	
+					CtrInfo.Builder mergeBuilder = Recommend.CtrInfo.newBuilder();
+					mergeToHeap(values,oldValueHeap.get(),mergeBuilder);
+					Save(key,mergeBuilder);
 				}else{
 					ClientAttr clientEntry = mtClientList.get(0);		
 					TairOption opt = new TairOption(clientEntry.getTimeout());
@@ -135,14 +140,37 @@ public class CtrActionHandler implements AlgAdpter{
 		}
 		
 		private void mergeToHeap(ActionCombinerValue newValList,
-				UserActiveDetail oldValList,
-				UserActiveDetail.Builder mergeValueBuilder){			
+				CtrInfo oldValList,
+				CtrInfo.Builder mergeValueBuilder){			
 		
 		}
 
-		private void Save(String key,SoftReference<UserActiveHistory> value){	
-			int cahceExpireTime = 5;
-			cacheMap.set(key, value, cahceExpireTime);
+		private void Save(String key,Builder mergeBuilder){	
+			CtrInfo putValue = mergeBuilder.build();
+			synchronized(cacheMap){
+				cacheMap.set(key, new SoftReference<CtrInfo>(putValue), 
+							algInfo.getCacheExpireTime());
+			}
+			
+			
+			for(ClientAttr clientEntry:mtClientList ){
+				TairOption putopt = new TairOption(clientEntry.getTimeout(),(short)0, algInfo.getDataExpireTime());
+				try {
+										
+					Future<Result<Void>> future = clientEntry.getClient().putAsync((short)algInfo.getOutputTableId(), 
+									key.getBytes(),putValue.toByteArray(), putopt);
+					clientEntry.getClient().notifyFuture(future, putCallBack, 
+							new UpdateCallBackContext(clientEntry,key,putValue.toByteArray(),putopt));					
+					if(mt!=null){
+						MonitorEntry mEntryPut = new MonitorEntry(Constants.SUCCESSCODE,Constants.SUCCESSCODE);
+						mEntryPut.addExtField("TDW_IDC", clientEntry.getGroupname());
+						mEntryPut.addExtField("tbl_name", "FIFO1");
+						mt.addCountEntry(Constants.systemID, Constants.tde_put_interfaceID, mEntryPut, 1);
+					}
+				} catch (Exception e){
+					logger.error(e.toString());
+				}
+			}
 		}
 
 		@Override
@@ -150,12 +178,13 @@ public class CtrActionHandler implements AlgAdpter{
 			@SuppressWarnings("unchecked")
 			Future<Result<byte[]>> afuture = (Future<Result<byte[]>>) future;
 			byte[] oldVal = null;
-			try {
+			try {	
 				oldVal = afuture.get().getResult();
-				UserActiveHistory oldValueHeap = UserActiveHistory.parseFrom(oldVal);
+				CtrInfo oldValueHeap = CtrInfo.parseFrom(oldVal);
 				
-				mergeToHeap(this.values,oldValueHeap);
-				Save(key,newValueHeap);
+				CtrInfo.Builder mergeBuilder = Recommend.CtrInfo.newBuilder();
+				mergeToHeap(values,oldValueHeap,mergeBuilder);
+				Save(key,mergeBuilder);
 			} catch (Exception e) {
 				
 			}

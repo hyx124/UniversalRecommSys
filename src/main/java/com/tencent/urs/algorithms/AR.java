@@ -71,7 +71,7 @@ public class AR implements AlgAdpter{
 						for (UpdateKey key : keySet) {
 							combinerMap.remove(key);
 							try{
-								new ItemCountCallBack(key).excute();
+								new GetItemCountCallBack(key).excute();
 							}catch(Exception e){
 							}
 						}
@@ -86,7 +86,7 @@ public class AR implements AlgAdpter{
 	private void combinerKeys(UpdateKey key) {
 		combinerMap.put(key, null);
 	}	
-
+	
 	private class GetItemPairCallBack implements MutiClientCallBack{
 		private final UpdateKey key;
 
@@ -148,20 +148,20 @@ public class AR implements AlgAdpter{
 		}
 
 		private void Save(String key,UserActiveHistory.Builder mergeValueBuilder){	
-			Future<Result<Void>> future = null;
+			
+			UserActiveHistory putValue = mergeValueBuilder.build();
+			synchronized(cacheMap){
+				cacheMap.set(key, new SoftReference<UserActiveHistory>(putValue), algInfo.getCacheExpireTime());
+			}
+			
 			for(ClientAttr clientEntry:mtClientList ){
 				TairOption putopt = new TairOption(clientEntry.getTimeout(),(short)0, algInfo.getDataExpireTime());
 				try {
-					
-					UserActiveHistory putValue = mergeValueBuilder.build();
-
-					future = clientEntry.getClient().putAsync((short)algInfo.getOutputTableId(), 
+					Future<Result<Void>> future = clientEntry.getClient().putAsync((short)algInfo.getOutputTableId(), 
 										key.getBytes(), putValue.toByteArray(), putopt);
 					clientEntry.getClient().notifyFuture(future, putCallBack, 
 							new UpdateCallBackContext(clientEntry,key,putValue.toByteArray(),putopt));
-					synchronized(cacheMap){
-						cacheMap.set(key, new SoftReference<UserActiveHistory>(putValue), algInfo.getCacheExpireTime());
-					}
+					
 					
 					if(mt!=null){
 						MonitorEntry mEntryPut = new MonitorEntry(Constants.SUCCESSCODE,Constants.SUCCESSCODE);
@@ -194,6 +194,116 @@ public class AR implements AlgAdpter{
 			
 		}
 	}
+
+
+	private class GetItemCountCallBack implements MutiClientCallBack{
+		private final UpdateKey key;
+
+		public GetItemCountCallBack(UpdateKey key) {
+			this.key = key ; 
+		}
+
+		public void excute() {
+			try {
+				String checkKey = key.getUin() + "#DETAIl";
+				
+				if(cacheMap.hasKey(checkKey)){		
+					SoftReference<UserActiveDetail> oldValueHeap = cacheMap.get(checkKey);	
+					UserActiveDetail.Builder mergeValueBuilder = Recommend.UserActiveDetail.newBuilder();
+					
+					mergeToHeap(key.getItemId(),oldValueHeap.get(),mergeValueBuilder);
+					oldValueHeap.clear();
+					Save(key,mergeValueBuilder);
+				}else{
+					ClientAttr clientEntry = mtClientList.get(0);		
+					TairOption opt = new TairOption(clientEntry.getTimeout());
+					Future<Result<byte[]>> future = clientEntry.getClient().getAsync((short)algInfo.getOutputTableId(),key.getBytes(),opt);
+					clientEntry.getClient().notifyFuture(future, this,clientEntry);	
+				}			
+				
+			} catch (TairQueueOverflow e) {
+				//log.error(e.toString());
+			} catch (TairRpcError e) {
+				//log.error(e.toString());
+			} catch (TairFlowLimit e) {
+				//log.error(e.toString());
+			}
+		}
+		
+		private void mergeToHeap(String itemId,
+				UserActiveHistory oldVal,
+				UserActiveHistory.Builder updatedBuilder){			
+			HashSet<String> alreadyIn = new HashSet<String>();
+			for(String newItemId: newValList.getActRecodeMap().keySet()){
+				if(updatedBuilder.getActRecordsCount() >= algInfo.getTopNum()){
+					break;
+				}
+				updatedBuilder.addActRecords(newValList.getActRecodeMap().get(newItemId));
+				alreadyIn.add(newItemId);
+			}
+					
+			for(Recommend.UserActiveHistory.ActiveRecord eachOldVal:oldVal.getActRecordsList()){
+				if(updatedBuilder.getActRecordsCount() >= algInfo.getTopNum()){
+					break;
+				}
+				
+				if(alreadyIn.contains(eachOldVal.getItem())){
+					continue;
+				}				
+
+				updatedBuilder.addActRecords(eachOldVal);
+			}
+			
+		}
+
+		private void Save(String key,UserActiveHistory.Builder mergeValueBuilder){	
+			
+			UserActiveHistory putValue = mergeValueBuilder.build();
+			synchronized(cacheMap){
+				cacheMap.set(key, new SoftReference<UserActiveHistory>(putValue), algInfo.getCacheExpireTime());
+			}
+			
+			for(ClientAttr clientEntry:mtClientList ){
+				TairOption putopt = new TairOption(clientEntry.getTimeout(),(short)0, algInfo.getDataExpireTime());
+				try {
+					Future<Result<Void>> future = clientEntry.getClient().putAsync((short)algInfo.getOutputTableId(), 
+										key.getBytes(), putValue.toByteArray(), putopt);
+					clientEntry.getClient().notifyFuture(future, putCallBack, 
+							new UpdateCallBackContext(clientEntry,key,putValue.toByteArray(),putopt));
+					
+					
+					if(mt!=null){
+						MonitorEntry mEntryPut = new MonitorEntry(Constants.SUCCESSCODE,Constants.SUCCESSCODE);
+						mEntryPut.addExtField("TDW_IDC", clientEntry.getGroupname());
+						mEntryPut.addExtField("tbl_name", "FIFO1");
+						mt.addCountEntry(Constants.systemID, Constants.tde_put_interfaceID, mEntryPut, 1);
+					}
+				} catch (Exception e){
+					logger.error(e.toString());
+				}
+			}
+		}
+
+		@Override
+		public void handle(Future<?> future, Object context) {			
+			@SuppressWarnings("unchecked")
+			Future<Result<byte[]>> afuture = (Future<Result<byte[]>>) future;
+			byte[] oldVal = null;
+			try {
+				oldVal = afuture.get().getResult();
+				SoftReference<UserActiveHistory> oldValueHeap = 
+						new SoftReference<UserActiveHistory>(Recommend.UserActiveHistory.parseFrom(oldVal));
+				
+				UserActiveHistory.Builder mergeValueBuilder = Recommend.UserActiveHistory.newBuilder();
+				mergeToHeap(this.values,oldValueHeap.get(),mergeValueBuilder);
+				Save(key,mergeValueBuilder);
+			} catch (Exception e) {
+				
+			}
+			
+		}
+	}
+
 
 	@Override
 	public void deal(AlgModuleInfo algInfo,Tuple input) {
