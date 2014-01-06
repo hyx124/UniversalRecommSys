@@ -104,6 +104,7 @@ public class TDBankSpout implements IRichSpout {
 
 				logger.info(Constants.actions_stream);
 				Thread.sleep(1000);
+				logger.info(Constants.item_category_stream);
 				
 			}else{	
 				Message msg = messageQueue.poll();
