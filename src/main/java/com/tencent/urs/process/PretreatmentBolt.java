@@ -177,9 +177,10 @@ public class PretreatmentBolt implements IRichBolt {
 		String topic = input.getStringByField("topic");
 	
 		logger.info("input:"+input.getStringByField("topic")+","+input.getStringByField("bid")+","+input.getStringByField("imp_date")+","+input.getLongByField("qq"));
-		for(AlgModuleInfo alg : algConf.getAlgList()){
-			if(alg.getTopicName().equals(topic)){				
-				RouteToAlgModBolt(alg,input);
+		for(String algId : algConf.getAlgConfMap().keySet()){
+			AlgModuleInfo algInfo = algConf.getAlgInfoById(algId);
+			if(algInfo.getTopicName().equals(topic)){				
+				RouteToAlgModBolt(algInfo,input);
 			}
 		}	
 	}

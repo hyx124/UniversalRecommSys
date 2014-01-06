@@ -25,8 +25,10 @@ import com.tencent.urs.algorithms.AlgAdpter;
 import com.tencent.urs.asyncupdate.UpdateCallBack;
 import com.tencent.urs.asyncupdate.UpdateCallBackContext;
 import com.tencent.urs.combine.ActionCombinerValue;
+import com.tencent.urs.combine.UpdateKey;
 import com.tencent.urs.conf.AlgModuleConf.AlgModuleInfo;
 import com.tencent.urs.protobuf.Recommend;
+import com.tencent.urs.protobuf.Recommend.UserActiveDetail;
 import com.tencent.urs.protobuf.Recommend.UserActiveHistory;
 import com.tencent.urs.tdengine.TDEngineClientFactory;
 import com.tencent.urs.tdengine.TDEngineClientFactory.ClientAttr;
@@ -34,24 +36,24 @@ import com.tencent.urs.utils.Constants;
 import com.tencent.urs.utils.DataCache;
 import com.tencent.urs.utils.Utils;
 
-public class TopActions implements AlgAdpter{
+public class AR implements AlgAdpter{
 	private List<ClientAttr> mtClientList;	
 	private MonitorTools mt;
-	private ConcurrentHashMap<String, ActionCombinerValue> combinerMap;
-	private DataCache<Recommend.UserActiveHistory> cacheMap;
+	private ConcurrentHashMap<UpdateKey, ActionCombinerValue> combinerMap;
+	private DataCache<UserActiveDetail> cacheMap;
 	private AlgModuleInfo algInfo;
 	private UpdateCallBack putCallBack;
 	private int combinerExpireTime;
 	
 	private static Logger logger = LoggerFactory
-			.getLogger(TopActions.class);
+			.getLogger(AR.class);
 	
 	@SuppressWarnings("rawtypes")
-	public TopActions(Map conf,AlgModuleInfo algInfo){
+	public AR(Map conf,AlgModuleInfo algInfo){
 		this.algInfo = algInfo;
 		this.mtClientList = TDEngineClientFactory.createMTClientList(conf);
 		this.mt = MonitorTools.getMonitorInstance(conf);
-		this.combinerMap = new ConcurrentHashMap<String,ActionCombinerValue>(1024);
+		this.combinerMap = new ConcurrentHashMap<UpdateKey,ActionCombinerValue>(1024);
 		this.putCallBack = new UpdateCallBack(mt, Constants.systemID, Constants.tde_interfaceID, "TopActions");
 			
 		this.combinerExpireTime = Utils.getInt(conf, "combiner.expireTime",5);
@@ -65,13 +67,12 @@ public class TopActions implements AlgAdpter{
 				try {
 					while (true) {
 						Thread.sleep(second * 1000);
-						Set<String> keySet = combinerMap.keySet();
-						for (String key : keySet) {
-							ActionCombinerValue expireTimeValue  = combinerMap.remove(key);
+						Set<UpdateKey> keySet = combinerMap.keySet();
+						for (UpdateKey key : keySet) {
+							combinerMap.remove(key);
 							try{
-								new TopActionsUpdateCallBack(key,expireTimeValue).excute();
+								new ItemCountCallBack(key).excute();
 							}catch(Exception e){
-								//mt.addCountEntry(systemID, interfaceID, item, count)
 							}
 						}
 					}
@@ -82,32 +83,26 @@ public class TopActions implements AlgAdpter{
 		}).start();
 	}
 	
-	private void combinerKeys(String key,ActionCombinerValue value) {
-		synchronized (combinerMap) {
-			if(combinerMap.containsKey(key)){
-				ActionCombinerValue oldvalue = combinerMap.get(key);
-				value.incrument(oldvalue);
-			}
-			combinerMap.put(key, value);
-		}
+	private void combinerKeys(UpdateKey key) {
+		combinerMap.put(key, null);
 	}	
 
-	private class TopActionsUpdateCallBack implements MutiClientCallBack{
-		private final String key;
-		private final ActionCombinerValue values;
+	private class GetItemPairCallBack implements MutiClientCallBack{
+		private final UpdateKey key;
 
-		public TopActionsUpdateCallBack(String key, ActionCombinerValue values) {
+		public GetItemPairCallBack(UpdateKey key) {
 			this.key = key ; 
-			this.values = values;								
 		}
 
 		public void excute() {
 			try {
-				if(cacheMap.hasKey(key)){		
-					SoftReference<UserActiveHistory> oldValueHeap = cacheMap.get(key);	
-					UserActiveHistory.Builder mergeValueBuilder = Recommend.UserActiveHistory.newBuilder();
+				String checkKey = key.getUin() + "#DETAIl";
+				
+				if(cacheMap.hasKey(checkKey)){		
+					SoftReference<UserActiveDetail> oldValueHeap = cacheMap.get(checkKey);	
+					UserActiveDetail.Builder mergeValueBuilder = Recommend.UserActiveDetail.newBuilder();
 					
-					mergeToHeap(values,oldValueHeap.get(),mergeValueBuilder);
+					mergeToHeap(key.getItemId(),oldValueHeap.get(),mergeValueBuilder);
 					oldValueHeap.clear();
 					Save(key,mergeValueBuilder);
 				}else{
@@ -126,7 +121,7 @@ public class TopActions implements AlgAdpter{
 			}
 		}
 		
-		private void mergeToHeap(ActionCombinerValue newValList,
+		private void mergeToHeap(String itemId,
 				UserActiveHistory oldVal,
 				UserActiveHistory.Builder updatedBuilder){			
 			HashSet<String> alreadyIn = new HashSet<String>();
@@ -206,9 +201,12 @@ public class TopActions implements AlgAdpter{
 			this.algInfo = algInfo;
 		}
 		
-		String key = input.getStringByField("qq");
-		ActionCombinerValue value = null;
+		Long uin = input.getLongByField("qq");
+		Integer groupId = input.getIntegerByField("groupId");
+		String itemId = input.getStringByField("itemId");
+		String adpos = input.getStringByField("adpos");
 		
-		combinerKeys(key, value);	
+		UpdateKey key = new UpdateKey(uin,groupId,adpos,itemId);
+		combinerKeys(key);	
 	}
 }

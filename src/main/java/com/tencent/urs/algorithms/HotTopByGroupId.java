@@ -34,7 +34,7 @@ import com.tencent.urs.utils.Constants;
 import com.tencent.urs.utils.DataCache;
 import com.tencent.urs.utils.Utils;
 
-public class TopActions implements AlgAdpter{
+public class HotTopByGroupId implements AlgAdpter{
 	private List<ClientAttr> mtClientList;	
 	private MonitorTools mt;
 	private ConcurrentHashMap<String, ActionCombinerValue> combinerMap;
@@ -44,10 +44,10 @@ public class TopActions implements AlgAdpter{
 	private int combinerExpireTime;
 	
 	private static Logger logger = LoggerFactory
-			.getLogger(TopActions.class);
+			.getLogger(HotTopByGroupId.class);
 	
 	@SuppressWarnings("rawtypes")
-	public TopActions(Map conf,AlgModuleInfo algInfo){
+	public HotTopByGroupId(Map conf,AlgModuleInfo algInfo){
 		this.algInfo = algInfo;
 		this.mtClientList = TDEngineClientFactory.createMTClientList(conf);
 		this.mt = MonitorTools.getMonitorInstance(conf);

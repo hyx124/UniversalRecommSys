@@ -9,6 +9,7 @@ import backtype.storm.Config;
 import backtype.storm.StormSubmitter;
 import backtype.storm.generated.AlreadyAliveException;
 import backtype.storm.generated.InvalidTopologyException;
+import backtype.storm.topology.BoltDeclarer;
 import backtype.storm.topology.TopologyBuilder;
 import backtype.storm.tuple.Fields;
 
@@ -17,6 +18,7 @@ import com.tencent.urs.conf.AlgModuleConf.AlgModuleInfo;
 import com.tencent.urs.conf.DataFilterConf;
 import com.tencent.urs.process.AlgDealBolt;
 import com.tencent.urs.process.PretreatmentBolt;
+import com.tencent.urs.process.ResultStorageBolt;
 import com.tencent.urs.spout.TDBankSpout;
 import com.tencent.urs.utils.Constants;
 
@@ -61,10 +63,22 @@ public class URSTopology {
 				//.fieldsGrouping("TDBankSpout",Constants.action_weight_stream, new Fields("item_id","type_id"))
 				.fieldsGrouping("TDBankSpout",Constants.actions_stream, new Fields("bid","qq","uid"));	
 			
-		for(AlgModuleInfo alg: algConf.getAlgList()){
-			builder.setBolt(alg.getAlgName(), new AlgDealBolt(alg),
-					getInt(conf.get("topology."+alg.getAlgName()+".parallel").toString()))
-					.fieldsGrouping("PretreatBolt",alg.getInputStream(), new Fields(alg.getHashKey()));		
+		for(String algId: algConf.getAlgConfMap().keySet()){
+			AlgModuleInfo algInfo = algConf.getAlgInfoById(algId);
+			builder.setBolt(algInfo.getAlgName(), new AlgDealBolt(algInfo),
+					getInt(conf.get("topology."+algInfo.getAlgName()+".parallel").toString()))
+					.fieldsGrouping("PretreatBolt",algInfo.getInputStream(), new Fields(algInfo.getHashKey()));		
+		}
+		
+		BoltDeclarer bolt = builder.setBolt("ResStorBolt", new ResultStorageBolt(algConf),
+				getInt(conf.get("topology.result_storage.parallel").toString()));
+		
+		for(String algId: algConf.getAlgConfMap().keySet()){
+			AlgModuleInfo algInfo = algConf.getAlgInfoById(algId);
+			if(algInfo.isDealByCenter()){
+				bolt.fieldsGrouping(algInfo.getAlgName(),Constants.user_info_stream, new Fields("key"));
+			}
+		
 		}
 		
 		try {

@@ -5,23 +5,31 @@ import java.io.FileNotFoundException;
 import java.io.IOException;
 import java.io.Serializable;
 import java.util.ArrayList;
+import java.util.HashMap;
 import java.util.List;
 
 import org.jdom.*;
 import org.jdom.input.SAXBuilder;
 
 public class AlgModuleConf implements Serializable{
+	/**
+	 * 
+	 */
+	private static final long serialVersionUID = 1L;
+	private HashMap<String,AlgModuleInfo> algModuleMap;
 	
-
-	private ArrayList<AlgModuleInfo> algModuleList;
+	public HashMap<String,AlgModuleInfo> getAlgConfMap(){
+		return this.algModuleMap;
+	}
 	
-	public ArrayList<AlgModuleInfo> getAlgList(){
-		return this.algModuleList;
+	public AlgModuleInfo getAlgInfoById(String algId){
+		return this.algModuleMap.get(algId);
 	}
 	
 	public AlgModuleConf(){
-		this.algModuleList = new ArrayList<AlgModuleInfo>();
+		this.algModuleMap = new HashMap<String,AlgModuleInfo>();
 	}
+	
 	
 	
 	public class AlgModuleInfo{
@@ -78,6 +86,21 @@ public class AlgModuleConf implements Serializable{
 		public int getCacheExpireTime() {
 			// TODO Auto-generated method stub
 			return 0;
+		}
+
+		public int getUpdateTime() {
+			// TODO Auto-generated method stub
+			return 0;
+		}
+
+		public String getInputTable() {
+			// TODO Auto-generated method stub
+			return null;
+		}
+
+		public boolean isDealByCenter() {
+			// TODO Auto-generated method stub
+			return false;
 		}
 	}
 

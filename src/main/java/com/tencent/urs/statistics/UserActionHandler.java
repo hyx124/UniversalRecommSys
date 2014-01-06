@@ -1,7 +1,13 @@
 package com.tencent.urs.statistics;
 
 import com.tencent.urs.protobuf.Recommend;
+import com.tencent.urs.protobuf.Recommend.UserActiveDetail;
+import com.tencent.urs.protobuf.Recommend.UserActiveDetail.ActType;
+import com.tencent.urs.protobuf.Recommend.UserActiveDetail.ActType.TimeSegment;
+import com.tencent.urs.protobuf.Recommend.UserActiveDetail.ActType.TimeSegment.Item;
+import com.tencent.urs.protobuf.Recommend.UserActiveDetail.Builder;
 import com.tencent.urs.protobuf.Recommend.UserActiveHistory;
+import com.tencent.urs.protobuf.Recommend.UserActiveHistory.ActiveRecord;
 
 import java.lang.ref.SoftReference;
 import java.util.ArrayList;
@@ -19,7 +25,6 @@ import backtype.storm.tuple.Tuple;
 
 import com.tencent.monitor.MonitorEntry;
 import com.tencent.monitor.MonitorTools;
-import com.tencent.openta.protocbuf.Pb;
 
 import com.tencent.tde.client.Result;
 import com.tencent.tde.client.TairClient.TairOption;
@@ -46,8 +51,6 @@ public class UserActionHandler implements AlgAdpter{
 	private UpdateCallBack putCallBack;
 	private ConcurrentHashMap<String, ActionCombinerValue> combinerMap;
 	private int nsTableID;
-	private int dataExpireTime;
-	private int cacheExpireTime;
 	private int combinerExpireTime;
 	
 	private AlgModuleInfo algInfo;
@@ -100,9 +103,6 @@ public class UserActionHandler implements AlgAdpter{
 		this.putCallBack = new UpdateCallBack(mt, Constants.systemID, Constants.tde_interfaceID, this.getClass().getName());
 		
 		this.combinerExpireTime = Utils.getInt(conf, "combiner.expireTime",5);
-		this.dataExpireTime = Utils.getInt(conf, "table.expireTime", 7*24*3600);
-		this.cacheExpireTime = Utils.getInt(conf, "cache.expireTime", 3600);
-		
 		setCombinerTime(combinerExpireTime, this);
 	}
 
@@ -118,9 +118,10 @@ public class UserActionHandler implements AlgAdpter{
 		public void excute() {
 			try {
 				if(cacheMap.hasKey(key)){		
-					SoftReference<UserActiveHistory> oldValueHeap = cacheMap.get(key);	
-					SoftReference<UserActiveHistory> newValueHeap = mergeToHeap(values,oldValueHeap.get());
-					Save(key,newValueHeap);
+					SoftReference<UserActiveDetail> oldValueHeap = cacheMap.get(key);	
+					UserActiveDetail.Builder mergeValueBuilder = UserActiveDetail.newBuilder();
+					mergeToHeap(values,oldValueHeap.get(),mergeValueBuilder);
+					Save(key,mergeValueBuilder);
 				}else{
 					ClientAttr clientEntry = mtClientList.get(0);		
 					TairOption opt = new TairOption(clientEntry.getTimeout());
@@ -135,44 +136,89 @@ public class UserActionHandler implements AlgAdpter{
 			} catch (TairFlowLimit e) {
 				//log.error(e.toString());
 			}
-		}
+		}	
 		
-		private void mergeToHeap(ActionCombinerValue newValList,
-				UserActiveHistory oldVal,
-				SoftReference<Recommend.UserActiveHistory.Builder> updatedBuilder){			
-			HashSet<String> alreadyIn = new HashSet<String>();
-			for(String newItemId: newValList.getActRecodeMap().keySet()){
-				if(updatedBuilder.get().getActRecordsCount() >= algInfo.getTopNum()){
-					break;
-				}
-				updatedBuilder.get().addActRecords(newValList.getActRecodeMap().get(newItemId));
-				alreadyIn.add(newItemId);
-			}
-					
-			for(Recommend.UserActiveHistory.ActiveRecord eachOldVal:oldVal.getActRecordsList()){
-				if(updatedBuilder.get().getActRecordsCount() >= algInfo.getTopNum()){
-					break;
+		private void addItemToBuilder(String itemId,ActiveRecord activeRecord, 
+				UserActiveDetail oldValList, Builder mergeValueBuilder ){
+			
+			boolean find_act = false;
+			boolean find_time = false;			
+			Long now = System.currentTimeMillis()/1000;
+			
+			Item.Builder newItemBuilder = Item.newBuilder();
+			newItemBuilder.setItem(itemId).setCount(1).setLastUpdateTime(now);
+			
+			for(ActType actType: oldValList.getTypesList()){
+				ActType.Builder newActBuilder = ActType.newBuilder();
+				
+				if(actType.getActType() == activeRecord.getActType()){
+					find_act = true;
 				}
 				
-				if(alreadyIn.contains(eachOldVal.getItem())){
-					continue;
-				}				
-
-				updatedBuilder.get().addActRecords(eachOldVal);
+				for(TimeSegment timeSegList: actType.getTsegsList()){
+					TimeSegment.Builder newTimeBuilder = TimeSegment.newBuilder();
+					if(timeSegList.getTimeSegment() == now){
+						find_time = true;
+						for(Item item: timeSegList.getItemsList()){
+							if(item.getItem().equals(itemId) ){
+								newItemBuilder.setCount(newItemBuilder.getCount()+1);
+							}else{
+								newTimeBuilder.addItems(item);
+							}
+						}
+						
+						newTimeBuilder.addItems(0, newItemBuilder.build());
+						newActBuilder.addTsegs(0,newTimeBuilder.build());
+					}else if(timeSegList.getTimeSegment() > algInfo.getDataExpireTime() && timeSegList.getTimeSegment() < now){
+						newActBuilder.addTsegs(timeSegList);
+					}else{
+						continue;
+					}					
+				}
+				
+				
+				if(!find_time){
+					TimeSegment.Builder newTimeBuilder = TimeSegment.newBuilder();
+					newTimeBuilder.setTimeSegment(System.currentTimeMillis()/1000);
+					newTimeBuilder.addItems(0,newItemBuilder.build());
+					newActBuilder.addTsegs(0,newTimeBuilder.build());
+				}
+				
+				mergeValueBuilder.addTypes(0,newActBuilder.build());
+			}
+			
+		
+			if(! find_act){
+				ActType.Builder newActBuilder = ActType.newBuilder();
+				TimeSegment.Builder newTimeBuilder = TimeSegment.newBuilder();
+				newTimeBuilder.addItems(0,newItemBuilder.build());
+				newActBuilder.addTsegs(0,newTimeBuilder.build());
+				mergeValueBuilder.addTypes(0,newActBuilder.build());
 			}
 			
 		}
+		
+		private void mergeToHeap(ActionCombinerValue newValList,
+				UserActiveDetail oldValList,
+				UserActiveDetail.Builder mergeValueBuilder){			
+		
+			for(String item:newValList.getActRecodeMap().keySet()){
+				addItemToBuilder(item,newValList.getActRecodeMap().get(item),oldValList,mergeValueBuilder);
+			}
+		}
 
-		private void Save(String key,SoftReference<UserActiveHistory> newValueHeap){	
+		private void Save(String key,UserActiveDetail.Builder mergeValueBuilder){	
 			Future<Result<Void>> future = null;
 			for(ClientAttr clientEntry:mtClientList ){
-				TairOption putopt = new TairOption(clientEntry.getTimeout(),(short)0, dataExpireTime);
+				TairOption putopt = new TairOption(clientEntry.getTimeout(),(short)0, algInfo.getDataExpireTime());
 				try {
-					future = clientEntry.getClient().putAsync((short)nsTableID, key.getBytes(), newValueHeap.toString().getBytes(), putopt);
+					UserActiveDetail putValue = mergeValueBuilder.build();
+					
+					future = clientEntry.getClient().putAsync((short)algInfo.getOutputTableId(), key.getBytes(),putValue.toByteArray(), putopt);
 					clientEntry.getClient().notifyFuture(future, putCallBack, 
-							new UpdateCallBackContext(clientEntry,key,newValueHeap.toString().getBytes(),putopt));
+							new UpdateCallBackContext(clientEntry,key,putValue.toByteArray(),putopt));
 					synchronized(cacheMap){
-						cacheMap.set(key, newValueHeap, cacheExpireTime);
+						cacheMap.set(key, new SoftReference<UserActiveDetail>(putValue), algInfo.getCacheExpireTime());
 					}
 					
 					if(mt!=null){
@@ -194,10 +240,11 @@ public class UserActionHandler implements AlgAdpter{
 			byte[] oldVal = null;
 			try {
 				oldVal = afuture.get().getResult();
-				SoftReference<UserActiveHistory> oldValueHeap = 
-						new SoftReference<UserActiveHistory>(Recommend.UserActiveHistory.parseFrom(oldVal));
-				SoftReference<UserActiveHistory> newValueHeap = mergeToHeap(this.values,oldValueHeap.get());
-				Save(key,newValueHeap);
+				UserActiveDetail oldValueHeap = Recommend.UserActiveDetail.parseFrom(oldVal);
+				UserActiveDetail.Builder mergeValueBuilder = UserActiveDetail.newBuilder(); 
+						
+				mergeToHeap(this.values,oldValueHeap,mergeValueBuilder);
+				Save(key,mergeValueBuilder);
 			} catch (Exception e) {
 				
 			}

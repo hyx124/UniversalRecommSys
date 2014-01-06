@@ -1,6 +1,7 @@
 package com.tencent.urs.statistics;
 
 import com.tencent.urs.protobuf.Recommend;
+import com.tencent.urs.protobuf.Recommend.UserActiveDetail;
 import com.tencent.urs.protobuf.Recommend.UserActiveHistory;
 
 import java.lang.ref.SoftReference;
@@ -29,6 +30,7 @@ import com.tencent.urs.algorithms.AlgAdpter;
 import com.tencent.urs.asyncupdate.UpdateCallBack;
 import com.tencent.urs.asyncupdate.UpdateCallBackContext;
 import com.tencent.urs.combine.ActionCombinerValue;
+import com.tencent.urs.combine.UpdateKey;
 import com.tencent.urs.conf.AlgModuleConf.AlgModuleInfo;
 import com.tencent.urs.tdengine.TDEngineClientFactory;
 import com.tencent.urs.tdengine.TDEngineClientFactory.ClientAttr;
@@ -36,6 +38,7 @@ import com.tencent.urs.utils.Constants;
 import com.tencent.urs.utils.DataCache;
 import com.tencent.urs.utils.LRUCache;
 import com.tencent.urs.utils.Utils;
+import com.tencent.urs.utils.Utils.actionType;
 
 public class CtrActionHandler implements AlgAdpter{
 	private List<ClientAttr> mtClientList;	
@@ -59,7 +62,7 @@ public class CtrActionHandler implements AlgAdpter{
 						for (String key : keySet) {
 							ActionCombinerValue expireTimeValue  = combinerMap.remove(key);
 							try{
-								new ActionDetailUpdateAysncCallback(key,expireTimeValue).excute();
+								new CtrUpdateAysncCallback(key,expireTimeValue).excute();
 							}catch(Exception e){
 								//mt.addCountEntry(systemID, interfaceID, item, count)
 							}
@@ -73,7 +76,13 @@ public class CtrActionHandler implements AlgAdpter{
 	}
 	
 	private void combinerKeys(String key,ActionCombinerValue value) {
-		//combinerMap.(key,value);
+		synchronized (combinerMap) {
+			if(combinerMap.containsKey(key)){
+				ActionCombinerValue oldvalue = combinerMap.get(key);
+				value.incrument(oldvalue);
+			}
+			combinerMap.put(key, value);
+		}
 	}	
 
 	@SuppressWarnings("rawtypes")
@@ -92,11 +101,12 @@ public class CtrActionHandler implements AlgAdpter{
 
 	}
 
-	private class ActionDetailUpdateAysncCallback implements MutiClientCallBack{
+	private class CtrUpdateAysncCallback implements MutiClientCallBack{
+		//adpos#page#itemid
 		private final String key;
 		private final ActionCombinerValue values;
 
-		public ActionDetailUpdateAysncCallback(String key, ActionCombinerValue values) {
+		public CtrUpdateAysncCallback(String key, ActionCombinerValue values) {
 			this.key = key ; 
 			this.values = values;								
 		}
@@ -105,7 +115,8 @@ public class CtrActionHandler implements AlgAdpter{
 			try {
 				if(cacheMap.hasKey(key)){		
 					SoftReference<UserActiveHistory> oldValueHeap = cacheMap.get(key);	
-					SoftReference<UserActiveHistory> newValueHeap = mergeToHeap(values,oldValueHeap);
+					Recommmend.CtrInfo.Builder 
+					mergeToHeap(values,oldValueHeap);
 					Save(key,newValueHeap);
 				}else{
 					ClientAttr clientEntry = mtClientList.get(0);		
@@ -123,8 +134,10 @@ public class CtrActionHandler implements AlgAdpter{
 			}
 		}
 		
-		private SoftReference<UserActiveHistory> mergeToHeap(ActionCombinerValue newVal,SoftReference<UserActiveHistory> oldVal){
-			return oldVal;
+		private void mergeToHeap(ActionCombinerValue newValList,
+				UserActiveDetail oldValList,
+				UserActiveDetail.Builder mergeValueBuilder){			
+		
 		}
 
 		private void Save(String key,SoftReference<UserActiveHistory> value){	
@@ -139,9 +152,9 @@ public class CtrActionHandler implements AlgAdpter{
 			byte[] oldVal = null;
 			try {
 				oldVal = afuture.get().getResult();
-				SoftReference<UserActiveHistory> oldValueHeap = 
-						new SoftReference<UserActiveHistory>(Recommend.UserActiveHistory.parseFrom(oldVal));
-				SoftReference<UserActiveHistory> newValueHeap = mergeToHeap(this.values,oldValueHeap);
+				UserActiveHistory oldValueHeap = UserActiveHistory.parseFrom(oldVal);
+				
+				mergeToHeap(this.values,oldValueHeap);
 				Save(key,newValueHeap);
 			} catch (Exception e) {
 				
@@ -155,22 +168,17 @@ public class CtrActionHandler implements AlgAdpter{
 		// TODO Auto-generated method stub
 		//只处理浏览数据
 		
-		String groupId = input.getStringByField("group_id");
-		String tabId = input.getStringByField("tabId");
+		String adpos = input.getStringByField("adpos");
 		String itemId = input.getStringByField("itemId");
 		String result = input.getStringByField("result");
-		String act = input.getStringByField("action_type");
-		Utils.actionType action_type = Utils.actionType.PageView;
-
+		Utils.actionType act = (actionType) input.getValueByField("action_type");
 		
-		if(action_type.equals(Utils.actionType.Impress)
-				||action_type.equals(Utils.actionType.Click)){
+		if(act == Utils.actionType.Impress || act == Utils.actionType.Click){
 			String[] items = result.split(",",-1);
 			for(String eachItem: items){
 				if(Utils.isItemIdValid(eachItem)){
-					String key = tabId+"#"+itemId+"#"+eachItem;
+					String key = adpos+"#"+itemId+"#"+eachItem;
 					ActionCombinerValue value = new ActionCombinerValue();
-					value.init(Utils.actionType.Impress);
 					combinerKeys(key,value);
 				}
 			}	

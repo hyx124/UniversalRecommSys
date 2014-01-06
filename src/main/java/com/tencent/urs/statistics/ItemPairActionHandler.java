@@ -1,7 +1,7 @@
 package com.tencent.urs.statistics;
 
 import com.tencent.urs.protobuf.Recommend;
-import com.tencent.urs.protobuf.Recommend.UserActiveHistory;
+import com.tencent.urs.protobuf.Recommend.UserActiveDetail;
 
 import java.lang.ref.SoftReference;
 import java.util.HashMap;
@@ -27,6 +27,7 @@ import com.tencent.tde.client.impl.MutiThreadCallbackClient.MutiClientCallBack;
 import com.tencent.urs.algorithms.AlgAdpter;
 import com.tencent.urs.asyncupdate.UpdateCallBack;
 import com.tencent.urs.combine.ActionCombinerValue;
+import com.tencent.urs.combine.GroupActionCombinerValue;
 import com.tencent.urs.combine.UpdateKey;
 import com.tencent.urs.conf.AlgModuleConf.AlgModuleInfo;
 import com.tencent.urs.tdengine.TDEngineClientFactory;
@@ -38,7 +39,7 @@ import com.tencent.urs.utils.Utils;
 public class ItemPairActionHandler implements AlgAdpter{
 	private List<ClientAttr> mtClientList;	
 	private MonitorTools mt;
-	private DataCache<Recommend.UserActiveHistory> userActionCache;
+	private DataCache<UserActiveDetail> userActionCache;
 	private DataCache<Integer> pairItemCache;
 	private UpdateCallBack putCallBack;
 	private ConcurrentHashMap<UpdateKey, ActionCombinerValue> actionCombinerMap;
@@ -84,7 +85,7 @@ public class ItemPairActionHandler implements AlgAdpter{
 		this.nsTableID = Utils.getInt(conf, "tableid", 11);
 		this.mtClientList = TDEngineClientFactory.createMTClientList(conf);
 		this.mt = MonitorTools.getMonitorInstance(conf);
-		this.userActionCache = new DataCache(conf);
+		this.userActionCache = new DataCache<UserActiveDetail>(conf);
 		this.actionCombinerMap = new ConcurrentHashMap<UpdateKey,ActionCombinerValue>(1024);
 				
 		
@@ -99,12 +100,12 @@ public class ItemPairActionHandler implements AlgAdpter{
 		private final UpdateKey key;
 		private final String item;
 		private final String putKey;
-		private final Integer incrWeight;
+		private final Integer changeWeight;
 
-		public ItemPairCountUpdateCallback(UpdateKey key, String item, Integer incrWeight) {
+		public ItemPairCountUpdateCallback(UpdateKey key, String item, Integer changeWeight) {
 			this.key = key ; 
 			this.item = item;		
-			this.incrWeight = incrWeight;
+			this.changeWeight = changeWeight;
 			this.putKey = key.getItemId()+"#"+item+"#"+key.getGroupId();
 		}
 		
@@ -112,7 +113,7 @@ public class ItemPairActionHandler implements AlgAdpter{
 			try {
 				if(pairItemCache.hasKey(putKey)){		
 					SoftReference<Integer> oldValue = pairItemCache.get(putKey);	
-					SoftReference<Integer> newValueList = new SoftReference<Integer>(oldValue.get()+incrWeight);
+					SoftReference<Integer> newValueList = new SoftReference<Integer>(oldValue.get()+changeWeight);
 					Save(putKey,newValueList);
 				}else{
 					ClientAttr clientEntry = mtClientList.get(0);		
@@ -144,7 +145,7 @@ public class ItemPairActionHandler implements AlgAdpter{
 				String oldVal = afuture.get().getResult().toString();
 				SoftReference<Integer> oldValue = 
 						new SoftReference<Integer>(Integer.valueOf(oldVal));
-				SoftReference<Integer> newValue = new SoftReference<Integer>(oldValue.get()+incrWeight);
+				SoftReference<Integer> newValue = new SoftReference<Integer>(oldValue.get()+changeWeight);
 				Save(putKey,newValue);
 			} catch (Exception e) {
 				
@@ -165,16 +166,16 @@ public class ItemPairActionHandler implements AlgAdpter{
 		}
 
 		private void next(HashMap<String,Integer> itemMap){
-			for(String eachItem:itemMap.keySet()){
-				new ItemPairCountUpdateCallback(key,eachItem,itemMap.get(eachItem)).excute();
+			for(String itemId:itemMap.keySet()){
+				new ItemPairCountUpdateCallback(key,itemId,itemMap.get(itemId)).excute();
 			}
 		}
 		
 		public void excute() {
 			try {
 				if(userActionCache.hasKey(checkKey)){		
-					SoftReference<UserActiveHistory> oldValueHeap = userActionCache.get(checkKey);	
-					next(getChangedItems(oldValueHeap));
+					SoftReference<UserActiveDetail> oldValueHeap = userActionCache.get(checkKey);	
+					next(getChangedItems(oldValueHeap.get()));
 				}else{
 					ClientAttr clientEntry = mtClientList.get(0);		
 					TairOption opt = new TairOption(clientEntry.getTimeout());
@@ -198,8 +199,7 @@ public class ItemPairActionHandler implements AlgAdpter{
 			byte[] oldVal = null;
 			try {
 				oldVal = afuture.get().getResult();
-				SoftReference<UserActiveHistory> oldValueHeap = 
-						new SoftReference<UserActiveHistory>(Recommend.UserActiveHistory.parseFrom(oldVal));
+				UserActiveDetail oldValueHeap = UserActiveDetail.parseFrom(oldVal);
 				next(getChangedItems(oldValueHeap));
 			} catch (Exception e) {
 				
@@ -207,8 +207,66 @@ public class ItemPairActionHandler implements AlgAdpter{
 			
 		}
 		
-		private HashMap<String,Integer> getChangedItems(SoftReference<UserActiveHistory> oldValueHeap){
-			return null;
+		private HashMap<String,Integer> getChangedItems(UserActiveDetail oldValueHeap){
+			HashMap<String,Integer>  lastWeightMap = new HashMap<String,Integer>();		
+			HashMap<String,Integer>  nowWeightMap = new HashMap<String,Integer>();	
+			
+			for(Recommend.UserActiveDetail.ActType act:oldValueHeap.getTypesList()){
+				for(Recommend.UserActiveDetail.ActType.TimeSegment ts: act.getTsegsList()){
+					if(justExpireSoon(ts.getTimeSegment())){
+						for(Recommend.UserActiveDetail.ActType.TimeSegment.Item item:ts.getItemsList()){
+							if(!item.getItem().equals(key.getItemId())){
+								
+								if(lastWeightMap.containsKey(item.getItem())){
+									if(act.getActType().getNumber() < lastWeightMap.get(item.getItem()) ){
+										lastWeightMap.put(item.getItem(), act.getActType().getNumber());
+									}
+								}else{
+									lastWeightMap.put(item.getItem(), act.getActType().getNumber());
+								}
+							} 
+						}
+					}else if(justUpdateSoon(ts.getTimeSegment())){
+						for(Recommend.UserActiveDetail.ActType.TimeSegment.Item item:ts.getItemsList()){
+							if(!item.getItem().equals(key.getItemId())){
+								
+								if(nowWeightMap.containsKey(item.getItem())){
+									if(act.getActType().getNumber() < nowWeightMap.get(item.getItem()) ){
+										nowWeightMap.put(item.getItem(), act.getActType().getNumber());
+									}
+								}else{
+									nowWeightMap.put(item.getItem(), act.getActType().getNumber());
+								}
+							}
+						}
+					}
+				}
+			}
+						
+			for(String itemId:lastWeightMap.keySet()){
+				int changeWeight = 0;
+				if(nowWeightMap.containsKey(itemId)){
+					changeWeight = nowWeightMap.get(itemId) - lastWeightMap.get(itemId);
+					
+				}else{
+					changeWeight = 0 - lastWeightMap.get(itemId);
+				}
+				
+				if(changeWeight != 0){
+					nowWeightMap.put(itemId, changeWeight);
+				}
+			}
+			return nowWeightMap;
+		}
+
+		private boolean justUpdateSoon(long timeSegment) {
+			// TODO Auto-generated method stub
+			return false;
+		}
+
+		private boolean justExpireSoon(long timeSegment) {
+			// TODO Auto-generated method stub
+			return false;
 		}
 		
 		
@@ -221,17 +279,13 @@ public class ItemPairActionHandler implements AlgAdpter{
 		Integer groupId = input.getIntegerByField("group_id");
 		String adpos = input.getStringByField("adpos");
 		String itemId = input.getStringByField("itemId");
-		Utils.actionType action_type = (Utils.actionType) input.getValueByField("action_type");
-		
 		
 		ActionCombinerValue value = new ActionCombinerValue();
-		value.init(action_type);
-				
-		if(Utils.isGroupIdVaild(groupId)){
-			groupId = 0;
+
+		if(Utils.isQNumValid(uin) && Utils.isGroupIdVaild(groupId) && Utils.isItemIdValid(itemId)){
+			UpdateKey key = new UpdateKey(uin,groupId,adpos,itemId);
+			combinerKeys(key,value);		
 		}
-		
-		UpdateKey key = new UpdateKey(uin,groupId,adpos,itemId);
-		combinerKeys(key,value);
+
 	}
 }

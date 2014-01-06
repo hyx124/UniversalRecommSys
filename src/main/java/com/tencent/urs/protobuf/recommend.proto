@@ -130,30 +130,33 @@ message ItemInfo
 	required ValidType VFlag = 5 [default = UNKNOWN];			//item是否有效
 }
 
+
 message UserActiveDetail
 {	
-	message ActType
-    {
-		required ActiveType actType = 1 [default = Unknown]; 			//item行为类型
-		message TimeSegment {								
-			message Item{
-				required string Item        = 1;                        //item
-				optional uint32 BigCtg      = 2;   						//item所属大类目
-				optional uint32 MiddleCtg   = 3;  						//item所属中类目
-				optional uint32 SmallCtg    = 4;  						//item所属小类目
-				optional uint64 LastUpdateTime = 5; 					//item行为发生时间戳(s)
-				optional uint64 Count = 6;								//该事件片段内，用户该行为产生的次数	
-			}	
-			required uint64 TimeSegment = 1;	
-			repeated Item items  = 2;
-		}			
-		
-		repeated TimeSegment tsegs  = 2;
-		
-    }
-
-    repeated ActType types  = 1;
+	message TimeSegment {	
+		required uint64 TimeId = 1;	
+		message ItemInfo{							
+			required string Item        = 1;                        //item
+			message ActType
+    		{
+    			required ActiveType ActType = 1 [default = Unknown]; 
+    			optional uint64 Count = 2;		
+    			optional uint64 LastUpdateTime = 3; 				//item行为发生时间戳(s)
+    		}
+    		required ActType acts = 2;
+		}
+		repeated ItemInfo items = 2;
+	}				
+	repeated TimeSegment tsegs = 1;
 }
 
+message CtrInfo
+{	
+	message TimeSegment {								
+		required Long click = 1;
+		optional Long impress = 2;
+	}
+    repeated TimeSegment tsegs  = 1;
+}
 
 option optimize_for = LITE_RUNTIME;

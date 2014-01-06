@@ -1,4 +1,4 @@
-package com.tencent.urs.algorithms;
+package com.tencent.urs.statistics;
 
 import java.lang.ref.SoftReference;
 import java.util.HashSet;

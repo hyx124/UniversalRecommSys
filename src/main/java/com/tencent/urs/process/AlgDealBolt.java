@@ -64,7 +64,7 @@ public class AlgDealBolt implements IRichBolt {
 	@Override
 	public void execute(Tuple input) {
 		try{		
-			algAdpter.deal(input);
+			algAdpter.deal(this.algInfo,input);
 		}
 		catch(Exception e){
 			logger.error(e.toString());

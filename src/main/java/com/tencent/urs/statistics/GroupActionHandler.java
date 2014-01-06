@@ -1,8 +1,6 @@
 package com.tencent.urs.statistics;
 
 import com.tencent.urs.protobuf.Recommend;
-import com.tencent.urs.protobuf.Recommend.UserActiveHistory;
-
 import java.lang.ref.SoftReference;
 import java.util.List;
 import java.util.Map;
@@ -25,7 +23,7 @@ import com.tencent.tde.client.error.TairRpcError;
 import com.tencent.tde.client.impl.MutiThreadCallbackClient.MutiClientCallBack;
 import com.tencent.urs.algorithms.AlgAdpter;
 import com.tencent.urs.asyncupdate.UpdateCallBack;
-import com.tencent.urs.combine.ActionCombinerValue;
+import com.tencent.urs.combine.GroupActionCombinerValue;
 import com.tencent.urs.combine.UpdateKey;
 import com.tencent.urs.conf.AlgModuleConf.AlgModuleInfo;
 import com.tencent.urs.tdengine.TDEngineClientFactory;
@@ -37,11 +35,13 @@ import com.tencent.urs.utils.Utils;
 public class GroupActionHandler implements AlgAdpter{
 	private List<ClientAttr> mtClientList;	
 	private MonitorTools mt;
-	private DataCache<Recommend.UserActiveHistory> userActionCache;
+	private DataCache<Recommend.UserActiveDetail> userActionCache;
 	private DataCache<Integer> groupCountCache;
-	private ConcurrentHashMap<UpdateKey, ActionCombinerValue> combinerMap;
+	private ConcurrentHashMap<UpdateKey, GroupActionCombinerValue> combinerMap;
 	private int nsTableID;
 	private UpdateCallBack putCallBack;
+	
+	private AlgModuleInfo algInfo;
 	
 	private static Logger logger = LoggerFactory
 			.getLogger(GroupActionHandler.class);
@@ -55,7 +55,7 @@ public class GroupActionHandler implements AlgAdpter{
 						Thread.sleep(second * 1000);
 						Set<UpdateKey> keySet = combinerMap.keySet();
 						for (UpdateKey key : keySet) {
-							ActionCombinerValue expireTimeValue  = combinerMap.remove(key);
+							GroupActionCombinerValue expireTimeValue  = combinerMap.remove(key);
 							try{
 								new ActionDetailCheckCallBack(key,expireTimeValue).excute();
 							}catch(Exception e){
@@ -70,12 +70,13 @@ public class GroupActionHandler implements AlgAdpter{
 		}).start();
 	}
 	
-	private void combinerKeys(UpdateKey key,ActionCombinerValue value) {
-		//combinerMap.(key,value);
-		if(combinerMap.get(key) != null){
-			
+	private void combinerKeys(UpdateKey key,GroupActionCombinerValue value) {
+		synchronized(combinerMap){
+			if(combinerMap.containsKey(key)){
+				value.incrument(combinerMap.get(key));
+			}
+			combinerMap.put(key, value);
 		}
-		
 	}	
 
 	@SuppressWarnings("rawtypes")
@@ -83,9 +84,9 @@ public class GroupActionHandler implements AlgAdpter{
 		this.nsTableID = Utils.getInt(conf, "tableid", 11);
 		this.mtClientList = TDEngineClientFactory.createMTClientList(conf);
 		this.mt = MonitorTools.getMonitorInstance(conf);
-		this.userActionCache = new DataCache(conf);
-		this.groupCountCache = new DataCache(conf);
-		this.combinerMap = new ConcurrentHashMap<UpdateKey,ActionCombinerValue>(1024);
+		this.userActionCache = new DataCache<Recommend.UserActiveDetail>(conf);
+		this.groupCountCache = new DataCache<Integer>(conf);
+		this.combinerMap = new ConcurrentHashMap<UpdateKey,GroupActionCombinerValue>(1024);
 				
 		
 		this.putCallBack = new UpdateCallBack(mt, Constants.systemID, Constants.tde_interfaceID, this.getClass().getName());
@@ -127,16 +128,10 @@ public class GroupActionHandler implements AlgAdpter{
 				//log.error(e.toString());
 			}
 		}
-		
-		private SoftReference<UserActiveHistory> addToHeap(Integer newVal,SoftReference<UserActiveHistory> oldValueList){
-			return oldValueList;
-		}
 
 		private void Save(String key,SoftReference<Integer> value){	
+			groupCountCache.set(key, value, algInfo.getCacheExpireTime());
 			
-			//put to tde
-			int cahceExpireTime = 5;
-			groupCountCache.set(key, value, cahceExpireTime);
 		}
 		
 		@Override
@@ -160,25 +155,26 @@ public class GroupActionHandler implements AlgAdpter{
 	private class ActionDetailCheckCallBack implements MutiClientCallBack{
 		private final UpdateKey key;
 		private final String userCheckKey;
-		private final ActionCombinerValue values;
+		private final GroupActionCombinerValue values;
 
-		public ActionDetailCheckCallBack(UpdateKey key, ActionCombinerValue values) {
+		public ActionDetailCheckCallBack(UpdateKey key, GroupActionCombinerValue values) {
 			this.key = key ; 
 			this.values = values;		
-			this.userCheckKey = this.key.getUin()+"#"+"AlgID";
+			this.userCheckKey = key.getUin() + "#" + algInfo.getAlgName();
 		}
 
 		public void next(Integer weight){
-			if(weight>0){
-				new GroupCountUpdateCallback(key,weight).excute();
-			}
+			new GroupCountUpdateCallback(key,weight).excute();
+			
+			UpdateKey noGroupKey = new UpdateKey(key.getUin(),0,key.getAdpos(),key.getItemId());
+			new GroupCountUpdateCallback(noGroupKey,weight).excute();
 		}
 		
 		public void excute() {
 			try {
 				if(userActionCache.hasKey(userCheckKey)){		
-					SoftReference<UserActiveHistory> oldValueHeap = userActionCache.get(userCheckKey);	
-					next(getIncreasedWeight(oldValueHeap));
+					SoftReference<Recommend.UserActiveDetail> oldValueHeap = userActionCache.get(userCheckKey);	
+					next(getIncreasedWeight(oldValueHeap.get()));
 				}else{
 					ClientAttr clientEntry = mtClientList.get(0);		
 					TairOption opt = new TairOption(clientEntry.getTimeout());
@@ -195,8 +191,36 @@ public class GroupActionHandler implements AlgAdpter{
 			}
 		}
 			
-		private Integer getIncreasedWeight(SoftReference<UserActiveHistory> oldValueHeap){
-			return 0;
+		private Integer getIncreasedWeight(Recommend.UserActiveDetail oldValueHeap){
+			int lastMaxCount = 0;		
+			int nowMaxCount = 0;			
+			for(Recommend.UserActiveDetail.ActType act:oldValueHeap.getTypesList()){
+				for(Recommend.UserActiveDetail.ActType.TimeSegment ts: act.getTsegsList()){
+					if(justExpireSoon(ts.getTimeSegment())){
+						for(Recommend.UserActiveDetail.ActType.TimeSegment.Item item:ts.getItemsList()){
+							if(item.getItem().equals(key.getItemId())){
+								lastMaxCount = Math.max(lastMaxCount, act.getActType().getNumber());
+								
+							}
+						}
+					}else if(justUpdateSoon(ts.getTimeSegment())){
+						for(Recommend.UserActiveDetail.ActType.TimeSegment.Item item:ts.getItemsList()){
+							if(item.getItem().equals(key.getItemId())){
+								nowMaxCount = Math.max(nowMaxCount, act.getActType().getNumber());
+							}
+						}
+					}
+				}
+			}
+			return nowMaxCount - lastMaxCount;
+		}
+
+		private boolean justUpdateSoon(long timeSegment) {
+			return false;
+		}
+
+		private boolean justExpireSoon(long timeSegment) {
+			return false;
 		}
 
 		@Override
@@ -206,9 +230,9 @@ public class GroupActionHandler implements AlgAdpter{
 			byte[] oldVal = null;
 			try {
 				oldVal = afuture.get().getResult();
-				SoftReference<UserActiveHistory> oldValueHeap = 
-						new SoftReference<UserActiveHistory>(Recommend.UserActiveHistory.parseFrom(oldVal));
-				next(getIncreasedWeight(oldValueHeap));
+				SoftReference<Recommend.UserActiveDetail> oldValueHeap = 
+						new SoftReference<Recommend.UserActiveDetail>(Recommend.UserActiveDetail.parseFrom(oldVal));
+				next(getIncreasedWeight(oldValueHeap.get()));
 			} catch (Exception e) {
 				
 			}
@@ -218,22 +242,22 @@ public class GroupActionHandler implements AlgAdpter{
 
 	@Override
 	public void deal(AlgModuleInfo algInfo,Tuple input) {
-		// TODO Auto-generated method stub		
+		// TODO Auto-generated method stub	
+		if(algInfo.getUpdateTime() > this.algInfo.getUpdateTime()){
+			this.algInfo = algInfo;
+		}
+		
 		Long uin = input.getLongByField("uin");
 		Integer groupId = input.getIntegerByField("group_id");
 		String adpos = input.getStringByField("adpos");
 		String itemId = input.getStringByField("itemId");
-		Utils.actionType action_type = (Utils.actionType) input.getValueByField("action_type");
 		
 		
-		ActionCombinerValue value = new ActionCombinerValue();
-		value.init(action_type);
-				
-		if(Utils.isGroupIdVaild(groupId)){
-			groupId = 0;
+		GroupActionCombinerValue value = new GroupActionCombinerValue();
+		
+		if(Utils.isQNumValid(uin) && Utils.isGroupIdVaild(groupId) && Utils.isItemIdValid(itemId)){
+			UpdateKey key = new UpdateKey(uin,groupId,adpos,itemId);
+			combinerKeys(key,value);		
 		}
-		
-		UpdateKey key = new UpdateKey(uin,groupId,adpos,itemId);
-		combinerKeys(key,value);
 	}
 }
