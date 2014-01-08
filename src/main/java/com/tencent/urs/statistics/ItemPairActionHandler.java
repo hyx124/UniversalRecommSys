@@ -2,6 +2,7 @@ package com.tencent.urs.statistics;
 
 import com.tencent.urs.protobuf.Recommend;
 import com.tencent.urs.protobuf.Recommend.UserActiveDetail;
+import com.tencent.urs.protobuf.Recommend.UserActiveHistory.ActiveRecord;
 
 import java.lang.ref.SoftReference;
 import java.util.HashMap;
@@ -161,13 +162,13 @@ public class ItemPairActionHandler implements AlgAdpter{
 
 		public ActionDetailCheckCallBack(UpdateKey key, ActionCombinerValue values){
 			this.key = key ; 
-			this.values = values;		
+			this.values = values;			
 			this.checkKey = this.key.getUin()+"#"+"AlgID";
 		}
 
-		private void next(HashMap<String,Integer> itemMap){
+		private void next(String item, HashMap<String,Integer> itemMap){
 			for(String itemId:itemMap.keySet()){
-				new ItemPairCountUpdateCallback(key,itemId,itemMap.get(itemId)).excute();
+				new ItemPairCountUpdateCallback(key, itemId, itemMap.get(itemId)).excute();
 			}
 		}
 		
@@ -175,7 +176,11 @@ public class ItemPairActionHandler implements AlgAdpter{
 			try {
 				if(userActionCache.hasKey(checkKey)){		
 					SoftReference<UserActiveDetail> oldValueHeap = userActionCache.get(checkKey);	
-					next(getChangedItems(oldValueHeap.get()));
+					for(String item:values.getActRecodeMap().keySet()){
+						HashMap<String,Integer> changeItemMap = getPairItems(oldValueHeap.get() , values.getActRecodeMap().get(item));
+						next(item,changeItemMap);
+					}
+					
 				}else{
 					ClientAttr clientEntry = mtClientList.get(0);		
 					TairOption opt = new TairOption(clientEntry.getTimeout());
@@ -200,44 +205,43 @@ public class ItemPairActionHandler implements AlgAdpter{
 			try {
 				oldVal = afuture.get().getResult();
 				UserActiveDetail oldValueHeap = UserActiveDetail.parseFrom(oldVal);
-				next(getChangedItems(oldValueHeap));
+				for(String item:values.getActRecodeMap().keySet()){
+					HashMap<String,Integer> changeItemMap = getPairItems(oldValueHeap , values.getActRecodeMap().get(item));
+					next(item,changeItemMap);
+				}
 			} catch (Exception e) {
 				
 			}
 			
 		}
 		
-		private HashMap<String,Integer> getChangedItems(UserActiveDetail oldValueHeap){
+		private HashMap<String,Integer> getPairItems(UserActiveDetail oldValueHeap, ActiveRecord activeRecord){
 			HashMap<String,Integer>  lastWeightMap = new HashMap<String,Integer>();		
 			HashMap<String,Integer>  nowWeightMap = new HashMap<String,Integer>();	
 			
-			for(Recommend.UserActiveDetail.ActType act:oldValueHeap.getTypesList()){
-				for(Recommend.UserActiveDetail.ActType.TimeSegment ts: act.getTsegsList()){
-					if(justExpireSoon(ts.getTimeSegment())){
-						for(Recommend.UserActiveDetail.ActType.TimeSegment.Item item:ts.getItemsList()){
-							if(!item.getItem().equals(key.getItemId())){
-								
-								if(lastWeightMap.containsKey(item.getItem())){
-									if(act.getActType().getNumber() < lastWeightMap.get(item.getItem()) ){
-										lastWeightMap.put(item.getItem(), act.getActType().getNumber());
-									}
-								}else{
-									lastWeightMap.put(item.getItem(), act.getActType().getNumber());
-								}
-							} 
-						}
-					}else if(justUpdateSoon(ts.getTimeSegment())){
-						for(Recommend.UserActiveDetail.ActType.TimeSegment.Item item:ts.getItemsList()){
-							if(!item.getItem().equals(key.getItemId())){
-								
-								if(nowWeightMap.containsKey(item.getItem())){
-									if(act.getActType().getNumber() < nowWeightMap.get(item.getItem()) ){
-										nowWeightMap.put(item.getItem(), act.getActType().getNumber());
-									}
-								}else{
-									nowWeightMap.put(item.getItem(), act.getActType().getNumber());
-								}
+			for(Recommend.UserActiveDetail.TimeSegment tsegs:oldValueHeap.getTsegsList()){
+				HashMap<String,Integer>  doWeightMap = null;
+				if(justExpireSoon(tsegs.getTimeId())){
+					doWeightMap = lastWeightMap;
+				}else if(justUpdateSoon(tsegs.getTimeId())){
+					doWeightMap = nowWeightMap;
+				}else{
+					continue;
+				}
+				
+				for(Recommend.UserActiveDetail.TimeSegment.ItemInfo item: tsegs.getItemsList()){
+					if(item.getItem().equals(key.getItemId())){
+						continue;
+					}
+						
+					for(Recommend.UserActiveDetail.TimeSegment.ItemInfo.ActType act:item.getActsList()){
+						if(nowWeightMap.containsKey(item.getItem())){
+							if(act.getActType().getNumber() < nowWeightMap.get(item.getItem()) ){
+								doWeightMap.put(item.getItem(), act.getActType().getNumber());
 							}
+						}else{
+							int minWeight = Math.min(act.getActType().getNumber(), activeRecord.getActType().getNumber());
+							doWeightMap.put(item.getItem(), minWeight);
 						}
 					}
 				}
@@ -281,9 +285,9 @@ public class ItemPairActionHandler implements AlgAdpter{
 		String itemId = input.getStringByField("itemId");
 		
 		ActionCombinerValue value = new ActionCombinerValue();
-
+		
 		if(Utils.isQNumValid(uin) && Utils.isGroupIdVaild(groupId) && Utils.isItemIdValid(itemId)){
-			UpdateKey key = new UpdateKey(uin,groupId,adpos,itemId);
+			UpdateKey key = new UpdateKey(uin,groupId,adpos,"");
 			combinerKeys(key,value);		
 		}
 

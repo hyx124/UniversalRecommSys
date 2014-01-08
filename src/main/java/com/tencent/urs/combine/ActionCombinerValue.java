@@ -32,8 +32,7 @@ public class ActionCombinerValue implements Combiner<ActionCombinerValue>,Serial
 	}
 		
 	@Override
-	public void incrument(ActionCombinerValue other) {
-		
+	public void incrument(ActionCombinerValue other) {		
 		for(String itemId: other.getActRecodeMap().keySet()){
 			actRecordMap.put(itemId, other.getActRecodeMap().get(itemId));
 		}

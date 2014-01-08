@@ -1,6 +1,7 @@
 package com.tencent.urs.algorithms;
 
 import java.lang.ref.SoftReference;
+import java.util.HashMap;
 import java.util.HashSet;
 import java.util.List;
 import java.util.Map;
@@ -30,6 +31,7 @@ import com.tencent.urs.conf.AlgModuleConf.AlgModuleInfo;
 import com.tencent.urs.protobuf.Recommend;
 import com.tencent.urs.protobuf.Recommend.UserActiveDetail;
 import com.tencent.urs.protobuf.Recommend.UserActiveHistory;
+import com.tencent.urs.protobuf.Recommend.UserActiveHistory.ActiveRecord;
 import com.tencent.urs.tdengine.TDEngineClientFactory;
 import com.tencent.urs.tdengine.TDEngineClientFactory.ClientAttr;
 import com.tencent.urs.utils.Constants;
@@ -41,6 +43,7 @@ public class AR implements AlgAdpter{
 	private MonitorTools mt;
 	private ConcurrentHashMap<UpdateKey, ActionCombinerValue> combinerMap;
 	private DataCache<UserActiveDetail> cacheMap;
+	//private DataCache<UserActiveDetail> cacheMap;
 	private AlgModuleInfo algInfo;
 	private UpdateCallBack putCallBack;
 	private int combinerExpireTime;
@@ -69,9 +72,9 @@ public class AR implements AlgAdpter{
 						Thread.sleep(second * 1000);
 						Set<UpdateKey> keySet = combinerMap.keySet();
 						for (UpdateKey key : keySet) {
-							combinerMap.remove(key);
+							ActionCombinerValue value = combinerMap.remove(key);
 							try{
-								new GetItemCountCallBack(key).excute();
+								new GetItemPairsCallBack(key,value).excute();
 							}catch(Exception e){
 							}
 						}
@@ -83,34 +86,74 @@ public class AR implements AlgAdpter{
 		}).start();
 	}
 	
-	private void combinerKeys(UpdateKey key) {
-		combinerMap.put(key, null);
+	private void combinerKeys(UpdateKey key,ActionCombinerValue value) {
+		combinerMap.put(key, value);
 	}	
 	
-	private class GetItemPairCallBack implements MutiClientCallBack{
+	private class GetPairsCountCallBack implements MutiClientCallBack{
 		private final UpdateKey key;
-
-		public GetItemPairCallBack(UpdateKey key) {
+		private final Integer itemCount1;
+		private final Integer itemCount2;
+		private final String otherItem;
+		
+		public GetPairsCountCallBack(UpdateKey key,String otherItem,Integer itemCount1,Integer itemCount2) {
 			this.key = key ; 
+			this.otherItem = otherItem;
+			this.itemCount1 = itemCount1;
+			this.itemCount2 = itemCount2;
+		}
+
+		public void excute() {
+			try {
+				
+				String checkKey = key.getUin() + "#DETAIl";				
+				ClientAttr clientEntry = mtClientList.get(0);		
+				TairOption opt = new TairOption(clientEntry.getTimeout());
+				Future<Result<byte[]>> future = clientEntry.getClient().getAsync((short)algInfo.getOutputTableId(),checkKey.getBytes(),opt);
+				clientEntry.getClient().notifyFuture(future, this,clientEntry);			
+			} catch (TairQueueOverflow e) {
+				//log.error(e.toString());
+			} catch (TairRpcError e) {
+				//log.error(e.toString());
+			} catch (TairFlowLimit e) {
+				//log.error(e.toString());
+			}
+		}
+
+		@Override
+		public void handle(Future<?> future, Object context) {			
+			@SuppressWarnings("unchecked")
+			Future<Result<byte[]>> afuture = (Future<Result<byte[]>>) future;
+			try {
+				Result<byte[]> result = afuture.get();	
+				if(result.isSuccess() && result.getResult()!=null){
+					String  pair = Recommend.UserActiveDetail.parseFrom(result.getResult());
+					HashSet<String> itemSet = getPairItems(oldValueHeap,key.getItemId());	
+				}
+			} catch (Exception e) {
+				
+			}
+			
+		}
+	}
+	
+	private class GetItemPairsCallBack implements MutiClientCallBack{
+		private final UpdateKey key;
+		private final String itemCount;
+		public GetItemPairsCallBack(UpdateKey key,String itemCount) {
+			this.key = key ; 
+			this.itemCount = itemCount;
 		}
 
 		public void excute() {
 			try {
 				String checkKey = key.getUin() + "#DETAIl";
 				
-				if(cacheMap.hasKey(checkKey)){		
-					SoftReference<UserActiveDetail> oldValueHeap = cacheMap.get(checkKey);	
-					UserActiveDetail.Builder mergeValueBuilder = Recommend.UserActiveDetail.newBuilder();
-					
-					mergeToHeap(key.getItemId(),oldValueHeap.get(),mergeValueBuilder);
-					oldValueHeap.clear();
-					Save(key,mergeValueBuilder);
-				}else{
-					ClientAttr clientEntry = mtClientList.get(0);		
-					TairOption opt = new TairOption(clientEntry.getTimeout());
-					Future<Result<byte[]>> future = clientEntry.getClient().getAsync((short)algInfo.getOutputTableId(),key.getBytes(),opt);
-					clientEntry.getClient().notifyFuture(future, this,clientEntry);	
-				}			
+				ClientAttr clientEntry = mtClientList.get(0);		
+				TairOption opt = new TairOption(clientEntry.getTimeout());
+				Future<Result<byte[]>> future = clientEntry.getClient().getAsync((short)algInfo.getOutputTableId(),checkKey.getBytes(),opt);
+				clientEntry.getClient().notifyFuture(future, this,clientEntry);	
+							
 				
 			} catch (TairQueueOverflow e) {
 				//log.error(e.toString());
@@ -121,73 +164,42 @@ public class AR implements AlgAdpter{
 			}
 		}
 		
-		private void mergeToHeap(String itemId,
-				UserActiveHistory oldVal,
-				UserActiveHistory.Builder updatedBuilder){			
-			HashSet<String> alreadyIn = new HashSet<String>();
-			for(String newItemId: newValList.getActRecodeMap().keySet()){
-				if(updatedBuilder.getActRecordsCount() >= algInfo.getTopNum()){
-					break;
-				}
-				updatedBuilder.addActRecords(newValList.getActRecodeMap().get(newItemId));
-				alreadyIn.add(newItemId);
-			}
-					
-			for(Recommend.UserActiveHistory.ActiveRecord eachOldVal:oldVal.getActRecordsList()){
-				if(updatedBuilder.getActRecordsCount() >= algInfo.getTopNum()){
-					break;
+		private HashSet<String> getPairItems(UserActiveDetail oldValueHeap, String itemId){
+			HashSet<String>  itemSet = new HashSet<String>();		
+			
+			for(Recommend.UserActiveDetail.TimeSegment tsegs:oldValueHeap.getTsegsList()){
+				HashMap<String,Integer>  doWeightMap = null;
+				if(!inValidTimeSeg(tsegs.getTimeId())){
+					continue;
 				}
 				
-				if(alreadyIn.contains(eachOldVal.getItem())){
-					continue;
-				}				
-
-				updatedBuilder.addActRecords(eachOldVal);
-			}
-			
-		}
-
-		private void Save(String key,UserActiveHistory.Builder mergeValueBuilder){	
-			
-			UserActiveHistory putValue = mergeValueBuilder.build();
-			synchronized(cacheMap){
-				cacheMap.set(key, new SoftReference<UserActiveHistory>(putValue), algInfo.getCacheExpireTime());
-			}
-			
-			for(ClientAttr clientEntry:mtClientList ){
-				TairOption putopt = new TairOption(clientEntry.getTimeout(),(short)0, algInfo.getDataExpireTime());
-				try {
-					Future<Result<Void>> future = clientEntry.getClient().putAsync((short)algInfo.getOutputTableId(), 
-										key.getBytes(), putValue.toByteArray(), putopt);
-					clientEntry.getClient().notifyFuture(future, putCallBack, 
-							new UpdateCallBackContext(clientEntry,key,putValue.toByteArray(),putopt));
-					
-					
-					if(mt!=null){
-						MonitorEntry mEntryPut = new MonitorEntry(Constants.SUCCESSCODE,Constants.SUCCESSCODE);
-						mEntryPut.addExtField("TDW_IDC", clientEntry.getGroupname());
-						mEntryPut.addExtField("tbl_name", "FIFO1");
-						mt.addCountEntry(Constants.systemID, Constants.tde_put_interfaceID, mEntryPut, 1);
+				for(Recommend.UserActiveDetail.TimeSegment.ItemInfo item: tsegs.getItemsList()){
+					if(!item.getItem().equals(key.getItemId())){
+						itemSet.add(item.getItem());
 					}
-				} catch (Exception e){
-					logger.error(e.toString());
 				}
 			}
+			return itemSet;
+		}
+
+		private boolean inValidTimeSeg(long timeId) {
+			// TODO Auto-generated method stub
+			return false;
 		}
 
 		@Override
 		public void handle(Future<?> future, Object context) {			
 			@SuppressWarnings("unchecked")
 			Future<Result<byte[]>> afuture = (Future<Result<byte[]>>) future;
-			byte[] oldVal = null;
 			try {
-				oldVal = afuture.get().getResult();
-				SoftReference<UserActiveHistory> oldValueHeap = 
-						new SoftReference<UserActiveHistory>(Recommend.UserActiveHistory.parseFrom(oldVal));
-				
-				UserActiveHistory.Builder mergeValueBuilder = Recommend.UserActiveHistory.newBuilder();
-				mergeToHeap(this.values,oldValueHeap.get(),mergeValueBuilder);
-				Save(key,mergeValueBuilder);
+				Result<byte[]> result = afuture.get();	
+				if(result.isSuccess() && result.getResult()!=null){
+					UserActiveDetail oldValueHeap = Recommend.UserActiveDetail.parseFrom(result.getResult());
+					HashSet<String> itemSet = getPairItems(oldValueHeap,key.getItemId());
+					for(String otherItem:itemSet){
+						new GetItemCountCallBack(key,otherItem, 0,0,1).excute();
+					}					
+				}
 			} catch (Exception e) {
 				
 			}
@@ -195,32 +207,27 @@ public class AR implements AlgAdpter{
 		}
 	}
 
-
 	private class GetItemCountCallBack implements MutiClientCallBack{
 		private final UpdateKey key;
+		private String otherItem;
+		private Integer itemCount;
+		private Integer count2;
+		private Integer step;
 
-		public GetItemCountCallBack(UpdateKey key) {
+		public GetItemCountCallBack(UpdateKey key,String otherItem,Integer itemCount,Integer step) {
 			this.key = key ; 
+			this.otherItem = otherItem;
+			this.itemCount = itemCount;
+			this.step = step;
 		}
 
 		public void excute() {
 			try {
-				String checkKey = key.getUin() + "#DETAIl";
-				
-				if(cacheMap.hasKey(checkKey)){		
-					SoftReference<UserActiveDetail> oldValueHeap = cacheMap.get(checkKey);	
-					UserActiveDetail.Builder mergeValueBuilder = Recommend.UserActiveDetail.newBuilder();
-					
-					mergeToHeap(key.getItemId(),oldValueHeap.get(),mergeValueBuilder);
-					oldValueHeap.clear();
-					Save(key,mergeValueBuilder);
-				}else{
-					ClientAttr clientEntry = mtClientList.get(0);		
-					TairOption opt = new TairOption(clientEntry.getTimeout());
-					Future<Result<byte[]>> future = clientEntry.getClient().getAsync((short)algInfo.getOutputTableId(),key.getBytes(),opt);
-					clientEntry.getClient().notifyFuture(future, this,clientEntry);	
-				}			
-				
+				String checkKey = key.getGroupId() + "#" + key.getItemId() +"#" +key.getAdpos();
+				ClientAttr clientEntry = mtClientList.get(0);		
+				TairOption opt = new TairOption(clientEntry.getTimeout());
+				Future<Result<byte[]>> future = clientEntry.getClient().getAsync((short)algInfo.getInputTableId(),checkKey.getBytes(),opt);
+				clientEntry.getClient().notifyFuture(future, this,clientEntry);	
 			} catch (TairQueueOverflow e) {
 				//log.error(e.toString());
 			} catch (TairRpcError e) {
@@ -229,74 +236,21 @@ public class AR implements AlgAdpter{
 				//log.error(e.toString());
 			}
 		}
-		
-		private void mergeToHeap(String itemId,
-				UserActiveHistory oldVal,
-				UserActiveHistory.Builder updatedBuilder){			
-			HashSet<String> alreadyIn = new HashSet<String>();
-			for(String newItemId: newValList.getActRecodeMap().keySet()){
-				if(updatedBuilder.getActRecordsCount() >= algInfo.getTopNum()){
-					break;
-				}
-				updatedBuilder.addActRecords(newValList.getActRecodeMap().get(newItemId));
-				alreadyIn.add(newItemId);
-			}
-					
-			for(Recommend.UserActiveHistory.ActiveRecord eachOldVal:oldVal.getActRecordsList()){
-				if(updatedBuilder.getActRecordsCount() >= algInfo.getTopNum()){
-					break;
-				}
-				
-				if(alreadyIn.contains(eachOldVal.getItem())){
-					continue;
-				}				
-
-				updatedBuilder.addActRecords(eachOldVal);
-			}
-			
-		}
-
-		private void Save(String key,UserActiveHistory.Builder mergeValueBuilder){	
-			
-			UserActiveHistory putValue = mergeValueBuilder.build();
-			synchronized(cacheMap){
-				cacheMap.set(key, new SoftReference<UserActiveHistory>(putValue), algInfo.getCacheExpireTime());
-			}
-			
-			for(ClientAttr clientEntry:mtClientList ){
-				TairOption putopt = new TairOption(clientEntry.getTimeout(),(short)0, algInfo.getDataExpireTime());
-				try {
-					Future<Result<Void>> future = clientEntry.getClient().putAsync((short)algInfo.getOutputTableId(), 
-										key.getBytes(), putValue.toByteArray(), putopt);
-					clientEntry.getClient().notifyFuture(future, putCallBack, 
-							new UpdateCallBackContext(clientEntry,key,putValue.toByteArray(),putopt));
-					
-					
-					if(mt!=null){
-						MonitorEntry mEntryPut = new MonitorEntry(Constants.SUCCESSCODE,Constants.SUCCESSCODE);
-						mEntryPut.addExtField("TDW_IDC", clientEntry.getGroupname());
-						mEntryPut.addExtField("tbl_name", "FIFO1");
-						mt.addCountEntry(Constants.systemID, Constants.tde_put_interfaceID, mEntryPut, 1);
-					}
-				} catch (Exception e){
-					logger.error(e.toString());
-				}
-			}
-		}
 
 		@Override
 		public void handle(Future<?> future, Object context) {			
 			@SuppressWarnings("unchecked")
 			Future<Result<byte[]>> afuture = (Future<Result<byte[]>>) future;
-			byte[] oldVal = null;
 			try {
-				oldVal = afuture.get().getResult();
-				SoftReference<UserActiveHistory> oldValueHeap = 
-						new SoftReference<UserActiveHistory>(Recommend.UserActiveHistory.parseFrom(oldVal));
-				
-				UserActiveHistory.Builder mergeValueBuilder = Recommend.UserActiveHistory.newBuilder();
-				mergeToHeap(this.values,oldValueHeap.get(),mergeValueBuilder);
-				Save(key,mergeValueBuilder);
+				if(afuture.get().isSuccess() && afuture.get().getResult()!=null){
+					String count = new String(afuture.get().getResult());
+					if(step == 1){
+						new GetItemCountCallBack(key,otherItem,Integer.valueOf(count),2).excute();
+					}else if(step == 2){
+						new GetPairsCountCallBack(key,otherItem,itemCount,Integer.valueOf(count)).excute();
+					}
+					
+				}
 			} catch (Exception e) {
 				
 			}
@@ -316,7 +270,9 @@ public class AR implements AlgAdpter{
 		String itemId = input.getStringByField("itemId");
 		String adpos = input.getStringByField("adpos");
 		
+		ActionCombinerValue value = new ActionCombinerValue();
+		
 		UpdateKey key = new UpdateKey(uin,groupId,adpos,itemId);
-		combinerKeys(key);	
+		combinerKeys(key,value);	
 	}
 }

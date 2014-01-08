@@ -102,6 +102,11 @@ public class AlgModuleConf implements Serializable{
 			// TODO Auto-generated method stub
 			return false;
 		}
+
+		public short getInputTableId() {
+			// TODO Auto-generated method stub
+			return 0;
+		}
 	}
 
 	public void load(FileInputStream fileInputStream){
