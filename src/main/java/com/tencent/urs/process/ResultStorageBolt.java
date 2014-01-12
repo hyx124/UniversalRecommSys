@@ -176,10 +176,10 @@ public class ResultStorageBolt implements IRichBolt {
 	@Override
 	public void execute(Tuple input) {
 		
-		String algId = input.getStringByField("algId");
+		String algName = input.getStringByField("algName");
 		String key = input.getStringByField("key");
 		Recommend.RecommendResult.Result value = (RecommendResult.Result) input.getValueByField("value");
-		new putToTDEUpdateCallBack(key,value,algConf.getAlgInfoById(algId)).excute();
+		new putToTDEUpdateCallBack(key,value,algConf.getAlgInfoByName(algName)).excute();
 		
 	}
 

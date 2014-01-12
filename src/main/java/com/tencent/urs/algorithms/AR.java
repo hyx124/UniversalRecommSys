@@ -1,6 +1,5 @@
 package com.tencent.urs.algorithms;
 
-import java.lang.ref.SoftReference;
 import java.util.HashMap;
 import java.util.HashSet;
 import java.util.List;
@@ -12,8 +11,10 @@ import java.util.concurrent.Future;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
+import backtype.storm.task.OutputCollector;
 import backtype.storm.tuple.Tuple;
-import com.tencent.monitor.MonitorEntry;
+import backtype.storm.tuple.Values;
+
 import com.tencent.monitor.MonitorTools;
 
 import com.tencent.tde.client.Result;
@@ -23,18 +24,13 @@ import com.tencent.tde.client.error.TairQueueOverflow;
 import com.tencent.tde.client.error.TairRpcError;
 import com.tencent.tde.client.impl.MutiThreadCallbackClient.MutiClientCallBack;
 import com.tencent.urs.algorithms.AlgAdpter;
-import com.tencent.urs.asyncupdate.UpdateCallBack;
-import com.tencent.urs.asyncupdate.UpdateCallBackContext;
 import com.tencent.urs.combine.ActionCombinerValue;
 import com.tencent.urs.combine.UpdateKey;
 import com.tencent.urs.conf.AlgModuleConf.AlgModuleInfo;
 import com.tencent.urs.protobuf.Recommend;
 import com.tencent.urs.protobuf.Recommend.UserActiveDetail;
-import com.tencent.urs.protobuf.Recommend.UserActiveHistory;
-import com.tencent.urs.protobuf.Recommend.UserActiveHistory.ActiveRecord;
 import com.tencent.urs.tdengine.TDEngineClientFactory;
 import com.tencent.urs.tdengine.TDEngineClientFactory.ClientAttr;
-import com.tencent.urs.utils.Constants;
 import com.tencent.urs.utils.DataCache;
 import com.tencent.urs.utils.Utils;
 
@@ -45,19 +41,19 @@ public class AR implements AlgAdpter{
 	private DataCache<UserActiveDetail> cacheMap;
 	//private DataCache<UserActiveDetail> cacheMap;
 	private AlgModuleInfo algInfo;
-	private UpdateCallBack putCallBack;
 	private int combinerExpireTime;
+	private OutputCollector collector;
 	
 	private static Logger logger = LoggerFactory
 			.getLogger(AR.class);
 	
 	@SuppressWarnings("rawtypes")
-	public AR(Map conf,AlgModuleInfo algInfo){
+	public AR(Map conf,AlgModuleInfo algInfo,OutputCollector collector){
 		this.algInfo = algInfo;
+		this.collector = collector;
 		this.mtClientList = TDEngineClientFactory.createMTClientList(conf);
 		this.mt = MonitorTools.getMonitorInstance(conf);
 		this.combinerMap = new ConcurrentHashMap<UpdateKey,ActionCombinerValue>(1024);
-		this.putCallBack = new UpdateCallBack(mt, Constants.systemID, Constants.tde_interfaceID, "TopActions");
 			
 		this.combinerExpireTime = Utils.getInt(conf, "combiner.expireTime",5);
 		setCombinerTime(combinerExpireTime, this);
@@ -74,7 +70,7 @@ public class AR implements AlgAdpter{
 						for (UpdateKey key : keySet) {
 							ActionCombinerValue value = combinerMap.remove(key);
 							try{
-								new GetItemPairsCallBack(key,value).excute();
+								new GetItemPairsCallBack(key,"").excute();
 							}catch(Exception e){
 							}
 						}
@@ -120,6 +116,21 @@ public class AR implements AlgAdpter{
 			}
 		}
 
+
+		public Double computeARWeight(Integer itemCount1, Integer itemCount2,
+				Integer pairCount) {	
+			//AR
+			Double simAR = (double) (pairCount/itemCount1);
+			return simAR;
+		}
+		
+		public Double computeCFWeight(Integer itemCount1, Integer itemCount2,
+				Integer pairCount) {	
+			//CF
+			Double simCF = (double) (pairCount/(Math.sqrt(itemCount1) * Math.sqrt(itemCount2)));
+			return simCF;
+		}
+		
 		@Override
 		public void handle(Future<?> future, Object context) {			
 			@SuppressWarnings("unchecked")
@@ -127,8 +138,14 @@ public class AR implements AlgAdpter{
 			try {
 				Result<byte[]> result = afuture.get();	
 				if(result.isSuccess() && result.getResult()!=null){
-					String  pair = Recommend.UserActiveDetail.parseFrom(result.getResult());
-					HashSet<String> itemSet = getPairItems(oldValueHeap,key.getItemId());	
+					Integer  pairCount = Integer.valueOf(new String(result.getResult()));
+					
+					Double arWeight = computeARWeight(itemCount1,itemCount2,pairCount);
+					Double cfWeight = computeCFWeight(itemCount1,itemCount2,pairCount);
+					String arKey = "item1#adpos#ar";
+					String cfKey = "item1#adpos#cf";
+					collector.emit("storageDream",new Values(algInfo.getAlgName(),arKey,otherItem,arWeight));
+					collector.emit("storageDream",new Values(algInfo.getAlgName(),cfKey,otherItem,cfWeight));
 				}
 			} catch (Exception e) {
 				
@@ -197,7 +214,7 @@ public class AR implements AlgAdpter{
 					UserActiveDetail oldValueHeap = Recommend.UserActiveDetail.parseFrom(result.getResult());
 					HashSet<String> itemSet = getPairItems(oldValueHeap,key.getItemId());
 					for(String otherItem:itemSet){
-						new GetItemCountCallBack(key,otherItem, 0,0,1).excute();
+						new GetItemCountCallBack(key,otherItem, 0,1).excute();
 					}					
 				}
 			} catch (Exception e) {
@@ -206,6 +223,7 @@ public class AR implements AlgAdpter{
 			
 		}
 	}
+
 
 	private class GetItemCountCallBack implements MutiClientCallBack{
 		private final UpdateKey key;
@@ -226,8 +244,11 @@ public class AR implements AlgAdpter{
 				String checkKey = key.getGroupId() + "#" + key.getItemId() +"#" +key.getAdpos();
 				ClientAttr clientEntry = mtClientList.get(0);		
 				TairOption opt = new TairOption(clientEntry.getTimeout());
-				Future<Result<byte[]>> future = clientEntry.getClient().getAsync((short)algInfo.getInputTableId(),checkKey.getBytes(),opt);
-				clientEntry.getClient().notifyFuture(future, this,clientEntry);	
+				String tableId = algInfo.getInputTableIdByName("GroupItemCount");
+				if(tableId != null){
+					Future<Result<byte[]>> future = clientEntry.getClient().getAsync(Short.valueOf(tableId),checkKey.getBytes(),opt);
+					clientEntry.getClient().notifyFuture(future, this,clientEntry);		
+				}
 			} catch (TairQueueOverflow e) {
 				//log.error(e.toString());
 			} catch (TairRpcError e) {
@@ -275,4 +296,5 @@ public class AR implements AlgAdpter{
 		UpdateKey key = new UpdateKey(uin,groupId,adpos,itemId);
 		combinerKeys(key,value);	
 	}
+
 }

@@ -40,26 +40,30 @@ public class PretreatmentBolt implements IRichBolt {
 	private static final long serialVersionUID = 1L;
 	private List<ClientAttr> mtClientList;	
 	private AlgModuleConf algConf;
-	private DataCache<String> qqCache;
-	private DataCache<String> groupIdCache;
+	private DataCache<Long> qqCache;
+	private DataCache<Integer> groupIdCache;
 	private OutputCollector collector;
 	
 	private int nsGetQQTable;
 	private int nsGetGroupIdTable;
+	private DataFilterConf dfConf;
+	private int cacheExpireTime;
 	
 	private static Logger logger = LoggerFactory
 			.getLogger(PretreatmentBolt.class);
 	
-	public PretreatmentBolt(AlgModuleConf conf){
-		this.algConf = conf;
+	public PretreatmentBolt(AlgModuleConf algConf,DataFilterConf dfConf){
+		this.algConf = algConf;
+		this.dfConf = dfConf;
 	}
 	
 	@Override
 	public void prepare(Map stormConf, TopologyContext context,
 			OutputCollector collector) {
-		this.qqCache = new DataCache(stormConf);
-		this.groupIdCache = new DataCache(stormConf);
+		this.qqCache = new DataCache<Long>(stormConf);
+		this.groupIdCache = new DataCache<Integer>(stormConf);
 		this.collector = collector;
+		this.cacheExpireTime = 1*24*3600;
 		
 		//this.mtClientList = TDEngineClientFactory.createMTClientList(stormConf);
 	}
@@ -84,10 +88,12 @@ public class PretreatmentBolt implements IRichBolt {
 			try {
 				Result<byte[]> res = afuture.get();
 				if(res.getCode().equals(ResultCode.OK) && res.getResult() != null){
-					String uin = new String(res.getResult());
+					Long uin = Long.valueOf(new String(res.getResult()));
 					outputValues.add(uin);
+					qqCache.set(uid, new SoftReference<Long>(uin),cacheExpireTime);
+					
 					if(isNeedGroupId){
-						new GetGroupIdUpdateCallBack(qq,outputStream,outputValues).excute();
+						new GetGroupIdUpdateCallBack(uin,outputStream,outputValues).excute();
 					}else{
 						emitData(outputStream,outputValues);
 					}
@@ -102,11 +108,11 @@ public class PretreatmentBolt implements IRichBolt {
 		}
 
 		public void excute() {
-			SoftReference<String> uin = qqCache.get(uid);
+			SoftReference<Long> uin = qqCache.get(uid);
 			if(uin != null){
-				outputValues.add(uin.toString());
+				outputValues.add(uin.get());
 				if(isNeedGroupId){
-					new GetGroupIdUpdateCallBack(uin.toString(), outputStream, outputValues).excute();
+					new GetGroupIdUpdateCallBack(uin.get(), outputStream, outputValues).excute();
 				}else{
 					emitData(outputStream, outputValues);
 				}
@@ -126,12 +132,12 @@ public class PretreatmentBolt implements IRichBolt {
 	}
 	
 	public class GetGroupIdUpdateCallBack implements MutiClientCallBack{
-		private String groupId;
-		private String qq;
+		private Integer groupId;
+		private Long qq;
 		private String outputStream;
 		private Values outputValues;
 		
-		public GetGroupIdUpdateCallBack(String qq,String outputStream, Values outputValues) {
+		public GetGroupIdUpdateCallBack(Long qq,String outputStream, Values outputValues) {
 			this.qq = qq;
 			this.outputStream = outputStream;
 			this.outputValues = outputValues;
@@ -143,8 +149,9 @@ public class PretreatmentBolt implements IRichBolt {
 			try {
 				Result<byte[]> res = afuture.get();
 				if(res.getCode().equals(ResultCode.OK) && res.getResult() != null){
-					String groupId = new String(res.getResult());
+					Integer groupId = Integer.valueOf(new String(res.getResult()));
 					outputValues.add(groupId);
+					groupIdCache.set(qq.toString(), new SoftReference<Integer>(groupId),cacheExpireTime);
 					emitData(outputStream,outputValues);
 				}else{
 					logger.error("get groupId from tde failed!");
@@ -155,15 +162,15 @@ public class PretreatmentBolt implements IRichBolt {
 		}
 		
 		public void excute(){
-			SoftReference<String> groupId = qqCache.get(qq);
+			SoftReference<Integer> groupId = groupIdCache.get(qq.toString());
 			if(groupId != null){
-				outputValues.add(qq.toString());
+				outputValues.add(groupId.get());
 				emitData(outputStream, outputValues);
 			}else{
 				try{
 					ClientAttr clientEntry = mtClientList.get(0);		
 					TairOption opt = new TairOption(clientEntry.getTimeout());
-					Future<Result<byte[]>> future = clientEntry.getClient().getAsync((short)nsGetGroupIdTable,qq.getBytes(),opt);
+					Future<Result<byte[]>> future = clientEntry.getClient().getAsync((short)nsGetGroupIdTable,qq.toString().getBytes(),opt);
 					clientEntry.getClient().notifyFuture(future, this,clientEntry);	
 				}catch(Exception e){
 					logger.error(e.toString());
@@ -174,76 +181,56 @@ public class PretreatmentBolt implements IRichBolt {
 	
 	@Override
 	public void execute(Tuple input) {
-		String topic = input.getStringByField("topic");
-	
-		logger.info("input:"+input.getStringByField("topic")+","+input.getStringByField("bid")+","+input.getStringByField("imp_date")+","+input.getLongByField("qq"));
-		for(String algId : algConf.getAlgConfMap().keySet()){
-			AlgModuleInfo algInfo = algConf.getAlgInfoById(algId);
-			if(algInfo.getTopicName().equals(topic)){				
-				RouteToAlgModBolt(algInfo,input);
+		String topic = input.getStringByField("topic");	
+		Values outputValues = new Values();
+		
+		String[] outputFields = dfConf.getInputFeildsByTopic(topic);
+		for(String field:outputFields){
+			String value = input.getStringByField(field);
+			outputValues.add(value);
+		}
+		
+		if(dfConf.isNeedQQ(topic) ){
+			Long qq = Long.valueOf(input.getStringByField("qq"));
+			String uid = input.getStringByField("uid");
+			if(!Utils.isQNumValid(qq)){
+				if(!uid.equals("0") && uid.matches("[0-9]+")){
+					new GetQQUpdateCallBack(uid,dfConf.isNeedGroupId(topic),topic,outputValues).excute();
+				}else{
+					return;
+				}
+			}else{
+				if(dfConf.isNeedGroupId(topic)){
+					Integer groupId = Integer.valueOf(input.getStringByField("group_id"));
+					if(!Utils.isGroupIdVaild(groupId)){
+						new GetGroupIdUpdateCallBack(qq,topic,outputValues);
+					}else{
+						emitData(topic, outputValues);
+					}					
+				}else{
+					emitData(topic, outputValues);
+				}				
 			}
-		}	
+		}else{
+			emitData(topic, outputValues);
+		}
 	}
 	
 	private void emitData(String outputStream, Values outputValues) {
 		this.collector.emit(outputStream,outputValues);
 	}
 
-	private Values genOutputValues(AlgModuleInfo alg, Tuple input){
-		Values outputValues = new Values();
-		String outputFields = alg.getOutputFields();
-		String[] fields = outputFields.split(",",-1);
-		for(String field:fields){
-			outputValues.add(input.getStringByField(field));
-		}
-		
-		return outputValues;
-	}
-	
-	private void RouteToAlgModBolt(AlgModuleInfo alg, Tuple input) {
-		Long qq = input.getLongByField("qq");
-		boolean isNeedGroupId = alg.isNeedGroupId();
-		String outputStream =  alg.getOutputStream();
-		Values outputValues =  genOutputValues(alg,input);
-
-		if(!Utils.isQNumValid(qq)){
-			String uid = input.getStringByField("uid");
-			new GetQQUpdateCallBack(uid,isNeedGroupId,outputStream,outputValues).excute();
-		}else if(isNeedGroupId){
-				
-		}else{
-			emitData(outputStream, outputValues);
-		}
-
-	}
-
-	private String getGroupIdByQQ(Long qq) {
-		return null;
-	}
-
 	@Override
 	public void cleanup() {
-		// TODO Auto-generated method stub
-		
+		// TODO Auto-generated method stub	
 	}
 
 	@Override
 	public void declareOutputFields(OutputFieldsDeclarer declarer) {
-		declarer.declareStream(Constants.user_info_stream, 
-				new Fields("alg_name","bid","qq","pb_info"));
-		
-		declarer.declareStream(Constants.item_info_stream, 
-				new Fields("alg_name","bid","item_id","pb_info"));
-		
-		declarer.declareStream(Constants.item_category_stream, 
-				new Fields("alg_name","bid","item_id","pb_info"));
-		
-		declarer.declareStream(Constants.action_weight_stream, 
-				new Fields("alg_name","bid","imp_date","type_id","weight"));
-		
-		declarer.declareStream(Constants.actions_stream, 
-				new Fields("alg_name","bid","qq","group_id","item_id","lbs_info","ad_pos","action_time","action_type","action_result"));
-		
+		for(String topic:this.dfConf.getAllTopics()){
+			Fields fields = new Fields(dfConf.getInputFeildsByTopic(topic));
+			declarer.declareStream(topic, fields);
+		}	
 		declarer.declareStream("filter_data", new Fields(""));
 	}
 

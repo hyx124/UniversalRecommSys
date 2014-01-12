@@ -35,12 +35,13 @@ public class URSTopology {
 		Config conf = new Config();
 		AlgModuleConf algConf = new AlgModuleConf();
 		DataFilterConf dfConf = new DataFilterConf();
+		dfConf.load(new FileInputStream(args[1]));
+		algConf.load(new FileInputStream(args[2]));
 		
 		Properties property = new Properties();
 		property.load(new FileInputStream(args[0]));
 		
-		//dfConf.load(new FileInputStream(args[1]));
-		//algConf.load(new FileInputStream(args[2]));
+		
 	
 		
 		for (String key : property.stringPropertyNames()) {
@@ -55,30 +56,29 @@ public class URSTopology {
 		builder.setSpout("TDBankSpout", new TDBankSpout(dfConf),
 				getInt(conf.get("topology.tdbank_spout.parallel").toString()));
 		
-		builder.setBolt("PretreatBolt", new PretreatmentBolt(algConf),
+		builder.setBolt("PretreatBolt", new PretreatmentBolt(algConf,dfConf),
 				getInt(conf.get("topology.pre_treatment.parallel").toString()))
-				.fieldsGrouping("TDBankSpout",Constants.user_info_stream, new Fields("bid","uid"))
-				.fieldsGrouping("TDBankSpout",Constants.item_info_stream, new Fields("bid","item_id"))
+				.fieldsGrouping("TDBankSpout",Constants.user_info_stream, new Fields("bid","hashKey"))
+				.fieldsGrouping("TDBankSpout",Constants.item_info_stream, new Fields("bid","hashKey"))
 				//.fieldsGrouping("TDBankSpout",Constants.item_category_stream, new Fields("bid","category_id"))
 				//.fieldsGrouping("TDBankSpout",Constants.action_weight_stream, new Fields("item_id","type_id"))
-				.fieldsGrouping("TDBankSpout",Constants.actions_stream, new Fields("bid","qq","uid"));	
+				.fieldsGrouping("TDBankSpout",Constants.actions_stream, new Fields("bid","hashKey"));	
 			
-		for(String algId: algConf.getAlgConfMap().keySet()){
-			AlgModuleInfo algInfo = algConf.getAlgInfoById(algId);
+		for(String algName: algConf.getAlgConfMap().keySet()){
+			AlgModuleInfo algInfo = algConf.getAlgInfoByName(algName);
 			builder.setBolt(algInfo.getAlgName(), new AlgDealBolt(algInfo),
 					getInt(conf.get("topology."+algInfo.getAlgName()+".parallel").toString()))
-					.fieldsGrouping("PretreatBolt",algInfo.getInputStream(), new Fields(algInfo.getHashKey()));		
+					.fieldsGrouping("PretreatBolt",algInfo.getInputTopic(), new Fields("HashKey"));		
 		}
 		
 		BoltDeclarer bolt = builder.setBolt("ResStorBolt", new ResultStorageBolt(algConf),
 				getInt(conf.get("topology.result_storage.parallel").toString()));
 		
-		for(String algId: algConf.getAlgConfMap().keySet()){
-			AlgModuleInfo algInfo = algConf.getAlgInfoById(algId);
-			if(algInfo.isDealByCenter()){
-				bolt.fieldsGrouping(algInfo.getAlgName(),Constants.user_info_stream, new Fields("key"));
+		for(String algName: algConf.getAlgConfMap().keySet()){
+			AlgModuleInfo algInfo = algConf.getAlgInfoByName(algName);
+			if(algInfo.isStorePartition()){
+				bolt.fieldsGrouping(algInfo.getAlgName(),algInfo.getAlgName(), new Fields("HashKey"));
 			}
-		
 		}
 		
 		try {

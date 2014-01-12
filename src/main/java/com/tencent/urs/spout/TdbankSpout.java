@@ -1,8 +1,7 @@
 package com.tencent.urs.spout;
 
-import java.text.SimpleDateFormat;
-import java.util.ArrayList;
 import java.util.Arrays;
+import java.util.HashMap;
 import java.util.Iterator;
 import java.util.Map;
 import java.util.concurrent.BlockingQueue;
@@ -24,6 +23,8 @@ import com.taobao.metamorphosis.exception.MetaClientException;
 import com.taobao.metamorphosis.utils.ZkUtils.ZKConfig;
 
 import com.tencent.monitor.MonitorTools;
+import com.tencent.urs.conf.AlgModuleConf;
+import com.tencent.urs.conf.AlgModuleConf.AlgModuleInfo;
 import com.tencent.urs.conf.DataFilterConf;
 import com.tencent.urs.tdbank.msg.TDMsg;
 import backtype.storm.spout.SpoutOutputCollector;
@@ -58,6 +59,7 @@ public class TDBankSpout implements IRichSpout {
 	private transient BlockingQueue<Message> messageQueue;
 	private MonitorTools mt;
 	private DataFilterConf dfConf;
+	private AlgModuleConf algConf;
 
 	public TDBankSpout(DataFilterConf dataFilterConf) {
 		this.dfConf = dataFilterConf;
@@ -94,15 +96,11 @@ public class TDBankSpout implements IRichSpout {
 		try {
 			if(debug){
 				Long ActionTime = System.currentTimeMillis();
-				String Date = new SimpleDateFormat("yyyyMMdd").format(ActionTime);
+				//String Date = new SimpleDateFormat("yyyyMMdd").format(ActionTime);
 
-				
-				//this.collector.emit("user_info",new Values("user_info","test_job",Date, "389687043","-----imei-----","12345",20,"",""));
-				//this.collector.emit("item_info",new Values("item_info","test_job",Date,"4205888", "389687043","-----imei-----","12345",20,"",""));
-				this.collector.emit(Constants.actions_stream,
-						new Values(Constants.actions_stream,"test_job",389687043,"134","","420581","","22222",ActionTime/1000L,"3",""));
+				String[] msg_array = {Constants.actions_stream,"test_job","389687043","134","","420581","","22222",String.valueOf(ActionTime/1000L),"3",""};
+				dealMsgByConfig("bid","topic",msg_array);
 
-				logger.info(Constants.actions_stream);
 				Thread.sleep(1000);
 				logger.info(Constants.item_category_stream);
 				
@@ -149,29 +147,37 @@ public class TDBankSpout implements IRichSpout {
 						}
 
 						String[] msg_array = msg.split("\t");
-						if(!isNeedFilter(msg_array)){
-							RouteData(msg_array);
-						}
+						dealMsgByConfig("bid","topic",msg_array);
 					}
 				}
 			}
 		}
 	}
+	
+	private void dealMsgByConfig(String bid,String topic,String[] msg_array){	
+		HashMap<String,String> inputs = dfConf.getInputsFromArray(bid,topic,msg_array);	
+		doEmit(topic,inputs);
+	}
 
-	private boolean isNeedFilter(String[] inputTuples){
-		return true;
+	private void doEmit(String topic,HashMap<String,String> inputs){
+		if(inputs == null){
+			this.collector.emit("filter_data",new Values());
+			return;	
+		}
+	
+		Values outputValues = new Values();
+		for(String name: dfConf.getInputFeildsByTopic(topic)){
+			if(inputs.containsKey(name)){
+				outputValues.add(inputs.get(name));
+			}else{
+				this.collector.emit("filter_data",new Values());
+				return;
+			}
+		}
+				
+		this.collector.emit(Constants.actions_stream,outputValues);	
 	}
 	
-	private void RouteData(String[] inputTuples){	
-		String algName = "ads";
-		if(inputTuples[0].equals("")){
-			String uin = inputTuples[1];			
-		}
-		
-		this.collector.emit(Constants.actions_stream,new Values(algName,""));
-		return;
-	}
-
 	private void setUpMeta(@SuppressWarnings("rawtypes") Map conf)
 			throws Exception {
 		// read config
@@ -276,27 +282,13 @@ public class TDBankSpout implements IRichSpout {
 	}
 
 	public void declareOutputFields(OutputFieldsDeclarer declarer) {
-		
-		declarer.declareStream(Constants.user_info_stream, 
-				new Fields("topic","bid","imp_date","qq","imei","uid","level","reg_date","reg_time"));
-		
-		declarer.declareStream(Constants.item_info_stream, 
-				new Fields("topic","bid","imp_date","item_id","categroy_id1","categroy_id2","categroy_id3",
-						"category_name1","category_name2","category_name3",
-						"free","publish","price","text","item_time","expire_time","platform","score"));
-		
-		declarer.declareStream(Constants.item_category_stream, 
-				new Fields("topic","bid","imp_date","category_id","name","level","father_id"));
-		
-		declarer.declareStream(Constants.action_weight_stream, 
-				new Fields("topic","bid","imp_date","type_id","weight"));
-		
-		declarer.declareStream(Constants.actions_stream, 
-				new Fields("topic","bid","qq","uid","imei","item_id","lbs_info","ad_pos","action_time","action_type","action_result"));
-		
-		
+		for(String topic:this.dfConf.getAllTopics()){
+			Fields fields = new Fields(dfConf.getInputFeildsByTopic(topic));
+			declarer.declareStream(topic, fields);
+		}
 		
 		declarer.declareStream("filter_data", new Fields(""));
+		
 	}
 
 	/**

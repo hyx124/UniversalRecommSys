@@ -1,16 +1,223 @@
-<alg_conf>
-	<alg_mod>
-		<name>detail</name>
-		<topic>*—detail</topic>
-		<input_fields>bid,uin,action_type,item_id</input_fields>
-		<input_tables>
-			<table_name>hha</table_name>
-		</input_tables>
+<AlgConf>
+	<AlgMod>
+		<AlgName>UserInfo</AlgName>
+		<AlgId>1</AlgId>
+		<InputTopic>UserInfo</InputTopic>
 		
-		<timewind_days>7</timewind_days>
-		<output_count>1000</output_count>
-		<output_table_id>312</output_table_id>
-		<need_groupId></need_groupId>
-	</alg_mod>
+		<OutputTableId>301</OutputTableId>
+		<TopNum>100</TopNum>
+		
+		<ExpireTime>15552000</ExpireTime>
+	</AlgMod>
 	
-</alg_conf>
+	<AlgMod>
+		<AlgName>ItemInfo</AlgName>
+		<AlgId>2</AlgId>
+		<InputTopic>ItemInfo</InputTopic>
+		
+		<OutputTableId>302</OutputTableId>
+		<TopNum>100</TopNum>
+		
+		<ExpireTime>15552000</ExpireTime>
+	</AlgMod>
+	
+	<AlgMod>
+		<AlgName>ItemCatInfo</AlgName>
+		<AlgId>3</AlgId>
+		<InputTopic>ItemCatInfo</InputTopic>
+		
+		<OutputTableId>303</OutputTableId>
+		<TopNum>100</TopNum>
+		
+		<ExpireTime>15552000</ExpireTime>
+	</AlgMod>
+	
+	<AlgMod>
+		<AlgName>ActionWeightInfo</AlgName>
+		<AlgId>4</AlgId>
+		<InputTopic>ActionWeightInfo</InputTopic>
+
+		<OutputTableId>304</OutputTableId>
+		<TopNum>100</TopNum>
+		
+		<ExpireTime>15552000</ExpireTime>
+	</AlgMod>
+	
+	<AlgMod>
+		<AlgName>UserActionDetail</AlgName>
+		<AlgId>5</AlgId>
+		<InputTopic>UserAction</InputTopic>
+		
+		<OutputTableId>305</OutputTableId>
+		<TopNum>100</TopNum>
+		<OutPutTimeSeg>86400</OutPutTimeSeg>
+		<OutPutWinds>7</OutPutWinds>
+		
+		<ExpireTime>604800</ExpireTime>
+	</AlgMod>
+	
+	<AlgMod>
+		<AlgName>GroupItemCount</AlgName>
+		<AlgId>6</AlgId>
+		<InputTopic>UserAction</InputTopic>
+
+		<InputTable>	
+			<Table>	
+				<TableName>UserActionDetail</TableName>
+				<TableId>305</TableId>
+			</Table>
+		</InputTable>
+				
+		<OutputTableId>306</OutputTableId>
+		<TopNum>100</TopNum>
+		<OutPutTimeSeg>86400</OutPutTimeSeg>
+		<OutPutWinds>7</OutPutWinds>
+		
+		<ExpireTime>604800</ExpireTime>
+	</AlgMod>
+	
+	<AlgMod>
+		<AlgName>GroupItemPairCount</AlgName>
+		<AlgId>7</AlgId>
+		<InputTopic>UserAction</InputTopic>
+
+		<InputTable>	
+			<Table>	
+				<TableName>UserActionDetail</TableName>
+				<TableId>301</TableId>
+			</Table>
+		</InputTable>
+		
+		
+		<OutputTableId>307</OutputTableId>
+		<TopNum>100</TopNum>
+		<OutPutTimeSeg>86400</OutPutTimeSeg>
+		<OutPutWinds>7</OutPutWinds>
+		
+		<ExpireTime>604800</ExpireTime>
+	</AlgMod>
+	
+	<AlgMod>
+		<AlgName>CtrCount</AlgName>
+		<AlgId>8</AlgId>
+		<InputTopic>UserAction</InputTopic>
+		
+		<OutputTableId>308</OutputTableId>
+		<TopNum>100</TopNum>
+		<OutPutTimeSeg>86400</OutPutTimeSeg>
+		<OutPutWinds>7</OutPutWinds>
+		
+		<ExpireTime>604800</ExpireTime>
+	</AlgMod>
+	
+	<AlgMod>
+		<AlgName>AR</AlgName>
+		<AlgId>10</AlgId>
+		<InputTopic>UserAction</InputTopic>
+		
+		<InputTable>	
+			<Table>	
+				<TableName>UserActionDetail</TableName>
+				<TableId>305</TableId>
+			</Table>
+			<Table>	
+				<TableName>GroupItemCount</TableName>
+				<TableId>306</TableId>
+			</Table>
+			<Table>	
+				<TableName>GroupItemPairCount</TableName>
+				<TableId>307</TableId>
+			</Table>
+		</InputTable>
+		
+		<OutputTableId>310</OutputTableId>
+		<TopNum>100</TopNum>
+
+		<ExpireTime>604800</ExpireTime>
+		<StorePartition>true</StorePartition>
+	</AlgMod>
+	
+	<AlgMod>
+		<AlgName>CF</AlgName>
+		<AlgId>11</AlgId>
+		<InputTopic>UserAction</InputTopic>
+		
+		<InputTable>	
+			<Table>	
+				<TableName>UserActionDetail</TableName>
+				<TableId>305</TableId>
+			</Table>
+			<Table>	
+				<TableName>GroupItemCount</TableName>
+				<TableId>306</TableId>
+			</Table>
+			<Table>	
+				<TableName>GroupItemPairCount</TableName>
+				<TableId>307</TableId>
+			</Table>
+		</InputTable>
+		
+		<OutputTableId>311</OutputTableId>
+		<TopNum>100</TopNum>
+
+		<ExpireTime>604800</ExpireTime>
+		<StorePartition>true</StorePartition>
+	</AlgMod>
+	
+	<AlgMod>
+		<AlgName>CTR</AlgName>
+		<AlgId>12</AlgId>
+		<InputTopic>UserAction</InputTopic>
+
+		<InputTable>	
+			<Table>	
+				<TableName>CtrCount</TableName>
+				<TableId>308</TableId>
+			</Table>
+		</InputTable>
+		
+		<OutputTableId>312</OutputTableId>
+		<TopNum>100</TopNum>
+		
+		<ExpireTime>604800</ExpireTime>
+		<StorePartition>true</StorePartition>
+	</AlgMod>
+	
+	<AlgMod>
+		<AlgName>HotByGroup</AlgName>
+		<AlgId>13</AlgId>
+		<InputTopic>UserAction</InputTopic>
+		
+		<InputTable>	
+			<Table>	
+				<TableName>GroupItemCount</TableName>
+				<TableId>306</TableId>
+			</Table>
+		</InputTable>
+		
+		<OutputTableId>313</OutputTableId>
+		<TopNum>100</TopNum>
+		
+		<ExpireTime>604800</ExpireTime>
+		<StorePartition>true</StorePartition>
+	</AlgMod>
+	
+	<AlgMod>
+		<AlgName>HotByCategroy</AlgName>
+		<AlgId>14</AlgId>
+		<InputTopic>UserAction</InputTopic>
+		
+		<InputTable>	
+			<Table>	
+				<TableName>GroupItemCount</TableName>
+				<TableId>306</TableId>
+			</Table>
+		</InputTable>
+		
+		<OutputTableId>314</OutputTableId>
+		<TopNum>100</TopNum>
+		
+		<ExpireTime>604800</ExpireTime>
+		<StorePartition>true</StorePartition>
+	</AlgMod>
+</AlgConf>

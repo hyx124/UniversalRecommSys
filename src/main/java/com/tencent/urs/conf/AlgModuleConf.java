@@ -22,8 +22,8 @@ public class AlgModuleConf implements Serializable{
 		return this.algModuleMap;
 	}
 	
-	public AlgModuleInfo getAlgInfoById(String algId){
-		return this.algModuleMap.get(algId);
+	public AlgModuleInfo getAlgInfoByName(String algName){
+		return this.algModuleMap.get(algName);
 	}
 	
 	public AlgModuleConf(){
@@ -34,78 +34,104 @@ public class AlgModuleConf implements Serializable{
 	
 	public class AlgModuleInfo{
 		private String algName;
-		private String inputStream;
-		private String hashKey;
+		private int expireTime;
+		private String inputTopic;
+		private Integer topNum;
+		private Long TimeSeg;
+		private String outputTableId;
+		private Integer outputWinds;
+		private Long updateTime;
+		
+		private HashMap<String,String> inputTables;
+		private Boolean storePartition;
+		private Integer algId;
+		
+	
+		public AlgModuleInfo(){
+			inputTables = new HashMap<String,String>();
+		}
+		
+		public void setAlgName(String algName) {
+			this.algName = algName;
+		}
+
+		public void setExpireTime(int expireTime) {
+			this.expireTime = expireTime;
+		}
+		
+		public void setInputTopic(String inputTopic) {
+			this.inputTopic = inputTopic;
+		}
+		
+
+		public void setTopNum(Integer topNum) {
+			this.topNum = topNum;
+		}
+
+		public void setOutputTimeSeg(Long TimeSeg) {
+			this.TimeSeg = TimeSeg;
+			
+		}
+
+		public void setOutputTableId(String outputTableId) {
+			this.outputTableId = outputTableId;
+			
+		}
+
+		public void setOutPutWinds(Integer winds) {
+			this.outputWinds = winds;
+		}
+		
+		public void setUpdateTime(long time) {
+			this.updateTime = time;
+		}
+
+		public void setStorePartition(Boolean boolean1) {
+			this.storePartition = boolean1;
+		}
+
+		public Integer getAlgId(){
+			return this.algId;
+		}
 		
 		public String getAlgName(){
-			return algName;
-		}
-		
-		public String getInputStream(){
-			return inputStream;
-		}	
-		
-		public String getHashKey(){
-			return hashKey;
+			return this.algName;
 		}
 
-		public Object getTopicName() {
-			return null;
-		}
-
-		public boolean isNeedGroupId() {
-			// TODO Auto-generated method stub
-			return false;
-		}
-
-		public String getOutputStream() {
-			// TODO Auto-generated method stub
-			return null;
-		}
-
-		public String getOutputFields() {
-			// TODO Auto-generated method stub
-			return null;
-		}
-
-		public int getTopNum() {
-			// TODO Auto-generated method stub
-			return 0;
+		public Integer getTopNum() {
+			return this.topNum;
 		}
 
 		public short getOutputTableId() {
-			// TODO Auto-generated method stub
-			return 0;
+			return Short.valueOf(this.outputTableId);
 		}
 
 		public int getDataExpireTime() {
-			// TODO Auto-generated method stub
-			return 0;
+			return this.expireTime;
+		}
+
+		public Long getUpdateTime() {
+			return this.updateTime;
+		}
+
+		public String getInputTableIdByName(String name) {
+			return this.inputTables.get(name);
+		}
+
+		public String getInputTopic() {
+			return this.inputTopic;
+		}
+
+		public boolean isStorePartition() {
+			return this.storePartition;
 		}
 
 		public int getCacheExpireTime() {
-			// TODO Auto-generated method stub
-			return 0;
+			return 10*60;
 		}
 
-		public int getUpdateTime() {
-			// TODO Auto-generated method stub
-			return 0;
-		}
-
-		public String getInputTable() {
-			// TODO Auto-generated method stub
-			return null;
-		}
-
-		public boolean isDealByCenter() {
-			// TODO Auto-generated method stub
-			return false;
-		}
-
-		public short getInputTableId() {
-			// TODO Auto-generated method stub
-			return 0;
+		public void setAlgId(Integer algId) {
+			this.algId = algId;
 		}
 	}
 
@@ -126,26 +152,46 @@ public class AlgModuleConf implements Serializable{
 		}
 
 	    // 得到根元素
-	    Element element = document.getRootElement();
-	        System.out.println("Root: " + element.getName());
+	    Element root = document.getRootElement();
+	    List<Element> algMod = root.getChildren("AlgMod");
 
-	    // 获取子元素
-	    Element alg_mod = element.getChild("alg_mod");
-	    System.out.println("child: " + alg_mod.getName());
+	    for(Element algInfo: algMod){
+	    	AlgModuleInfo algModInfo = new AlgModuleInfo();
+	    	List<Element> algAttrList = algInfo.getChildren();
+	    	String algName = algInfo.getChildTextTrim("AlgName");
+	    	
+	    	for(Element attr: algAttrList){
+	    		if(attr.getName().equals("AlgId")){
+	    			algModInfo.setAlgId(Integer.valueOf(algInfo.getChildTextTrim("AlgId")));
+	    		}else if(attr.getName().equals("AlgName")){
+	    			algModInfo.setAlgName(algName);
+	    		}else if(attr.getName().equals("InputTopic")){
+	    			algModInfo.setInputTopic(algInfo.getChildTextTrim("InputTopic"));
+	    		}else if(attr.getName().equals("OutputTableId")){
+	    			algModInfo.setOutputTableId(algInfo.getChildTextTrim("OutputTableId"));
+	    		}else if(attr.getName().equals("ExpireTime")){
+	    			algModInfo.setExpireTime(Integer.valueOf(algInfo.getChildTextTrim("ExpireTime")));
+	    		}else if(attr.getName().equals("TopNum")){
+	    			algModInfo.setTopNum(Integer.valueOf(algInfo.getChildTextTrim("TopNum")));
+	    		}else if(attr.getName().equals("OutPutTimeSeg")){
+	    			algModInfo.setOutputTimeSeg(Long.valueOf(algInfo.getChildTextTrim("OutPutTimeSeg")));
+	    		}else if(attr.getName().equals("OutPutWinds")){
+	    			algModInfo.setOutPutWinds(Integer.valueOf(algInfo.getChildTextTrim("OutPutWinds")));
+	    		}else if(attr.getName().equals("StorePartition")){
+	    			algModInfo.setStorePartition(Boolean.valueOf(algInfo.getChildTextTrim("StorePartition")));
+	    		}else if(attr.getName().equals("InputTable")){
+	    			List<Element> inputTables = attr.getChildren();
+	    	        for(Element table: inputTables){
+	    	        	algModInfo.inputTables.put(table.getChildTextTrim("TableName"), table.getChildTextTrim("TableId"));
+	    	        }
+	    		}
+	    	}
 
-	    // 获取属性
-	    List list = alg_mod.getAttributes();
-	    
-	    System.out.println("child size: " + list.size());
-	    for (int i = 0; i < list.size(); ++i)
-	    {
-	    	Attribute attr = (Attribute) list.get(i);
-	        String attrName = attr.getName();
-	        String attrValue = attr.getValue();
-
-	        System.out.println("hello的属性： " + attrName + " = " + attrValue);
+	        algModInfo.setUpdateTime (System.currentTimeMillis()/1000L);
+	    	
+	    	
+	    	this.algModuleMap.put(algName, algModInfo);
 	    }
-
 	}
 	
 	public static void main(String[] args){
@@ -156,6 +202,24 @@ public class AlgModuleConf implements Serializable{
 			// TODO Auto-generated catch block
 			e.printStackTrace();
 		}
+		
+		for(String name:conf.getAlgConfMap().keySet()){
+			AlgModuleInfo algInfo = conf.getAlgInfoByName(name);
+			System.out.println(name);
+			System.out.println("id="+algInfo.getAlgId());
+			System.out.println("name="+algInfo.getAlgName());
+			System.out.println("InputTopic="+algInfo.getInputTopic());
+			System.out.println("OutputTableId="+algInfo.getOutputTableId());
+			System.out.println("TopNum="+algInfo.getTopNum());
+			System.out.println("ExpireTime="+algInfo.expireTime);
+			System.out.println("yes="+algInfo.inputTables.size());
+			for(String tableName:algInfo.inputTables.keySet()){
+				System.out.println("name="+tableName+","+algInfo.getInputTableIdByName(tableName));
+			}
+			System.out.println("----------------------------------");
+		}
+		
+		
 	}
 
 }
