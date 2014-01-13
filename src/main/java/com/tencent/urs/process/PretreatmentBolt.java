@@ -1,6 +1,7 @@
 package com.tencent.urs.process;
 
 import java.lang.ref.SoftReference;
+import java.util.ArrayList;
 import java.util.List;
 import java.util.Map;
 import java.util.concurrent.Future;
@@ -12,6 +13,9 @@ import com.esotericsoftware.kryo.io.Input;
 import com.tencent.tde.client.Result;
 import com.tencent.tde.client.Result.ResultCode;
 import com.tencent.tde.client.TairClient.TairOption;
+import com.tencent.tde.client.error.TairFlowLimit;
+import com.tencent.tde.client.error.TairRpcError;
+import com.tencent.tde.client.error.TairTimeout;
 import com.tencent.tde.client.impl.MutiThreadCallbackClient.MutiClientCallBack;
 import com.tencent.urs.conf.AlgModuleConf;
 import com.tencent.urs.conf.AlgModuleConf.AlgModuleInfo;
@@ -39,22 +43,20 @@ public class PretreatmentBolt implements IRichBolt {
 	 */
 	private static final long serialVersionUID = 1L;
 	private List<ClientAttr> mtClientList;	
-	private AlgModuleConf algConf;
 	private DataCache<Long> qqCache;
 	private DataCache<Integer> groupIdCache;
 	private OutputCollector collector;
 	
-	private int nsGetQQTable;
-	private int nsGetGroupIdTable;
 	private DataFilterConf dfConf;
 	private int cacheExpireTime;
+	private int nsTableGroup;
+	private int nsTableUin;
 	
 	private static Logger logger = LoggerFactory
 			.getLogger(PretreatmentBolt.class);
 	
-	public PretreatmentBolt(AlgModuleConf algConf,DataFilterConf dfConf){
-		this.algConf = algConf;
-		this.dfConf = dfConf;
+	public PretreatmentBolt(DataFilterConf dfConf){
+		this.dfConf = dfConf;	
 	}
 	
 	@Override
@@ -64,8 +66,28 @@ public class PretreatmentBolt implements IRichBolt {
 		this.groupIdCache = new DataCache<Integer>(stormConf);
 		this.collector = collector;
 		this.cacheExpireTime = 1*24*3600;
+		this.nsTableGroup = Utils.getInt(stormConf, "tdengine.table.indival", 319);
+		this.nsTableUin = Utils.getInt(stormConf, "tdengine.table.indival", 320);
 		
-		//this.mtClientList = TDEngineClientFactory.createMTClientList(stormConf);
+		this.mtClientList = TDEngineClientFactory.createMTClientList(stormConf);
+		ClientAttr clientEntry = mtClientList.get(0);		
+		TairOption opt = new TairOption(clientEntry.getTimeout(),(short)0, 24*3600);
+		try {
+			clientEntry.getClient().put((short) nsTableUin, "17139104".getBytes(), "389687043".getBytes(), opt);
+			clientEntry.getClient().put((short) nsTableGroup, "389687043".getBytes(), "51".getBytes(), opt);
+		} catch (TairRpcError e) {
+			// TODO Auto-generated catch block
+			e.printStackTrace();
+		} catch (TairFlowLimit e) {
+			// TODO Auto-generated catch block
+			e.printStackTrace();
+		} catch (TairTimeout e) {
+			// TODO Auto-generated catch block
+			e.printStackTrace();
+		} catch (InterruptedException e) {
+			// TODO Auto-generated catch block
+			e.printStackTrace();
+		}
 	}
 	
 	public class GetQQUpdateCallBack implements MutiClientCallBack{
@@ -120,7 +142,7 @@ public class PretreatmentBolt implements IRichBolt {
 				try{
 					ClientAttr clientEntry = mtClientList.get(0);		
 					TairOption opt = new TairOption(clientEntry.getTimeout());
-					Future<Result<byte[]>> future = clientEntry.getClient().getAsync((short)nsGetQQTable,uid.getBytes(),opt);
+					Future<Result<byte[]>> future = clientEntry.getClient().getAsync((short)nsTableUin,uid.getBytes(),opt);
 					clientEntry.getClient().notifyFuture(future, this,clientEntry);	
 				}catch(Exception e){
 					logger.error(e.toString());
@@ -132,7 +154,6 @@ public class PretreatmentBolt implements IRichBolt {
 	}
 	
 	public class GetGroupIdUpdateCallBack implements MutiClientCallBack{
-		private Integer groupId;
 		private Long qq;
 		private String outputStream;
 		private Values outputValues;
@@ -170,7 +191,7 @@ public class PretreatmentBolt implements IRichBolt {
 				try{
 					ClientAttr clientEntry = mtClientList.get(0);		
 					TairOption opt = new TairOption(clientEntry.getTimeout());
-					Future<Result<byte[]>> future = clientEntry.getClient().getAsync((short)nsGetGroupIdTable,qq.toString().getBytes(),opt);
+					Future<Result<byte[]>> future = clientEntry.getClient().getAsync((short)nsTableGroup,qq.toString().getBytes(),opt);
 					clientEntry.getClient().notifyFuture(future, this,clientEntry);	
 				}catch(Exception e){
 					logger.error(e.toString());
@@ -181,18 +202,25 @@ public class PretreatmentBolt implements IRichBolt {
 	
 	@Override
 	public void execute(Tuple input) {
+		String bid = input.getStringByField("bid");
 		String topic = input.getStringByField("topic");	
-		Values outputValues = new Values();
+		//Long qq = Long.valueOf(input.getStringByField("qq"));
+		Long qq = 0L;
+		String uid = input.getStringByField("uid");	
+		if(!uid.equals("17139104")){
+			return;
+		}
 		
+		Values outputValues = new Values();
 		String[] outputFields = dfConf.getInputFeildsByTopic(topic);
 		for(String field:outputFields){
-			String value = input.getStringByField(field);
-			outputValues.add(value);
+			if(!field.equals("qq")){
+				String value = input.getStringByField(field);
+				outputValues.add(value);
+			}
 		}
 		
 		if(dfConf.isNeedQQ(topic) ){
-			Long qq = Long.valueOf(input.getStringByField("qq"));
-			String uid = input.getStringByField("uid");
 			if(!Utils.isQNumValid(qq)){
 				if(!uid.equals("0") && uid.matches("[0-9]+")){
 					new GetQQUpdateCallBack(uid,dfConf.isNeedGroupId(topic),topic,outputValues).excute();
@@ -200,11 +228,13 @@ public class PretreatmentBolt implements IRichBolt {
 					return;
 				}
 			}else{
+				outputValues.add(qq);
 				if(dfConf.isNeedGroupId(topic)){
 					Integer groupId = Integer.valueOf(input.getStringByField("group_id"));
 					if(!Utils.isGroupIdVaild(groupId)){
 						new GetGroupIdUpdateCallBack(qq,topic,outputValues);
 					}else{
+						outputValues.add(groupId);
 						emitData(topic, outputValues);
 					}					
 				}else{
@@ -218,6 +248,7 @@ public class PretreatmentBolt implements IRichBolt {
 	
 	private void emitData(String outputStream, Values outputValues) {
 		this.collector.emit(outputStream,outputValues);
+		logger.info("output="+outputValues.toString());
 	}
 
 	@Override
@@ -228,8 +259,23 @@ public class PretreatmentBolt implements IRichBolt {
 	@Override
 	public void declareOutputFields(OutputFieldsDeclarer declarer) {
 		for(String topic:this.dfConf.getAllTopics()){
-			Fields fields = new Fields(dfConf.getInputFeildsByTopic(topic));
-			declarer.declareStream(topic, fields);
+			ArrayList<String> outputFields = new ArrayList<String>();
+			
+			for(String fieldName : dfConf.getInputFeildsByTopic(topic)){
+				if(!fieldName.equals("qq")){
+					outputFields.add(fieldName);
+				}
+			}
+			
+			if(dfConf.isNeedQQ(topic)){
+				outputFields.add("qq");
+			}
+			
+			if(dfConf.isNeedGroupId(topic)){
+				outputFields.add("group_id");
+			}
+			
+			declarer.declareStream(topic, new Fields(outputFields));
 		}	
 		declarer.declareStream("filter_data", new Fields(""));
 	}

@@ -56,14 +56,16 @@ public class URSTopology {
 		builder.setSpout("TDBankSpout", new TDBankSpout(dfConf),
 				getInt(conf.get("topology.tdbank_spout.parallel").toString()));
 		
-		builder.setBolt("PretreatBolt", new PretreatmentBolt(algConf,dfConf),
-				getInt(conf.get("topology.pre_treatment.parallel").toString()))
-				.fieldsGrouping("TDBankSpout",Constants.user_info_stream, new Fields("bid","hashKey"))
-				.fieldsGrouping("TDBankSpout",Constants.item_info_stream, new Fields("bid","hashKey"))
-				//.fieldsGrouping("TDBankSpout",Constants.item_category_stream, new Fields("bid","category_id"))
-				//.fieldsGrouping("TDBankSpout",Constants.action_weight_stream, new Fields("item_id","type_id"))
-				.fieldsGrouping("TDBankSpout",Constants.actions_stream, new Fields("bid","hashKey"));	
-			
+		
+		BoltDeclarer preBolt = builder.setBolt("PretreatBolt", new PretreatmentBolt(dfConf),
+				getInt(conf.get("topology.pre_treatment.parallel").toString()));
+		
+		for(String topic:dfConf.getAllTopics()){
+			preBolt.fieldsGrouping("TDBankSpout",topic, new Fields(dfConf.getHashKeyByTopic(topic)));
+		}
+					
+		
+		/*
 		for(String algName: algConf.getAlgConfMap().keySet()){
 			AlgModuleInfo algInfo = algConf.getAlgInfoByName(algName);
 			builder.setBolt(algInfo.getAlgName(), new AlgDealBolt(algInfo),
@@ -80,7 +82,7 @@ public class URSTopology {
 				bolt.fieldsGrouping(algInfo.getAlgName(),algInfo.getAlgName(), new Fields("HashKey"));
 			}
 		}
-		
+		*/
 		try {
 			StormSubmitter.submitTopology(conf.get("topology.name").toString(),
 					conf, builder.createTopology());

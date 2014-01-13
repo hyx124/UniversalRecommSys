@@ -49,7 +49,7 @@ public class TDBankSpout implements IRichSpout {
 	private static final long serialVersionUID = 1L;
 	private static Logger logger = LoggerFactory
 			.getLogger(TDBankSpout.class);
-	public final int DEFAULT_MAX_PENDING = 50000;
+	public final int DEFAULT_MAX_PENDING = 100000;
 	private int MAX_PENDING;
 	public static byte SPEARATOR = (byte) 0xe0;
 	private transient MessageConsumer messageConsumer;
@@ -59,7 +59,6 @@ public class TDBankSpout implements IRichSpout {
 	private transient BlockingQueue<Message> messageQueue;
 	private MonitorTools mt;
 	private DataFilterConf dfConf;
-	private AlgModuleConf algConf;
 
 	public TDBankSpout(DataFilterConf dataFilterConf) {
 		this.dfConf = dataFilterConf;
@@ -78,7 +77,7 @@ public class TDBankSpout implements IRichSpout {
 			this.collector = collector;
 			MAX_PENDING = Utils.getInt(conf, "tdbank.max.pending",DEFAULT_MAX_PENDING);
 			messageQueue = new LinkedBlockingQueue<Message>();
-			this.mt = MonitorTools.getMonitorInstance(conf);
+			//this.mt = MonitorTools.getMonitorInstance(conf);
 
 			setUpMeta(conf);
 		} catch (Exception e) {
@@ -86,24 +85,16 @@ public class TDBankSpout implements IRichSpout {
 		}
 	}
 
-	/*
-	 * (non-Javadoc)
-	 * 
-	 * @see backtype.storm.spout.ISpout#nextTuple()
-	 */
 	public void nextTuple() {
-		boolean debug = true;
+		boolean debug = false;
 		try {
 			if(debug){
 				Long ActionTime = System.currentTimeMillis();
-				//String Date = new SimpleDateFormat("yyyyMMdd").format(ActionTime);
+				//String[] dealMsg ={"1","UserAction",uin,uid,adpos,action_type,action_time,itemId,"","","",""}; 
+				String[] msg_array = {"1","UserAction","389687043","389687043","adpos","2",String.valueOf(ActionTime/1000L),"22222","","","",""};
+				dealMsgByConfig("1","UserAction",msg_array);
 
-				String[] msg_array = {Constants.actions_stream,"test_job","389687043","134","","420581","","22222",String.valueOf(ActionTime/1000L),"3",""};
-				dealMsgByConfig("bid","topic",msg_array);
-
-				Thread.sleep(1000);
-				logger.info(Constants.item_category_stream);
-				
+				Thread.sleep(1000);				
 			}else{	
 				Message msg = messageQueue.poll();
 				if (msg != null) {
@@ -145,9 +136,42 @@ public class TDBankSpout implements IRichSpout {
 						if (categoryId.length >= 4) {
 							tag = categoryId[1];
 						}
+						
+						String[] msg_array = msg.split("\t",-1);
 
-						String[] msg_array = msg.split("\t");
-						dealMsgByConfig("bid","topic",msg_array);
+						if (tag.equals("yxpv")
+								&& msg_array.length >= 30) {
+							
+							String uin = msg_array[2];
+							String uid = msg_array[3];
+							String action_time = msg_array[5];
+							String itemId = msg_array[7];
+							String adpos = msg_array[29];
+							String action_type = "";
+							
+							if (msg_array[22].indexOf("searchex.yixun.com") >= 0
+									&& msg_array[22].indexOf("searchex.yixun.com") < 15) {
+								action_type = "1";
+							} else if (msg_array[22].indexOf("direct enter") != -1) {
+								action_type = "2";
+							} else if (msg_array[22].indexOf("sale.yixun.com/morningmarket.html") != -1
+									|| msg_array[22].indexOf("sale.yixun.com/nightmarket.html") != -1
+									|| msg_array[22].indexOf("tuan.yixun.com") != -1) {
+								action_type = "3";	
+							} else if (msg_array[22].indexOf("www.baidu.com") != -1) {
+								action_type = "4";
+							} else if (msg_array[22].indexOf("event.yixun.com") != -1) {
+								action_type = "5";
+							} else{
+								return;			
+							}
+							//output=[1, UserAction, 20806747, 160821738, 4001, 1, 1389582548, 700919, , , , ]
+							String[] dealMsg ={"1","UserAction",uin,uid,adpos,action_type,action_time,itemId,"","","",""}; 
+							dealMsgByConfig("1","UserAction",dealMsg);
+						}else{
+							return ;
+						}
+
 					}
 				}
 			}
@@ -175,7 +199,7 @@ public class TDBankSpout implements IRichSpout {
 			}
 		}
 				
-		this.collector.emit(Constants.actions_stream,outputValues);	
+		this.collector.emit(topic,outputValues);	
 	}
 	
 	private void setUpMeta(@SuppressWarnings("rawtypes") Map conf)
@@ -232,11 +256,6 @@ public class TDBankSpout implements IRichSpout {
 		return -1;
 	}
 
-	/*
-	 * (non-Javadoc)
-	 * 
-	 * @see backtype.storm.spout.ISpout#close()
-	 */
 	public void close() {
 		try {
 			messageConsumer.shutdown();
@@ -250,20 +269,10 @@ public class TDBankSpout implements IRichSpout {
 		}
 	}
 
-	/*
-	 * (non-Javadoc)
-	 * 
-	 * @see backtype.storm.spout.ISpout#deactivate()
-	 */
 	public void deactivate() {
 		// TODO Auto-generated method stub
 	}
 
-	/*
-	 * (non-Javadoc)
-	 * 
-	 * @see backtype.storm.topology.IComponent#getComponentConfiguration()
-	 */
 	public Map<String, Object> getComponentConfiguration() {
 		// TODO Auto-generated method stub
 		return null;
@@ -286,9 +295,7 @@ public class TDBankSpout implements IRichSpout {
 			Fields fields = new Fields(dfConf.getInputFeildsByTopic(topic));
 			declarer.declareStream(topic, fields);
 		}
-		
-		declarer.declareStream("filter_data", new Fields(""));
-		
+		declarer.declareStream("filter_data", new Fields(""));		
 	}
 
 	/**

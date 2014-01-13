@@ -19,11 +19,13 @@ public class DataFilterConf implements Serializable{
 	 */
 	private static final long serialVersionUID = 1L;
 	
-	private class TopicInfo{
+	private class TopicInfo implements Serializable{
+		private static final long serialVersionUID = 1L;
 		private String name;
 		private String[] fields;
 		private Boolean isNeedGroupId;
 		private Boolean isNeedQQ;
+		private String hashKey;
 		
 		public TopicInfo(){
 			name = "";
@@ -72,9 +74,19 @@ public class DataFilterConf implements Serializable{
 				this.isNeedGroupId = false;
 			}
 		}
+		
+		public void setHashKey(String hashKey) {	
+			this.hashKey = hashKey;
+		}
+
+		public String getHashKey() {
+		
+			return this.hashKey;
+		}
 	}
 	
-	private class ColumnInfo{
+	private class ColumnInfo implements Serializable{
+		private static final long serialVersionUID = 1L;
 		private String colName;
 		private Boolean isInRange;
 		private Boolean isNotNull;
@@ -90,7 +102,6 @@ public class DataFilterConf implements Serializable{
 		}
 		
 		public void setName(String colName) {
-
 			this.colName = colName;
 		}
 		
@@ -104,9 +115,6 @@ public class DataFilterConf implements Serializable{
 					
 					minValue = Long.valueOf(values[0]);
 					maxValue = Long.valueOf(values[1]);
-					if(colName.equals("qq")){
-						System.out.println(minValue+","+maxValue);
-					}
 					this.isInRange = true;
 				}	
 			}	
@@ -229,6 +237,8 @@ public class DataFilterConf implements Serializable{
 	    			topicInfo.setIsNeedQQ(topic.getChildTextTrim("IsNeedQQ"));
 	    		}else if(attr.getName().equals("IsNeedGroup")){
 	    			topicInfo.setIsNeedGroupId(topic.getChildTextTrim("IsNeedGroup"));
+	    		}else if(attr.getName().equals("HashKey")){
+	    			topicInfo.setHashKey(topic.getChildTextTrim("HashKey"));
 	    		}
 		    }
 	    	allInfoMap.put(topicName, topicInfo);
@@ -274,6 +284,14 @@ public class DataFilterConf implements Serializable{
 		return null;
 	}
 
+
+	public String getHashKeyByTopic(String topic) {
+		if(allInfoMap.containsKey(topic)){
+			return allInfoMap.get(topic).getHashKey();
+		}
+		return "";
+	}
+	
 	public Set<String> getAllTopics() {
 		return allInfoMap.keySet();
 	}
@@ -311,6 +329,7 @@ public class DataFilterConf implements Serializable{
 			System.out.println("");
 			System.out.println(""+tinfo.isNeedGroupId());
 			System.out.println(""+tinfo.isNeedQQ());
+			System.out.println("hashKey="+tinfo.getHashKey());
 		}
 		
 		System.out.println("---------------------------------");
@@ -326,6 +345,7 @@ public class DataFilterConf implements Serializable{
 					System.out.println("colMinValue="+cinfo.minValue);
 					System.out.println("isInRange="+cinfo.isInRange);
 					System.out.println("isNotNull="+cinfo.isNotNull);
+			
 				}
 			}
 		
@@ -343,4 +363,5 @@ public class DataFilterConf implements Serializable{
 		
 
 	}
+
 }

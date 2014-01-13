@@ -39,53 +39,53 @@ message ItemDetailInfo
 	required uint64 ImpDate = 2;
 
 
-	optional uint64 BigType = 3;
-	optional string BigTypeName = 4;
+	optional uint64 BigType = 3;			//大类
+	optional string BigTypeName = 4;		//大类中文描述
 	
-	optional uint64 MiddleType = 5;  
-	optional string MiddleTypeName = 6;  
+	optional uint64 MiddleType = 5;  		//中类
+	optional string MiddleTypeName = 6;  	//中类中文描述
 	
-	optional uint64 SmallType = 7;
-	optional string SmallTypeName = 8;
+	optional uint64 SmallType = 7;			//小类
+	optional string SmallTypeName = 8;		//小类中文描述
 
-	optional ChargeType FreeFlag = 9 [default = NormalFee];
-	optional PublicType PublicFlag = 10 [default = NotPublic];
+	optional ChargeType FreeFlag = 9 [default = NormalFee];			//收费类型
+	optional PublicType PublicFlag = 10 [default = NotPublic];		//状态类型
 	
-	optional float Price = 11;
-	optional string Text = 12;
-	optional uint64 ItemTime = 13;
-	optional uint64 Platform = 14;
-	optional uint64 Score = 15;	
+	optional float Price = 11;				//价格
+	optional string Text = 12;				//备注
+	optional uint64 ItemTime = 13;			//创建时间
+	optional uint64 Platform = 14;			//所投放平台
+	optional uint64 Score = 15;				//分值
 }
 
 message UserDetailInfo
 {
-	required string QQNum = 1;
-	required uint64 ImpDate = 2;
+	required string QQNum = 1;				//用户qq号码
+	required uint64 ImpDate = 2;			//更新日期
 
-	optional string Imei = 3;
-	optional string Uid = 4;
+	optional string Imei = 3;				//手机IMEI号
+	optional string Uid = 4;				//业务帐号
 	
-	optional uint64 Level = 5;  
-	optional uint64 RegDate = 6;  
-	optional uint64 RegTime = 7;
+	optional uint64 Level = 5;  			//用户等级
+	optional uint64 RegDate = 6;  			//注册日期
+	optional uint64 RegTime = 7;			//注册时间
 }
 
 message RecommendResult
 {	
     message Result
     {
-        required string Item= 1;
-		optional uint32 BigType = 2;
-		optional uint32 MiddleType = 3;  
-		optional uint32 SmallType = 4;
-		optional double Weight = 5;
+        required string Item= 1;			//商品ID
+		optional uint32 BigType = 2;		//大类ID
+		optional uint32 MiddleType = 3;  	//中类ID
+		optional uint32 SmallType = 4;		//小类ID
+		optional double Weight = 5;			//权重
 
-		optional ChargeType FreeFlag = 6 [default = NormalFee];
-		optional uint64 Price = 7;
-		optional uint64 UpdateTime = 8;
-		optional uint64 ExpireTime = 9;
-		optional string Comment = 10;
+		optional ChargeType FreeFlag = 6 [default = NormalFee];		//收费类型
+		optional uint64 Price = 7;			//价格
+		optional uint64 UpdateTime = 8;		//更新时间
+		optional uint64 ExpireTime = 9;		//过期时间
+		optional string Comment = 10;		//备注
     }
     repeated Result Results  = 1;
 }
@@ -136,11 +136,11 @@ message UserActiveDetail
 	message TimeSegment {	
 		required uint64 TimeId = 1;	
 		message ItemInfo{							
-			required string Item        = 1;                        //item
+			required string Item = 1;                        	//商品ID
 			message ActType
     		{
     			required ActiveType ActType = 1 [default = Unknown]; 
-    			optional uint64 Count = 2;		
+    			optional uint64 Count = 2;							//该item在该时间的段内，该行为的次数
     			optional uint64 LastUpdateTime = 3; 				//item行为发生时间戳(s)
     		}
     		repeated ActType acts = 2;
@@ -153,8 +153,8 @@ message UserActiveDetail
 message CtrInfo
 {	
 	message TimeSegment {								
-		required uint64 click = 1;
-		optional uint64 impress = 2;
+		required uint64 click = 1;								//点击数
+		optional uint64 impress = 2;							//曝光数
 	}
     repeated TimeSegment tsegs  = 1;
 }

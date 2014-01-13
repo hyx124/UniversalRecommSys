@@ -5,6 +5,7 @@
 			<Fields>bid,topic,qq,uid,adpos,action_type,action_time,item_id,action_result,imei,platform,lbs_info</Fields>
 			<IsNeedQQ>true</IsNeedQQ>
 			<IsNeedGroup>true</IsNeedGroup>
+			<HashKey>qq</HashKey>
 		</Topic>
 	</AllInfo>
 
@@ -26,7 +27,7 @@
 		
 			<Column>
 				<Name>uid</Name>
-				<ValidRange>[10000,100000000000]</ValidRange>
+				<ValidRange>[0,100000000000]</ValidRange>
 				<NotNull>false</NotNull>
 			</Column>
 		
