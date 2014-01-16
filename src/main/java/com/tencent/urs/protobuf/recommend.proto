@@ -75,7 +75,7 @@ message RecommendResult
 {	
     message Result
     {
-        required string Item= 1;			//商品ID
+        required string Item = 1;			//商品ID
 		optional uint32 BigType = 2;		//大类ID
 		optional uint32 MiddleType = 3;  	//中类ID
 		optional uint32 SmallType = 4;		//小类ID

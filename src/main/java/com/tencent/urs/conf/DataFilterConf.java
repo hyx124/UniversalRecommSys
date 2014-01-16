@@ -8,11 +8,6 @@ import java.util.HashMap;
 import java.util.List;
 import java.util.Set;
 
-import org.jdom.*;
-import org.jdom.input.SAXBuilder;
-
-import com.tencent.urs.conf.AlgModuleConf.AlgModuleInfo;
-
 public class DataFilterConf implements Serializable{
 	/**
 	 * 
@@ -205,76 +200,7 @@ public class DataFilterConf implements Serializable{
 	}
 	
 	public void load(FileInputStream fileInputStream){
-		// 构造
-		SAXBuilder saxBuilder = new SAXBuilder();
-
-	    // 获取文档
-	    Document document = null;
-		try {
-			document = saxBuilder.build(fileInputStream);
-		} catch (JDOMException e) {
-			// TODO Auto-generated catch block
-			e.printStackTrace();
-		} catch (IOException e) {
-			// TODO Auto-generated catch block
-			e.printStackTrace();
-		}
-
-		   // 得到根元素
-	    Element root = document.getRootElement();
-	    Element allNode = root.getChild("AllInfo");
-	    List<Element> topicNods = allNode.getChildren("Topic");
-	    for(Element topic: topicNods){
-	    	TopicInfo topicInfo = new TopicInfo();
-	    	String topicName =  topic.getChildTextTrim("Name");
-	    	List<Element> topicAttrList = topic.getChildren();
-	    	for(Element attr: topicAttrList){
-		    	if(attr.getName().equals("Name")){
-		    		topicInfo.setName(topicName);
-	    		}else if(attr.getName().equals("Fields")){
-	    			topicInfo.setFeilds(topic.getChildTextTrim("Fields"));
-	    		}else if(attr.getName().equals("IsNeedQQ")){
-	    			topicInfo.setIsNeedQQ(topic.getChildTextTrim("IsNeedQQ"));
-	    		}else if(attr.getName().equals("IsNeedGroup")){
-	    			topicInfo.setIsNeedGroupId(topic.getChildTextTrim("IsNeedGroup"));
-	    		}else if(attr.getName().equals("HashKey")){
-	    			topicInfo.setHashKey(topic.getChildTextTrim("HashKey"));
-	    		}
-		    }
-	    	allInfoMap.put(topicName, topicInfo);
-	    }
-	    
-	    Element buNode = root.getChild("BusinessInfo");
-	    String bid = buNode.getChildTextTrim("Bid");
-	    List<Element> buNods = buNode.getChildren("Topic");
-	    
-	    HashMap<String,HashMap<String, ColumnInfo>> topicInfoMap = new HashMap<String,HashMap<String, ColumnInfo>>();
-	    for(Element topic: buNods){
-	    	String topicName =  topic.getChildTextTrim("Name");
-	    	
-	    	List<Element> columns = topic.getChildren("Column");
-	    	
-	    	HashMap<String, ColumnInfo> cInfoMap = new HashMap<String, ColumnInfo>();
-	    	for(Element col: columns){
-	    		List<Element> attrsList = col.getChildren();
-	    		String colName = col.getChildTextTrim("Name");
-	    		
-	    		ColumnInfo cInfo = new ColumnInfo();
-	    		for(Element attr: attrsList){
-			    	if(attr.getName().equals("Name")){		
-			    		cInfo.setName(colName);
-		    		}else if(attr.getName().equals("ValidRange")){
-		    			cInfo.setValidRange(col.getChildTextTrim("ValidRange"));
-		    		}else if(attr.getName().equals("NotNull")){
-		    			cInfo.setNotNull(col.getChildTextTrim("NotNull"));
-		    		}
-			    }
-	    		cInfoMap.put(colName, cInfo);	
-		    }
-	    	topicInfoMap.put(topicName, cInfoMap);
-	    	
-	    }
-	    dfConfMap.put(bid, topicInfoMap);
+		
 	}
 
 	public String[] getInputFeildsByTopic(String topic) {

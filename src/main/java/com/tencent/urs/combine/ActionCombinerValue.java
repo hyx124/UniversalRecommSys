@@ -13,6 +13,7 @@ public class ActionCombinerValue implements Combiner<ActionCombinerValue>,Serial
 	 * 
 	 */
 	private static final long serialVersionUID = 305886042186738812L;
+	
 	private HashMap<String,Recommend.UserActiveHistory.ActiveRecord> actRecordMap;
 	public class Action{
 		
@@ -32,9 +33,9 @@ public class ActionCombinerValue implements Combiner<ActionCombinerValue>,Serial
 	}
 		
 	@Override
-	public void incrument(ActionCombinerValue other) {		
-		for(String itemId: other.getActRecodeMap().keySet()){
-			actRecordMap.put(itemId, other.getActRecodeMap().get(itemId));
+	public void incrument(ActionCombinerValue newValues) {		
+		for(String itemId: newValues.getActRecodeMap().keySet()){
+			actRecordMap.put(itemId, newValues.getActRecodeMap().get(itemId));
 		}
 	}
 

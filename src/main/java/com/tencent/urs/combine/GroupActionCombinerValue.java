@@ -13,35 +13,32 @@ public class GroupActionCombinerValue implements Combiner<GroupActionCombinerVal
 	 * 
 	 */
 	private static final long serialVersionUID = 305886042186738812L;
-	private HashMap<Utils.actionType,Integer> actRecordMap;
-	public class Action{
-		
+	private Long time;
+	private Recommend.ActiveType actType;
+	
+	public Long getTime(){
+		return this.time;
 	}
 	
-	public HashMap<Utils.actionType,Integer> getActRecodeMap(){
-		return this.actRecordMap;
+	public Recommend.ActiveType getType(){
+		return this.actType;
 	}
 	
-	public GroupActionCombinerValue(){
-		this.actRecordMap = new HashMap<Utils.actionType,Integer>();
-	}
-	
-	public void init(Utils.actionType actType,Integer count){
-		this.actRecordMap.clear();
-		actRecordMap.put(actType,count);
+	public GroupActionCombinerValue(Recommend.ActiveType actType,Long time){
+		this.time = time;
+		this.actType = actType;
 	}
 		
 	@Override
-	public void incrument(GroupActionCombinerValue other) {
-		
-		for(Utils.actionType at: other.getActRecodeMap().keySet()){
-			int count = other.getActRecodeMap().get(at);
-			if(this.getActRecodeMap().containsKey(at)){
-				count = count + actRecordMap.get(at);
-			}			
-			actRecordMap.put(at, count);
+	public void incrument(GroupActionCombinerValue newValue) {		
+		if(newValue.getType().getNumber() > this.getType().getNumber()){
+			this.actType = newValue.getType();
+			this.time = newValue.getTime();
 		}
 	}
-
+	
+	public static void main(String[] args){
+		System.out.print(Recommend.ActiveType.Impress.getNumber());
+	}
 	
 }

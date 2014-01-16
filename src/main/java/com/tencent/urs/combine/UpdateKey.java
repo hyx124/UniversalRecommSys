@@ -1,13 +1,18 @@
 package com.tencent.urs.combine;
 
 public class UpdateKey{
+	private String bid;
 	private Long uin;
 	private Integer groupId;
 	private String adpos;
 	private String itemId;
 	
-	public UpdateKey(Long uin,Integer groupId,String adpos,String itemId){
+	public UpdateKey(String bid,Long uin,Integer groupId,String adpos,String itemId){
 		
+	}
+	
+	public String getBid(){
+		return this.bid;
 	}
 	
 	public Integer getGroupId(){

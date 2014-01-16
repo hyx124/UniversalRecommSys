@@ -53,18 +53,22 @@ http://maven.apache.org/xsd/maven-4.0.0.xsd">
 		<dependency>
 			<groupId>com.tencent.streaming</groupId>
 			<artifactId>monitor</artifactId>
+			<version>2.0.0</version>
 		</dependency>
 		
 		<dependency>
 			<groupId>com.tencent.streaming</groupId>
 			<artifactId>streaming-commons</artifactId>
-			<version>2.0.0</version>
+			<version>2.0.1</version>
 		</dependency>
 		
+        
 		<dependency>
 			<groupId>com.tencent.tdengine.api</groupId>
 			<artifactId>tde-java</artifactId>
+			<version>1.1.0</version>
 		</dependency>
+		
 		<dependency>
 			<groupId>com.taobao.metamorphosis</groupId>
 			<artifactId>metamorphosis-client</artifactId>
@@ -76,6 +80,7 @@ http://maven.apache.org/xsd/maven-4.0.0.xsd">
 				</exclusion>
 			</exclusions>
 		</dependency>
+		
 		<dependency>
 			<groupId>com.taobao.metamorphosis</groupId>
 			<artifactId>metamorphosis-client-extension</artifactId>
@@ -91,11 +96,13 @@ http://maven.apache.org/xsd/maven-4.0.0.xsd">
 		<dependency>
 			<groupId>com.google.protobuf</groupId>
 			<artifactId>protobuf-java</artifactId>
+			<version>2.4.1</version>
 		</dependency>
 		
 		<dependency>
 			<groupId>storm</groupId>
 			<artifactId>storm</artifactId>
+			<version>0.8.2</version>
 			<scope>provided</scope>
 		</dependency>
 		

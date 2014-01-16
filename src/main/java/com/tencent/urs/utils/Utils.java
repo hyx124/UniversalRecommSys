@@ -3,33 +3,9 @@ package com.tencent.urs.utils;
 import java.util.HashSet;
 import java.util.Map;
 
+import com.tencent.urs.protobuf.Recommend.ActiveType;
+
 public class Utils {
-	
-	public static enum actionType{
-		Unknown(0),
-		Impress(1),
-		Click(2),
-		PageView(3),
-		Read(4),
-		Save(5),
-		BuyCart(6),
-		Deal(7),
-		Score(8),
-		Comments(9),
-		Reply(10),
-		Ups(11),
-		Praise(12),
-		Share(13);
-		
-		private int value;  
-		actionType(int value){
-			this.value = value;
-		}	
-		
-		public int getValue(){
-			return this.value;
-		}
-	}
 	
 	private static HashSet<Integer> groupIdSet = new HashSet<Integer>();
 	static{
@@ -91,19 +67,29 @@ public class Utils {
 		return false;
 	}
 	
-	public static boolean isQNumValid(Long uin){
-		if(uin <10000 || uin > 10000000000L){
+	public static boolean isQNumValid(String qq){
+		if(!qq.matches("[0-9]+") && qq.equals("0")){
 			return false;
+		}else{
+			if(Long.valueOf(qq) <10000 || Long.valueOf(qq) > 10000000000L){
+				return false;
+			}
 		}
+		
 		return true;
 	}
 	
-	public static boolean isGroupIdVaild(Integer groupId){
-		if(groupIdSet.contains(groupId)){
-			return true;
-		}else{
+	public static boolean isGroupIdVaild(String groupId){
+		if(!groupId.matches("[0-9]+") && groupId.equals("0")){
 			return false;
+		}else{
+			if(groupIdSet.contains(Long.valueOf(groupId))){
+				return true;
+			}else{
+				return false;
+			}
 		}
+
 	}
 
 	
@@ -112,6 +98,43 @@ public class Utils {
 	 */
 	public static void main(String[] args) {
 		// TODO Auto-generated method stub	
+	}
+
+	public static ActiveType getActionTypeByString(String actionType) {
+		if(actionType.equals("1")){
+			return ActiveType.Impress;
+		}else if(actionType.equals("2")){
+			return ActiveType.Click;
+		}else if(actionType.equals("3")){
+			return ActiveType.PageView;
+		}else if(actionType.equals("4")){
+			return ActiveType.Read;
+		}else if(actionType.equals("5")){
+			return ActiveType.Save;
+		}else if(actionType.equals("6")){
+			return ActiveType.BuyCart;
+		}else if(actionType.equals("7")){
+			return ActiveType.Deal;
+		}else if(actionType.equals("8")){
+			return ActiveType.Score;
+		}else if(actionType.equals("9")){
+			return ActiveType.Comments;
+		}else if(actionType.equals("10")){
+			return ActiveType.Reply;
+		}else if(actionType.equals("11")){
+			return ActiveType.Ups;
+		}else if(actionType.equals("12")){
+			return ActiveType.Praise;
+		}else if(actionType.equals("13")){
+			return ActiveType.Share;
+		}else{
+			return ActiveType.Unknown;
+		}
+	}
+
+	public static boolean isBidValid(String bid) {
+		// TODO Auto-generated method stub
+		return true;
 	}
 
 }
