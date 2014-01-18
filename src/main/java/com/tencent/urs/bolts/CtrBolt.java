@@ -48,7 +48,7 @@ import com.tencent.urs.utils.Constants;
 import com.tencent.urs.utils.DataCache;
 import com.tencent.urs.utils.Utils;
 
-public class CtrDetailBolt extends AbstractConfigUpdateBolt{
+public class CtrBolt extends AbstractConfigUpdateBolt{
 	private static final long serialVersionUID = 2177325954880418605L;
 	private List<ClientAttr> mtClientList;	
 	private MonitorTools mt;
@@ -58,9 +58,9 @@ public class CtrDetailBolt extends AbstractConfigUpdateBolt{
 	private AlgModuleConf algInfo;
 	
 	private static Logger logger = LoggerFactory
-			.getLogger(CtrDetailBolt.class);
+			.getLogger(CtrBolt.class);
 	
-	public CtrDetailBolt(String config, ImmutableList<Output> outputField, String sid) {
+	public CtrBolt(String config, ImmutableList<Output> outputField, String sid) {
 		super(config, outputField, sid);
 		this.updateConfig(super.config);
 	}

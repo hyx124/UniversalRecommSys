@@ -39,7 +39,7 @@ import com.tencent.urs.tdengine.TDEngineClientFactory.ClientAttr;
 import com.tencent.urs.utils.DataCache;
 import com.tencent.urs.utils.Utils;
 
-public class CFBolt extends AbstractConfigUpdateBolt{
+public class ARCFBolt extends AbstractConfigUpdateBolt{
 	/**
 	 * 
 	 */
@@ -53,10 +53,10 @@ public class CFBolt extends AbstractConfigUpdateBolt{
 	private int combinerExpireTime;
 	private OutputCollector collector;
 	
-	private static Logger logger = LoggerFactory.getLogger(CFBolt.class);
+	private static Logger logger = LoggerFactory.getLogger(ARCFBolt.class);
 
 	@SuppressWarnings("rawtypes")
-	public CFBolt(String config, ImmutableList<Output> outputField,
+	public ARCFBolt(String config, ImmutableList<Output> outputField,
 			String sid){
 		super(config, outputField, sid);
 		this.updateConfig(super.config);
@@ -73,30 +73,6 @@ public class CFBolt extends AbstractConfigUpdateBolt{
 		this.combinerExpireTime = Utils.getInt(conf, "combiner.expireTime",5);
 		setCombinerTime(combinerExpireTime);
 	} 
-	
-	@Override
-	public void updateConfig(XMLConfiguration config) {
-		try {
-			this.algInfo.load(config);
-		} catch (ConfigurationException e) {
-			logger.error(e.toString());
-		}
-	}
-
-	@Override
-	public void processEvent(String sid, Tuple tuple) {
-		String bid = tuple.getStringByField("bid");
-		Long uin = tuple.getLongByField("qq");
-		Integer groupId = tuple.getIntegerByField("groupId");
-		String itemId = tuple.getStringByField("itemId");
-		String adpos = tuple.getStringByField("adpos");
-		
-		ActionCombinerValue value = new ActionCombinerValue();
-		
-		UpdateKey key = new UpdateKey(bid,uin,groupId,adpos,itemId);
-		combinerKeys(key,value);	
-	}
-
 	
 	private void setCombinerTime(final int second) {
 		new Thread(new Runnable() {
@@ -263,6 +239,7 @@ public class CFBolt extends AbstractConfigUpdateBolt{
 		}
 	}
 
+
 	private class GetItemCountCallBack implements MutiClientCallBack{
 		private final UpdateKey key;
 		private String otherItem;
@@ -315,6 +292,30 @@ public class CFBolt extends AbstractConfigUpdateBolt{
 			}
 			
 		}
+	}
+
+
+	@Override
+	public void updateConfig(XMLConfiguration config) {
+		try {
+			this.algInfo.load(config);
+		} catch (ConfigurationException e) {
+			logger.error(e.toString());
+		}
+	}
+
+	@Override
+	public void processEvent(String sid, Tuple tuple) {
+		String bid = tuple.getStringByField("bid");
+		Long uin = tuple.getLongByField("newqq");
+		Integer groupId = tuple.getIntegerByField("groupId");
+		String itemId = tuple.getStringByField("itemId");
+		String adpos = tuple.getStringByField("adpos");
+		
+		ActionCombinerValue value = new ActionCombinerValue();
+		
+		UpdateKey key = new UpdateKey(bid,uin,groupId,adpos,itemId);
+		combinerKeys(key,value);	
 	}
 
 }

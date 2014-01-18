@@ -71,6 +71,132 @@
 			<cache_expiretime>3600</cache_expiretime>
 		</bolt>
 		
+		<bolt name="ItemPairBolt" class="com.tencent.urs.bolts.ItemPairBolt" parallelsim="1">
+			<grouping type="field">
+				<fields>qq</fields>
+				<component>PretreatmentBolt</component>
+				<streaming_ids>UserAction</streaming_ids>
+			</grouping>
+		
+			<storage_table>304</storage_table>
+			<dependent_table>302</dependent_table>
+			<data_expiretime>259200</data_expiretime>
+			<cache_expiretime>3600</cache_expiretime>
+		</bolt>
+		
+		<bolt name="CtrStorBolt" class="com.tencent.urs.bolts.CtrStorBolt" parallelsim="1">
+			<grouping type="field">
+				<fields>qq</fields>
+				<component>PretreatmentBolt</component>
+				<streaming_ids>UserAction</streaming_ids>
+			</grouping>
+		
+			<storage_table>305</storage_table>
+			<data_expiretime>259200</data_expiretime>
+			<cache_expiretime>3600</cache_expiretime>
+		</bolt>
+		
+		<bolt name="ARCFBolt" class="com.tencent.urs.bolts.ARCFBolt" parallelsim="1">
+			<grouping type="field">
+				<fields>qq</fields>
+				<component>PretreatmentBolt</component>
+				<streaming_ids>UserAction</streaming_ids>
+			</grouping>
+		
+			<actiondetail_table></actiondetail_table>
+			<itemcount_table></itemcount_table>
+			<itempair_table></itempair_table>
+			<data_expiretime>259200</data_expiretime>
+			<cache_expiretime>3600</cache_expiretime>
+			
+			<output_fields>
+				<stream_id>computer_result</stream_id>
+				<fields>key,weight,alg_name</fields>
+			</output_fields>
+		</bolt>
+		
+		<bolt name="CtrBolt" class="com.tencent.urs.bolts.CtrBolt" parallelsim="1">
+			<grouping type="field">
+				<fields>qq</fields>
+				<component>PretreatmentBolt</component>
+				<streaming_ids>UserAction</streaming_ids>
+			</grouping>
+		
+			<dependent_table>305</dependent_table>
+			<data_expiretime>259200</data_expiretime>
+			<cache_expiretime>3600</cache_expiretime>
+			
+			<output_fields>
+				<stream_id>computer_result</stream_id>
+				<fields>key,weight,alg_name</fields>
+			</output_fields>
+		</bolt>
+		
+		<bolt name="HotTopByCategory" class="com.tencent.urs.bolts.HotTopByCategory" parallelsim="1">
+			<grouping type="field">
+				<fields>qq</fields>
+				<component>PretreatmentBolt</component>
+				<streaming_ids>UserAction</streaming_ids>
+			</grouping>
+		
+			<dependent_table>303</dependent_table>
+			<data_expiretime>259200</data_expiretime>
+			<cache_expiretime>3600</cache_expiretime>
+			
+			<output_fields>
+				<stream_id>computer_result</stream_id>
+				<fields>key,weight,alg_name</fields>
+			</output_fields>
+		</bolt>
+		
+		<bolt name="HotTopByGroupId" class="com.tencent.urs.bolts.HotTopByGroupId" parallelsim="1">
+			<grouping type="field">
+				<fields>qq</fields>
+				<component>PretreatmentBolt</component>
+				<streaming_ids>UserAction</streaming_ids>
+			</grouping>
+		
+			<dependent_table>303</dependent_table>
+			<data_expiretime>259200</data_expiretime>
+			<cache_expiretime>3600</cache_expiretime>
+			
+			<output_fields>
+				<stream_id>computer_result</stream_id>
+				<fields>key,weight,alg_name</fields>
+			</output_fields>
+		</bolt>
+		
+		<bolt name="ResultStorageBolt" class="com.tencent.urs.bolts.ResultStorageBolt" parallelsim="1">
+			<grouping type="field">
+				<fields>key</fields>
+				<component>ARCFBolt</component>
+				<streaming_ids>result</streaming_ids>
+			</grouping>
+			
+			<grouping type="field">
+				<fields>key</fields>
+				<component>CtrBolt</component>
+				<streaming_ids>result</streaming_ids>
+			</grouping>
+			
+			<grouping type="field">
+				<fields>key</fields>
+				<component>HotTopByCategory</component>
+				<streaming_ids>result</streaming_ids>
+			</grouping>
+			
+			<grouping type="field">
+				<fields>key</fields>
+				<component>HotTopByGroupId</component>
+				<streaming_ids>result</streaming_ids>
+			</grouping>
+			
+		
+			<dependent_table>310</dependent_table>
+			<data_expiretime>259200</data_expiretime>
+			<cache_expiretime>3600</cache_expiretime>
+		</bolt>
+		
 	</bolts>
 	
 	<configs>
