@@ -1,7 +1,7 @@
 <?xml version="1.0" encoding="UTF-8" ?>
-<topology name="urs-topology" works="20" ackers="0" debug="false">
+<topology name="urs-topology" works="20" ackers="0" debug="false">	
 	<spouts>
-		<spout name="UserActionSpout" class="com.tencent.urs.spouts.UserActionSpout" parallelism="1">
+		<spout name="TestSpout" class="com.tencent.urs.spouts.TestSpout" parallelism="1">
 			<tdbank_zookeeper_address>sk-zk-td1:2181,sk-zk-td2:2181,sk-zk-td3:2181,sk-zk-td4:2181,sk-zk-td5:2181</tdbank_zookeeper_address>
 			<tdbank_zookeeper_timeout>10000</tdbank_zookeeper_timeout>
 			<tdbank_zookeeper_connecttimeout>30000</tdbank_zookeeper_connecttimeout>
@@ -17,7 +17,6 @@
 			</output_fields>
 		</spout>
 	</spouts>
-
 	
 	<bolts>
 		<bolt name="PretreatmentBolt" class="com.tencent.urs.bolts.PretreatmentBolt" parallelsim="1">
@@ -65,7 +64,8 @@
 				<streaming_ids>UserAction</streaming_ids>
 			</grouping>
 		
-			<storage_table>303</storage_table>
+			<user_count_table>303</user_count_table>
+			<group_count_table>304</group_count_table>
 			<dependent_table>302</dependent_table>
 			<data_expiretime>259200</data_expiretime>
 			<cache_expiretime>3600</cache_expiretime>
@@ -78,7 +78,8 @@
 				<streaming_ids>UserAction</streaming_ids>
 			</grouping>
 		
-			<storage_table>304</storage_table>
+			<user_count_table>305</user_count_table>
+			<group_count_table>306</group_count_table>
 			<dependent_table>302</dependent_table>
 			<data_expiretime>259200</data_expiretime>
 			<cache_expiretime>3600</cache_expiretime>
@@ -91,7 +92,7 @@
 				<streaming_ids>UserAction</streaming_ids>
 			</grouping>
 		
-			<storage_table>305</storage_table>
+			<storage_table>306</storage_table>
 			<data_expiretime>259200</data_expiretime>
 			<cache_expiretime>3600</cache_expiretime>
 		</bolt>
@@ -103,9 +104,9 @@
 				<streaming_ids>UserAction</streaming_ids>
 			</grouping>
 		
-			<actiondetail_table></actiondetail_table>
-			<itemcount_table></itemcount_table>
-			<itempair_table></itempair_table>
+			<item_count_table>304</item_count_table>
+			<pair_count_table>306</pair_count_table>
+			<dependent_table>302</dependent_table>
 			<data_expiretime>259200</data_expiretime>
 			<cache_expiretime>3600</cache_expiretime>
 			
@@ -122,7 +123,7 @@
 				<streaming_ids>UserAction</streaming_ids>
 			</grouping>
 		
-			<dependent_table>305</dependent_table>
+			<dependent_table>306</dependent_table>
 			<data_expiretime>259200</data_expiretime>
 			<cache_expiretime>3600</cache_expiretime>
 			
@@ -139,7 +140,7 @@
 				<streaming_ids>UserAction</streaming_ids>
 			</grouping>
 		
-			<dependent_table>303</dependent_table>
+			<item_count_table>304</item_count_table>
 			<data_expiretime>259200</data_expiretime>
 			<cache_expiretime>3600</cache_expiretime>
 			
@@ -156,7 +157,7 @@
 				<streaming_ids>UserAction</streaming_ids>
 			</grouping>
 		
-			<dependent_table>303</dependent_table>
+			<item_count_table>304</item_count_table>
 			<data_expiretime>259200</data_expiretime>
 			<cache_expiretime>3600</cache_expiretime>
 			
@@ -170,25 +171,25 @@
 			<grouping type="field">
 				<fields>key</fields>
 				<component>ARCFBolt</component>
-				<streaming_ids>result</streaming_ids>
+				<streaming_ids>computer_result</streaming_ids>
 			</grouping>
 			
 			<grouping type="field">
 				<fields>key</fields>
 				<component>CtrBolt</component>
-				<streaming_ids>result</streaming_ids>
+				<streaming_ids>computer_result</streaming_ids>
 			</grouping>
 			
 			<grouping type="field">
 				<fields>key</fields>
 				<component>HotTopByCategory</component>
-				<streaming_ids>result</streaming_ids>
+				<streaming_ids>computer_result</streaming_ids>
 			</grouping>
 			
 			<grouping type="field">
 				<fields>key</fields>
 				<component>HotTopByGroupId</component>
-				<streaming_ids>result</streaming_ids>
+				<streaming_ids>computer_result</streaming_ids>
 			</grouping>
 			
 		

@@ -7,7 +7,6 @@ import java.util.Map;
 import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.Future;
 
-import org.apache.commons.configuration.ConfigurationException;
 import org.apache.commons.configuration.XMLConfiguration;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -23,7 +22,6 @@ import com.tencent.tde.client.TairClient.TairOption;
 import com.tencent.tde.client.impl.MutiThreadCallbackClient.MutiClientCallBack;
 import com.tencent.urs.asyncupdate.UpdateCallBack;
 import com.tencent.urs.asyncupdate.UpdateCallBackContext;
-import com.tencent.urs.combine.ActionCombinerValue;
 import com.tencent.urs.conf.AlgModuleConf;
 import com.tencent.urs.protobuf.Recommend;
 import com.tencent.urs.protobuf.Recommend.RecommendResult;
@@ -36,8 +34,6 @@ import com.tencent.urs.utils.Utils;
 
 import backtype.storm.task.OutputCollector;
 import backtype.storm.task.TopologyContext;
-import backtype.storm.topology.IRichBolt;
-import backtype.storm.topology.OutputFieldsDeclarer;
 import backtype.storm.tuple.Tuple;
 
 public class ResultStorageBolt extends AbstractConfigUpdateBolt {
@@ -53,15 +49,16 @@ public class ResultStorageBolt extends AbstractConfigUpdateBolt {
 	private static Logger logger = LoggerFactory
 			.getLogger(ResultStorageBolt.class);
 
-	public ResultStorageBolt(String config, ImmutableList<Output> outputField,
-			String sid) {
-		super(config, outputField, sid);
+	public ResultStorageBolt(String config, ImmutableList<Output> outputField) {
+		super(config, outputField, Constants.config_stream);
 	}
 	
 	@Override
 	public void prepare(Map conf, TopologyContext context,
 			OutputCollector collector) {
 		super.prepare(conf, context, collector);
+		updateConfig(super.config);
+		
 		this.resCache = new DataCache<RecommendResult>(conf);
 		this.collector = collector;
 		
@@ -186,20 +183,15 @@ public class ResultStorageBolt extends AbstractConfigUpdateBolt {
 	
 	@Override
 	public void updateConfig(XMLConfiguration config) {
-		
-		try {
-			this.algConf.load(config);
-		} catch (ConfigurationException e) {
-			logger.error(e.toString());
-		}	
+
 	}
 
 	@Override
 	public void processEvent(String sid, Tuple tuple) {		
 		String algName = tuple.getStringByField("algName");
 		String key = tuple.getStringByField("key");
-		Recommend.RecommendResult.Result value = (RecommendResult.Result) tuple.getValueByField("value");
-		new putToTDEUpdateCallBack(key,value,algConf).excute();
+		//Recommend.RecommendResult.Result value = (RecommendResult.Result) tuple.getValueByField("value");
+		//new putToTDEUpdateCallBack(key,value,algConf).excute();
 		
 	}
 	

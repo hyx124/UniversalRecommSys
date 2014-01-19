@@ -8,7 +8,11 @@ public class UpdateKey{
 	private String itemId;
 	
 	public UpdateKey(String bid,Long uin,Integer groupId,String adpos,String itemId){
-		
+		this.bid = bid;
+		this.uin = uin;
+		this.groupId = groupId;
+		this.adpos = adpos;
+		this.itemId = itemId;
 	}
 	
 	public String getBid(){

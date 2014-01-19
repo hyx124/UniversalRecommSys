@@ -99,21 +99,14 @@ public class PretreatmentBolt extends AbstractConfigUpdateBolt {
 		String topic = tuple.getStringByField("topic");	
 		String qq = tuple.getStringByField("qq");
 		String uid = tuple.getStringByField("uid");	
-		
-		if(qq.equals("389687043") || uid.equals("17139104")){
-			logger.info("enter in bolt,uin="+qq+",uid="+uid);
-			qq = "0";
-		}else{
-			return;
-		}
-		
+
 		Values outputValues = new Values();
 	
 		for(String field:tuple.getFields()){
 			outputValues.add(tuple.getStringByField(field));
 		}
-		
-		if(sid.equals(Constants.actions_stream) ){
+
+		if(topic.equals(Constants.actions_stream)){
 			if(!Utils.isQNumValid(qq)){
 				if(!uid.equals("0") && uid.matches("[0-9]+")){
 					new GetQQUpdateCallBack(uid,true,topic,outputValues).excute();
@@ -122,14 +115,8 @@ public class PretreatmentBolt extends AbstractConfigUpdateBolt {
 				}
 			}else{
 				outputValues.add(qq);
-				String groupId = tuple.getStringByField("group_id");
-				if(!Utils.isGroupIdVaild(groupId)){
-					new GetGroupIdUpdateCallBack(qq,topic,outputValues);
-				}else{
-					outputValues.add(groupId);
-					emitData(topic, outputValues);
-				}							
-			}
+				new GetGroupIdUpdateCallBack(qq,topic,outputValues).excute();
+			}						
 		}else{
 			emitData(topic, outputValues);
 		}
@@ -236,6 +223,7 @@ public class PretreatmentBolt extends AbstractConfigUpdateBolt {
 		public void excute(){
 			SoftReference<String> groupId = groupIdCache.get(qq.toString());
 			if(groupId != null){
+				logger.info("get groupid in cache, groupid="+groupId.get());
 				outputValues.add(groupId.get());
 				emitData(outputStream, outputValues);
 			}else{
@@ -253,8 +241,8 @@ public class PretreatmentBolt extends AbstractConfigUpdateBolt {
 	}
 	
 	private void emitData(String outputStream, Values outputValues) {
-		this.collector.emit(outputStream,outputValues);
 		logger.info("output="+outputValues.toString());
+		this.collector.emit(outputStream,outputValues);
 	}
 	
 }

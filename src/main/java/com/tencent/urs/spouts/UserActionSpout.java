@@ -101,10 +101,6 @@ public class UserActionSpout extends TdbankSpout {
 						
 			//output=[1, UserAction, 20806747, 160821738, 4001, 1, 1389582548, 700919, , , , ]
 			
-			if(uin.endsWith("0") || uid.equals("0")){
-				uin = "389687043";
-				uid = "17139104";
-			}
 			String[] dealMsg ={"1","UserAction",uin,uid,adpos,action_type,action_time,itemId,"","","",""}; 
 			dealMsgByConfig("1","UserAction",dealMsg);
 		}else{
@@ -122,10 +118,7 @@ public class UserActionSpout extends TdbankSpout {
 		for(String value: msg_array){
 			outputValues.add(value);
 		}
-		this.collector.emit(topic,outputValues);	
-		if(outputValues.toString().indexOf("389687043")>=0){
-			logger.info("log_output="+outputValues.toString());
-		}		
+		this.collector.emit(topic,outputValues);			
 	}
 	
 	private int searchIndex(byte[] bytes, byte key) {

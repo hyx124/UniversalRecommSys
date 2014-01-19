@@ -56,23 +56,20 @@ public class HotTopByCategory extends AbstractConfigUpdateBolt{
 			.getLogger(HotTopByCategory.class);
 	
 	
-	public HotTopByCategory(String config, ImmutableList<Output> outputField, String sid) {
-		super(config, outputField, sid);
-		this.updateConfig(super.config);
+	public HotTopByCategory(String config, ImmutableList<Output> outputField) {
+		super(config, outputField, Constants.config_stream);
 	}
 
 	@Override
 	public void updateConfig(XMLConfiguration config) {
-		try {
-			this.algInfo.load(config);
-		} catch (ConfigurationException e) {
-			logger.error(e.toString());
-		}
+
 	}
 	
 	@Override
 	public void prepare(Map conf, TopologyContext context, OutputCollector collector){
 		super.prepare(conf, context, collector);
+		this.updateConfig(super.config);
+
 		this.mtClientList = TDEngineClientFactory.createMTClientList(conf);
 		this.mt = MonitorTools.getMonitorInstance(conf);
 		this.combinerMap = new ConcurrentHashMap<String,ActionCombinerValue>(1024);
@@ -87,7 +84,7 @@ public class HotTopByCategory extends AbstractConfigUpdateBolt{
 		String key = tuple.getStringByField("qq");
 		ActionCombinerValue value = null;
 		
-		combinerKeys(key, value);	
+		//combinerKeys(key, value);	
 	}
 
 	private void setCombinerTime(final int second) {

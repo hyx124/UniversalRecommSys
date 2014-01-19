@@ -46,14 +46,16 @@ public class BaseInfoBolt extends AbstractConfigUpdateBolt{
 			.getLogger(BaseInfoBolt.class);
 	
 	@SuppressWarnings("rawtypes")
-	public BaseInfoBolt(String config, ImmutableList<Output> outputField,
-			String sid){
-		super(config, outputField, sid);
-		this.updateConfig(super.config);		
+	public BaseInfoBolt(String config, ImmutableList<Output> outputField){
+		super(config, outputField, Constants.config_stream);
+				
 	}
 	
 	@Override
 	public void prepare(Map conf, TopologyContext context, OutputCollector collector){
+		super.prepare(conf, context, collector);
+		updateConfig(super.config);
+		
 		this.nsTableID = Utils.getInt(conf, "tableid", 11);
 		
 		this.mtClientList = TDEngineClientFactory.createMTClientList(conf);

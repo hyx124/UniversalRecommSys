@@ -60,9 +60,8 @@ public class CtrBolt extends AbstractConfigUpdateBolt{
 	private static Logger logger = LoggerFactory
 			.getLogger(CtrBolt.class);
 	
-	public CtrBolt(String config, ImmutableList<Output> outputField, String sid) {
-		super(config, outputField, sid);
-		this.updateConfig(super.config);
+	public CtrBolt(String config, ImmutableList<Output> outputField) {
+		super(config, outputField, Constants.config_stream);
 	}
 	
 	private void setCombinerTime(final int second) {
@@ -102,6 +101,8 @@ public class CtrBolt extends AbstractConfigUpdateBolt{
 	@Override
 	public void prepare(Map conf, TopologyContext context, OutputCollector collector){
 		super.prepare(conf, context, collector);
+		updateConfig(super.config);
+		
 		this.mtClientList = TDEngineClientFactory.createMTClientList(conf);
 		this.mt = MonitorTools.getMonitorInstance(conf);
 		this.cacheMap = new DataCache<Recommend.CtrInfo>(conf);
@@ -205,24 +206,19 @@ public class CtrBolt extends AbstractConfigUpdateBolt{
 
 	@Override
 	public void updateConfig(XMLConfiguration config) {
-		try {
-			this.algInfo.load(config);
-		} catch (ConfigurationException e) {
-			logger.error(e.toString());
-		}
+
 	}
 
 	@Override
 	public void processEvent(String sid, Tuple tuple) {
 		String adpos = tuple.getStringByField("adpos");
-		String itemId = tuple.getStringByField("itemId");
-		String result = tuple.getStringByField("result");
+		String itemId = tuple.getStringByField("item_id");
 		
 		String actionType = tuple.getStringByField("action_type");
 		String actionTime = tuple.getStringByField("action_time");
 	
 		ActiveType actType = Utils.getActionTypeByString(actionType);
-			
+		/*	
 		if(actType == Recommend.ActiveType.Impress || actType == Recommend.ActiveType.Click){
 			String[] items = result.split(",",-1);
 			for(String eachItem: items){
@@ -238,6 +234,6 @@ public class CtrBolt extends AbstractConfigUpdateBolt{
 					combinerKeys(key,value);
 				}
 			}	
-		}
+		}*/
 	}
 }

@@ -61,14 +61,14 @@ public class Utils {
 	}
 	
 	public static boolean isItemIdValid(String itemId){
-		if(itemId.matches("[0-9]+") && !itemId.equals("0")){
+		if(itemId.matches("[0-9]+") && !itemId.equals("0") ){
 			return true;
 		}
 		return false;
 	}
 	
 	public static boolean isQNumValid(String qq){
-		if(!qq.matches("[0-9]+") && qq.equals("0")){
+		if(!qq.matches("[0-9]+") || qq.equals("0") ){
 			return false;
 		}else{
 			if(Long.valueOf(qq) <10000 || Long.valueOf(qq) > 10000000000L){
@@ -80,10 +80,10 @@ public class Utils {
 	}
 	
 	public static boolean isGroupIdVaild(String groupId){
-		if(!groupId.matches("[0-9]+") && groupId.equals("0")){
+		if(!groupId.matches("[0-9]+") || groupId.equals("0")){
 			return false;
 		}else{
-			if(groupIdSet.contains(Long.valueOf(groupId))){
+			if(groupIdSet.contains(Integer.valueOf(groupId))){
 				return true;
 			}else{
 				return false;

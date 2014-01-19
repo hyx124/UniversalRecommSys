@@ -36,6 +36,7 @@ import com.tencent.urs.protobuf.Recommend;
 import com.tencent.urs.protobuf.Recommend.UserActiveDetail;
 import com.tencent.urs.tdengine.TDEngineClientFactory;
 import com.tencent.urs.tdengine.TDEngineClientFactory.ClientAttr;
+import com.tencent.urs.utils.Constants;
 import com.tencent.urs.utils.DataCache;
 import com.tencent.urs.utils.Utils;
 
@@ -56,22 +57,21 @@ public class ARCFBolt extends AbstractConfigUpdateBolt{
 	private static Logger logger = LoggerFactory.getLogger(ARCFBolt.class);
 
 	@SuppressWarnings("rawtypes")
-	public ARCFBolt(String config, ImmutableList<Output> outputField,
-			String sid){
-		super(config, outputField, sid);
-		this.updateConfig(super.config);
-		
+	public ARCFBolt(String config, ImmutableList<Output> outputField){
+		super(config, outputField, Constants.config_stream);
 	}
 	
 	@Override 
 	public void prepare(Map conf, TopologyContext context, OutputCollector collector){
 		super.prepare(conf, context, collector);
+		this.updateConfig(super.config);
+
 		this.mtClientList = TDEngineClientFactory.createMTClientList(conf);
 		this.mt = MonitorTools.getMonitorInstance(conf);
 		this.combinerMap = new ConcurrentHashMap<UpdateKey,ActionCombinerValue>(1024);
 
-		this.combinerExpireTime = Utils.getInt(conf, "combiner.expireTime",5);
-		setCombinerTime(combinerExpireTime);
+		//this.combinerExpireTime = Utils.getInt(conf, "combiner.expireTime",5);
+		//setCombinerTime(combinerExpireTime);
 	} 
 	
 	private void setCombinerTime(final int second) {
@@ -83,9 +83,9 @@ public class ARCFBolt extends AbstractConfigUpdateBolt{
 						Thread.sleep(second * 1000);
 						Set<UpdateKey> keySet = combinerMap.keySet();
 						for (UpdateKey key : keySet) {
-							ActionCombinerValue value = combinerMap.remove(key);
+							combinerMap.remove(key);
 							try{
-								new GetItemPairsCallBack(key,"").excute();
+								new GetItemPairsCallBack(key,0L).excute();
 							}catch(Exception e){
 							}
 						}
@@ -171,8 +171,8 @@ public class ARCFBolt extends AbstractConfigUpdateBolt{
 	
 	private class GetItemPairsCallBack implements MutiClientCallBack{
 		private final UpdateKey key;
-		private final String itemCount;
-		public GetItemPairsCallBack(UpdateKey key,String itemCount) {
+		private final Long itemCount;
+		public GetItemPairsCallBack(UpdateKey key,Long itemCount) {
 			this.key = key ; 
 			this.itemCount = itemCount;
 		}
@@ -239,7 +239,6 @@ public class ARCFBolt extends AbstractConfigUpdateBolt{
 		}
 	}
 
-
 	private class GetItemCountCallBack implements MutiClientCallBack{
 		private final UpdateKey key;
 		private String otherItem;
@@ -294,28 +293,23 @@ public class ARCFBolt extends AbstractConfigUpdateBolt{
 		}
 	}
 
-
 	@Override
 	public void updateConfig(XMLConfiguration config) {
-		try {
-			this.algInfo.load(config);
-		} catch (ConfigurationException e) {
-			logger.error(e.toString());
-		}
+	
 	}
 
 	@Override
 	public void processEvent(String sid, Tuple tuple) {
 		String bid = tuple.getStringByField("bid");
-		Long uin = tuple.getLongByField("newqq");
-		Integer groupId = tuple.getIntegerByField("groupId");
-		String itemId = tuple.getStringByField("itemId");
+		String uin = tuple.getStringByField("qq");
+		String groupId = tuple.getStringByField("group_id");
+		String itemId = tuple.getStringByField("item_id");
 		String adpos = tuple.getStringByField("adpos");
 		
-		ActionCombinerValue value = new ActionCombinerValue();
+		//ActionCombinerValue value = new ActionCombinerValue();
 		
-		UpdateKey key = new UpdateKey(bid,uin,groupId,adpos,itemId);
-		combinerKeys(key,value);	
+		//UpdateKey key = new UpdateKey(bid,Long.valueOf(uin),Integer.valueOf(groupId),adpos,itemId);
+		//combinerKeys(key,null);	
 	}
 
 }
