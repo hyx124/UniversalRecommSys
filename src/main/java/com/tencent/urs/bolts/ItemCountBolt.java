@@ -109,7 +109,7 @@ public class ItemCountBolt extends AbstractConfigUpdateBolt{
 	
 		ActiveType actType = Utils.getActionTypeByString(actionType);
 		
-		if(!Utils.isQNumValid(qq) || !Utils.isGroupIdVaild(groupId) || !Utils.isItemIdValid(itemId)){
+		if(!Utils.isBidValid(bid) || !Utils.isQNumValid(qq) || !Utils.isGroupIdVaild(groupId) || !Utils.isItemIdValid(itemId)){
 			return;
 		}
 		
@@ -164,7 +164,7 @@ public class ItemCountBolt extends AbstractConfigUpdateBolt{
 
 		public GroupCountUpdateCallback(UpdateKey key, Integer value) {
 			this.value = value;		
-			this.putKey = key.getBid()+"#"+key.getItemId()+"#"+key.getAdpos()+"#"+key.getGroupId();
+			this.putKey = key.getGroupCountKey();
 		}
 		
 		public void excute() {
@@ -250,7 +250,7 @@ public class ItemCountBolt extends AbstractConfigUpdateBolt{
 			this.key = key ; 
 			this.count = count;	
 			//this.time = time;
-			this.userCountKey = key.getBid()+"#"+key.getUin()+"#"+key.getItemId();
+			this.userCountKey = key.getUserCountKey();
 		}
 		
 		public void excute() {
@@ -289,7 +289,7 @@ public class ItemCountBolt extends AbstractConfigUpdateBolt{
 		
 		private void save(String userCountKey,Integer count){
 			Future<Result<Void>> future = null;
-			synchronized(groupCountCache){
+			synchronized(userCountCache){
 				userCountCache.set(userCountKey, new SoftReference<Integer>(count), cacheExpireTime);
 			}
 			
@@ -339,7 +339,7 @@ public class ItemCountBolt extends AbstractConfigUpdateBolt{
 		public ActionDetailCallBack(UpdateKey key, GroupActionCombinerValue values) {
 			this.key = key ; 
 			this.values = values;		
-			this.userCheckKey = key.getBid()+"#"+key.getUin() + "#ActionDetail";
+			this.userCheckKey = key.getDetailKey();
 		}
 
 		public void next(Integer weight){

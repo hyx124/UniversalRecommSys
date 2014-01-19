@@ -1,5 +1,6 @@
 package com.tencent.urs.bolts;
 
+import java.text.SimpleDateFormat;
 import java.util.HashMap;
 import java.util.HashSet;
 import java.util.List;
@@ -30,9 +31,11 @@ import com.tencent.tde.client.error.TairQueueOverflow;
 import com.tencent.tde.client.error.TairRpcError;
 import com.tencent.tde.client.impl.MutiThreadCallbackClient.MutiClientCallBack;
 import com.tencent.urs.combine.ActionCombinerValue;
+import com.tencent.urs.combine.GroupActionCombinerValue;
 import com.tencent.urs.combine.UpdateKey;
 import com.tencent.urs.conf.AlgModuleConf;
 import com.tencent.urs.protobuf.Recommend;
+import com.tencent.urs.protobuf.Recommend.ActiveType;
 import com.tencent.urs.protobuf.Recommend.UserActiveDetail;
 import com.tencent.urs.tdengine.TDEngineClientFactory;
 import com.tencent.urs.tdengine.TDEngineClientFactory.ClientAttr;
@@ -47,12 +50,15 @@ public class ARCFBolt extends AbstractConfigUpdateBolt{
 	private static final long serialVersionUID = -7105767417026977180L;
 	private List<ClientAttr> mtClientList;	
 	private MonitorTools mt;
-	private ConcurrentHashMap<UpdateKey, ActionCombinerValue> combinerMap;
+	private ConcurrentHashMap<UpdateKey, GroupActionCombinerValue> combinerMap;
 	private DataCache<UserActiveDetail> cacheMap;
 	//private DataCache<UserActiveDetail> cacheMap;
-	private AlgModuleConf algInfo;
-	private int combinerExpireTime;
 	private OutputCollector collector;
+	private int nsGroupPairTableId;
+	private int nsGroupCountTableId;
+	private int nsDetailTableId;
+	private int dataExpireTime;
+	private int cacheExpireTime;
 	
 	private static Logger logger = LoggerFactory.getLogger(ARCFBolt.class);
 
@@ -68,11 +74,42 @@ public class ARCFBolt extends AbstractConfigUpdateBolt{
 
 		this.mtClientList = TDEngineClientFactory.createMTClientList(conf);
 		this.mt = MonitorTools.getMonitorInstance(conf);
-		this.combinerMap = new ConcurrentHashMap<UpdateKey,ActionCombinerValue>(1024);
+		this.combinerMap = new ConcurrentHashMap<UpdateKey,GroupActionCombinerValue>(1024);
 
-		//this.combinerExpireTime = Utils.getInt(conf, "combiner.expireTime",5);
-		//setCombinerTime(combinerExpireTime);
+		int combinerExpireTime = Utils.getInt(conf, "combiner.expireTime",5);
+		setCombinerTime(combinerExpireTime);
 	} 
+	
+	@Override
+	public void updateConfig(XMLConfiguration config) {
+		nsGroupPairTableId = config.getInt("pair_count_table",303);
+		nsGroupCountTableId = config.getInt("item_count_table",304);
+		nsDetailTableId = config.getInt("dependent_table",302);
+		dataExpireTime = config.getInt("data_expiretime",1*24*3600);
+		cacheExpireTime = config.getInt("cache_expiretime",3600);
+	}
+
+	@Override
+	public void processEvent(String sid, Tuple tuple) {
+		String bid = tuple.getStringByField("bid");
+		String qq = tuple.getStringByField("qq");
+		String groupId = tuple.getStringByField("group_id");
+		String itemId = tuple.getStringByField("item_id");
+		String adpos = tuple.getStringByField("adpos");
+		
+		String actionType = tuple.getStringByField("action_type");
+		String actionTime = tuple.getStringByField("action_time");
+		
+		ActiveType actType = Utils.getActionTypeByString(actionType);
+		
+		if(!Utils.isBidValid(bid) || !Utils.isQNumValid(qq) || !Utils.isGroupIdVaild(groupId) || !Utils.isItemIdValid(itemId)){
+			return;
+		}
+		
+		GroupActionCombinerValue value = new GroupActionCombinerValue(actType,Long.valueOf(actionTime));
+		UpdateKey key = new UpdateKey(bid,Long.valueOf(qq),Integer.valueOf(groupId),adpos,itemId);
+		combinerKeys(key,value);	
+	}
 	
 	private void setCombinerTime(final int second) {
 		new Thread(new Runnable() {
@@ -83,9 +120,9 @@ public class ARCFBolt extends AbstractConfigUpdateBolt{
 						Thread.sleep(second * 1000);
 						Set<UpdateKey> keySet = combinerMap.keySet();
 						for (UpdateKey key : keySet) {
-							combinerMap.remove(key);
+							GroupActionCombinerValue value = combinerMap.remove(key);
 							try{
-								new GetItemPairsCallBack(key,0L).excute();
+								new GetPairsListCallBack(key,value).excute();
 							}catch(Exception e){
 							}
 						}
@@ -97,7 +134,7 @@ public class ARCFBolt extends AbstractConfigUpdateBolt{
 		}).start();
 	}
 	
-	private void combinerKeys(UpdateKey key,ActionCombinerValue value) {
+	private void combinerKeys(UpdateKey key,GroupActionCombinerValue value) {
 		combinerMap.put(key, value);
 	}	
 	
@@ -106,21 +143,21 @@ public class ARCFBolt extends AbstractConfigUpdateBolt{
 		private final Integer itemCount1;
 		private final Integer itemCount2;
 		private final String otherItem;
+		private String getKey;
 		
 		public GetPairsCountCallBack(UpdateKey key,String otherItem,Integer itemCount1,Integer itemCount2) {
 			this.key = key ; 
 			this.otherItem = otherItem;
 			this.itemCount1 = itemCount1;
 			this.itemCount2 = itemCount2;
+			this.getKey = key.getGroupPairKey(otherItem);
 		}
 
 		public void excute() {
-			try {
-				
-				String checkKey = key.getUin() + "#DETAIl";				
+			try {		
 				ClientAttr clientEntry = mtClientList.get(0);		
 				TairOption opt = new TairOption(clientEntry.getTimeout());
-				Future<Result<byte[]>> future = clientEntry.getClient().getAsync((short)algInfo.getOutputTableId(),checkKey.getBytes(),opt);
+				Future<Result<byte[]>> future = clientEntry.getClient().getAsync((short)nsGroupPairTableId,getKey.toString().getBytes(),opt);
 				clientEntry.getClient().notifyFuture(future, this,clientEntry);			
 			} catch (TairQueueOverflow e) {
 				//log.error(e.toString());
@@ -157,10 +194,12 @@ public class ARCFBolt extends AbstractConfigUpdateBolt{
 					
 					Double arWeight = computeARWeight(itemCount1,itemCount2,pairCount);
 					Double cfWeight = computeCFWeight(itemCount1,itemCount2,pairCount);
-					String arKey = "item1#adpos#ar";
-					String cfKey = "item1#adpos#cf";
-					collector.emit("storageDream",new Values(algInfo.getAlgName(),arKey,otherItem,arWeight));
-					collector.emit("storageDream",new Values(algInfo.getAlgName(),cfKey,otherItem,cfWeight));
+					//bid,adpos,group_id,item_id,other_item,weight, alg_name
+					Values values_ar = new Values(getKey,key.getBid(),key.getAdpos(),key.getGroupId(),key.getItemId(),otherItem,arWeight,"AR");
+					Values values_cf = new Values(getKey,key.getBid(),key.getAdpos(),key.getGroupId(),key.getItemId(),otherItem,cfWeight,"CF");
+					
+					collector.emit("computer_result",values_ar);
+					collector.emit("computer_result",values_cf);
 				}
 			} catch (Exception e) {
 				
@@ -169,81 +208,10 @@ public class ARCFBolt extends AbstractConfigUpdateBolt{
 		}
 	}
 	
-	private class GetItemPairsCallBack implements MutiClientCallBack{
-		private final UpdateKey key;
-		private final Long itemCount;
-		public GetItemPairsCallBack(UpdateKey key,Long itemCount) {
-			this.key = key ; 
-			this.itemCount = itemCount;
-		}
-
-		public void excute() {
-			try {
-				String checkKey = key.getUin() + "#DETAIl";
-				
-				ClientAttr clientEntry = mtClientList.get(0);		
-				TairOption opt = new TairOption(clientEntry.getTimeout());
-				Future<Result<byte[]>> future = clientEntry.getClient().getAsync((short)algInfo.getOutputTableId(),checkKey.getBytes(),opt);
-				clientEntry.getClient().notifyFuture(future, this,clientEntry);	
-							
-				
-			} catch (TairQueueOverflow e) {
-				//log.error(e.toString());
-			} catch (TairRpcError e) {
-				//log.error(e.toString());
-			} catch (TairFlowLimit e) {
-				//log.error(e.toString());
-			}
-		}
-		
-		private HashSet<String> getPairItems(UserActiveDetail oldValueHeap, String itemId){
-			HashSet<String>  itemSet = new HashSet<String>();		
-			
-			for(Recommend.UserActiveDetail.TimeSegment tsegs:oldValueHeap.getTsegsList()){
-				HashMap<String,Integer>  doWeightMap = null;
-				if(!inValidTimeSeg(tsegs.getTimeId())){
-					continue;
-				}
-				
-				for(Recommend.UserActiveDetail.TimeSegment.ItemInfo item: tsegs.getItemsList()){
-					if(!item.getItem().equals(key.getItemId())){
-						itemSet.add(item.getItem());
-					}
-				}
-			}
-			return itemSet;
-		}
-
-		private boolean inValidTimeSeg(long timeId) {
-			// TODO Auto-generated method stub
-			return false;
-		}
-
-		@Override
-		public void handle(Future<?> future, Object context) {			
-			@SuppressWarnings("unchecked")
-			Future<Result<byte[]>> afuture = (Future<Result<byte[]>>) future;
-			try {
-				Result<byte[]> result = afuture.get();	
-				if(result.isSuccess() && result.getResult()!=null){
-					UserActiveDetail oldValueHeap = Recommend.UserActiveDetail.parseFrom(result.getResult());
-					HashSet<String> itemSet = getPairItems(oldValueHeap,key.getItemId());
-					for(String otherItem:itemSet){
-						new GetItemCountCallBack(key,otherItem, 0,1).excute();
-					}					
-				}
-			} catch (Exception e) {
-				
-			}
-			
-		}
-	}
-
 	private class GetItemCountCallBack implements MutiClientCallBack{
 		private final UpdateKey key;
 		private String otherItem;
 		private Integer itemCount;
-		private Integer count2;
 		private Integer step;
 
 		public GetItemCountCallBack(UpdateKey key,String otherItem,Integer itemCount,Integer step) {
@@ -255,14 +223,20 @@ public class ARCFBolt extends AbstractConfigUpdateBolt{
 
 		public void excute() {
 			try {
-				String checkKey = key.getGroupId() + "#" + key.getItemId() +"#" +key.getAdpos();
+				String getKey = "";
+				if(step == 1){
+					getKey = key.getGroupCountKey();
+				}else if(step == 2){
+					getKey = key.getOtherGroupCountKey(otherItem);
+				}else{
+					return;
+				}
+								
+				
 				ClientAttr clientEntry = mtClientList.get(0);		
 				TairOption opt = new TairOption(clientEntry.getTimeout());
-				String tableId = algInfo.getInputTableIdByName("GroupItemCount");
-				if(tableId != null){
-					Future<Result<byte[]>> future = clientEntry.getClient().getAsync(Short.valueOf(tableId),checkKey.getBytes(),opt);
-					clientEntry.getClient().notifyFuture(future, this,clientEntry);		
-				}
+				Future<Result<byte[]>> future = clientEntry.getClient().getAsync((short)nsGroupCountTableId,getKey.getBytes(),opt);
+				clientEntry.getClient().notifyFuture(future, this,clientEntry);		
 			} catch (TairQueueOverflow e) {
 				//log.error(e.toString());
 			} catch (TairRpcError e) {
@@ -292,24 +266,73 @@ public class ARCFBolt extends AbstractConfigUpdateBolt{
 			
 		}
 	}
-
-	@Override
-	public void updateConfig(XMLConfiguration config) {
 	
+	private class GetPairsListCallBack implements MutiClientCallBack{
+		private final UpdateKey key;
+		private GroupActionCombinerValue value;
+		public GetPairsListCallBack(UpdateKey key,GroupActionCombinerValue value) {
+			this.key = key ; 
+			this.value = value;
+			//this.itemCount = itemCount;
+		}
+
+		public void excute() {
+			try {
+				String checkKey = key.getDetailKey();
+				
+				ClientAttr clientEntry = mtClientList.get(0);		
+				TairOption opt = new TairOption(clientEntry.getTimeout());
+				Future<Result<byte[]>> future = clientEntry.getClient().getAsync((short)nsDetailTableId,checkKey.getBytes(),opt);
+				clientEntry.getClient().notifyFuture(future, this,clientEntry);	
+
+			} catch (TairQueueOverflow e) {
+				//log.error(e.toString());
+			} catch (TairRpcError e) {
+				//log.error(e.toString());
+			} catch (TairFlowLimit e) {
+				//log.error(e.toString());
+			}
+		}
+		
+		private Long getWinIdByTime(Long time){	
+			String expireId = new SimpleDateFormat("yyyyMMdd").format(time*1000L);
+			return Long.valueOf(expireId);
+		}
+		
+		private HashSet<String> getPairItems(UserActiveDetail oldValueHeap, String itemId){
+			HashSet<String>  itemSet = new HashSet<String>();		
+			
+			for(Recommend.UserActiveDetail.TimeSegment tsegs:oldValueHeap.getTsegsList()){
+				if(tsegs.getTimeId() > getWinIdByTime(value.getTime() - dataExpireTime)){
+					for(Recommend.UserActiveDetail.TimeSegment.ItemInfo item: tsegs.getItemsList()){
+						if(!item.getItem().equals(key.getItemId())){
+							itemSet.add(item.getItem());
+						}
+					}
+				}
+			}
+			return itemSet;
+		}
+
+		@Override
+		public void handle(Future<?> future, Object context) {			
+			@SuppressWarnings("unchecked")
+			Future<Result<byte[]>> afuture = (Future<Result<byte[]>>) future;
+			try {
+				Result<byte[]> result = afuture.get();	
+				if(result.isSuccess() && result.getResult()!=null){
+					UserActiveDetail oldValueHeap = Recommend.UserActiveDetail.parseFrom(result.getResult());
+					HashSet<String> itemSet = getPairItems(oldValueHeap,key.getItemId());
+					for(String otherItem:itemSet){
+						new GetItemCountCallBack(key,otherItem, 0,1).excute();
+					}					
+				}
+			} catch (Exception e) {
+				
+			}
+			
+		}
 	}
 
-	@Override
-	public void processEvent(String sid, Tuple tuple) {
-		String bid = tuple.getStringByField("bid");
-		String uin = tuple.getStringByField("qq");
-		String groupId = tuple.getStringByField("group_id");
-		String itemId = tuple.getStringByField("item_id");
-		String adpos = tuple.getStringByField("adpos");
-		
-		//ActionCombinerValue value = new ActionCombinerValue();
-		
-		//UpdateKey key = new UpdateKey(bid,Long.valueOf(uin),Integer.valueOf(groupId),adpos,itemId);
-		//combinerKeys(key,null);	
-	}
 
 }

@@ -112,7 +112,7 @@
 			
 			<output_fields>
 				<stream_id>computer_result</stream_id>
-				<fields>key,weight,alg_name</fields>
+				<fields>key,bid,adpos,group_id,item_id,other_item,weight, alg_name</fields>
 			</output_fields>
 		</bolt>
 		
@@ -129,7 +129,7 @@
 			
 			<output_fields>
 				<stream_id>computer_result</stream_id>
-				<fields>key,weight,alg_name</fields>
+				<fields>key,item_id,weight,alg_name</fields>
 			</output_fields>
 		</bolt>
 		
@@ -146,7 +146,7 @@
 			
 			<output_fields>
 				<stream_id>computer_result</stream_id>
-				<fields>key,weight,alg_name</fields>
+				<fields>key,item_id,weight,alg_name</fields>
 			</output_fields>
 		</bolt>
 		
@@ -163,7 +163,7 @@
 			
 			<output_fields>
 				<stream_id>computer_result</stream_id>
-				<fields>key,weight,alg_name</fields>
+				<fields>key,item_id,weight,alg_name</fields>
 			</output_fields>
 		</bolt>
 		
