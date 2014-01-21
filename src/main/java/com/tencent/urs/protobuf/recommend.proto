@@ -152,9 +152,10 @@ message UserActiveDetail
 
 message CtrInfo
 {	
-	message TimeSegment {								
-		required uint64 click = 1;								//点击数
-		optional uint64 impress = 2;							//曝光数
+	message TimeSegment {		
+		required uint64 timeId = 1;						
+		optional uint64 click = 2;								//点击数
+		optional uint64 impress = 3;							//曝光数
 	}
     repeated TimeSegment tsegs  = 1;
 }

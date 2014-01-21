@@ -4,7 +4,6 @@ import com.google.common.collect.ImmutableList;
 import com.tencent.urs.protobuf.Recommend;
 import com.tencent.urs.protobuf.Recommend.ActiveType;
 import com.tencent.urs.protobuf.Recommend.UserActiveDetail;
-import com.tencent.urs.protobuf.Recommend.UserActiveHistory;
 import com.tencent.urs.protobuf.Recommend.UserActiveDetail.TimeSegment.ItemInfo.ActType;
 import com.tencent.urs.protobuf.Recommend.UserActiveDetail.Builder;
 import com.tencent.urs.protobuf.Recommend.UserActiveHistory.ActiveRecord;
@@ -18,7 +17,6 @@ import java.util.Set;
 import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.Future;
 
-import org.apache.commons.configuration.ConfigurationException;
 import org.apache.commons.configuration.XMLConfiguration;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -27,7 +25,6 @@ import backtype.storm.task.OutputCollector;
 import backtype.storm.task.TopologyContext;
 import backtype.storm.tuple.Tuple;
 
-import com.tencent.monitor.MonitorEntry;
 import com.tencent.monitor.MonitorTools;
 
 import com.tencent.streaming.commons.bolts.config.AbstractConfigUpdateBolt;
@@ -41,6 +38,7 @@ import com.tencent.tde.client.impl.MutiThreadCallbackClient.MutiClientCallBack;
 import com.tencent.urs.asyncupdate.UpdateCallBack;
 import com.tencent.urs.asyncupdate.UpdateCallBackContext;
 import com.tencent.urs.combine.ActionCombinerValue;
+import com.tencent.urs.combine.GroupActionCombinerValue;
 import com.tencent.urs.tdengine.TDEngineClientFactory;
 import com.tencent.urs.tdengine.TDEngineClientFactory.ClientAttr;
 import com.tencent.urs.utils.Constants;
@@ -76,8 +74,9 @@ public class ActionDetailBolt extends AbstractConfigUpdateBolt{
 		topNum = config.getInt("topNum",30);
 	}
 	
+	@SuppressWarnings("unchecked")
 	@Override
-	public void prepare(Map conf, TopologyContext context, OutputCollector collector){
+	public void prepare(@SuppressWarnings("rawtypes") Map conf, TopologyContext context, OutputCollector collector){
 		super.prepare(conf, context, collector);
 		updateConfig(super.config);
 		
@@ -145,12 +144,15 @@ public class ActionDetailBolt extends AbstractConfigUpdateBolt{
 	}
 	
 	private void combinerKeys(String key,ActionCombinerValue value) {
-		synchronized (combinerMap) {
+		synchronized(combinerMap){
 			if(combinerMap.containsKey(key)){
-				ActionCombinerValue oldvalue = combinerMap.get(key);
-				value.incrument(oldvalue);
+				ActionCombinerValue oldValue = combinerMap.get(key);
+				oldValue.incrument(value);
+				combinerMap.put(key, oldValue);
+			}else{
+				combinerMap.put(key, value);
 			}
-			combinerMap.put(key, value);
+			
 		}
 	}	
 	
@@ -318,8 +320,7 @@ public class ActionDetailBolt extends AbstractConfigUpdateBolt{
 			}
 		}
 
-		private void printOut(Recommend.UserActiveDetail mergeValue){
-			
+		private void printOut(Recommend.UserActiveDetail mergeValue){	
 			for(UserActiveDetail.TimeSegment tsegs: mergeValue.getTsegsList()){	
 				logger.info("--id="+tsegs.getTimeId());
 				for(UserActiveDetail.TimeSegment.ItemInfo item: tsegs.getItemsList()){	
@@ -332,7 +333,7 @@ public class ActionDetailBolt extends AbstractConfigUpdateBolt{
 		}
 		
 		private void Save(Recommend.UserActiveDetail.Builder mergeValueBuilder){	
-			//printOut(mergeValueBuilder.build());
+			printOut(mergeValueBuilder.build());
 			
 			
 			Future<Result<Void>> future = null;

@@ -15,9 +15,6 @@ public class ActionCombinerValue implements Combiner<ActionCombinerValue>,Serial
 	private static final long serialVersionUID = 305886042186738812L;
 	
 	private HashMap<String,Recommend.UserActiveHistory.ActiveRecord> actRecordMap;
-	public class Action{
-		
-	}
 	
 	public HashMap<String,Recommend.UserActiveHistory.ActiveRecord> getActRecodeMap(){
 		return this.actRecordMap;

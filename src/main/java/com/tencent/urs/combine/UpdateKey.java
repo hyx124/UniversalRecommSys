@@ -84,7 +84,6 @@ public class UpdateKey{
 		return getKey.toString();
 	}
 
-	
 	public String getBid(){
 		return this.bid;
 	}

@@ -33,6 +33,7 @@ public class UpdateCallBack implements MutiClientCallBack {
 
 	@Override
 	public void handle(Future<?> future, Object context) {
+		@SuppressWarnings("unchecked")
 		Future<Result<byte[]>> afuture = (Future<Result<byte[]>>) future;
 		Result<byte[]> result;
 		UpdateCallBackContext updateData = (UpdateCallBackContext) context;

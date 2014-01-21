@@ -19,9 +19,23 @@
 	</spouts>
 	
 	<bolts>
+	
 		<bolt name="PretreatmentBolt" class="com.tencent.urs.bolts.PretreatmentBolt" parallelsim="1">
 			<grouping type="field">
 				<fields>qq</fields>
+				<component>UserActionSpout</component>
+				<streaming_ids>UserAction</streaming_ids>
+			</grouping>
+			
+			<output_fields>
+				<stream_id>UserAction</stream_id>
+				<fields>bid,topic,old_qq,uid,adpos,action_type,action_time,item_id,action_result,imei,platform,lbs_info,qq,group_id</fields>
+			</output_fields>	
+		</bolt>
+
+		<bolt name="BaseInfoBolt" class="com.tencent.urs.bolts.BaseInfoBolt" parallelsim="1">
+			<grouping type="field">
+				<fields>hashKey</fields>
 				<component>UserActionSpout</component>
 				<streaming_ids>UserAction</streaming_ids>
 			</grouping>
@@ -112,7 +126,7 @@
 			
 			<output_fields>
 				<stream_id>computer_result</stream_id>
-				<fields>key,bid,adpos,group_id,item_id,other_item,weight, alg_name</fields>
+				<fields>key,item_id,weight,alg_name</fields>
 			</output_fields>
 		</bolt>
 		
@@ -192,8 +206,8 @@
 				<streaming_ids>computer_result</streaming_ids>
 			</grouping>
 			
-		
-			<dependent_table>310</dependent_table>
+			<top_num>100</top_num>
+			<storage_table>310</storage_table>
 			<data_expiretime>259200</data_expiretime>
 			<cache_expiretime>3600</cache_expiretime>
 		</bolt>

@@ -117,7 +117,6 @@ public class TopActionBolt extends AbstractConfigUpdateBolt {
 		String key = bid+"#"+qq+"#D1";
 		combinerKeys(key, value);	
 	}
-
 	
 	private void setCombinerTime(final int second) {
 		new Thread(new Runnable() {
@@ -207,7 +206,7 @@ public class TopActionBolt extends AbstractConfigUpdateBolt {
 				@Override
 				public int compare(Entry<String, ActiveRecord> arg0,
 						Entry<String, ActiveRecord> arg1) {
-					 return (int)(arg0.getValue().getActTime() - arg1.getValue().getActTime());
+					 return (int)(arg1.getValue().getActTime() - arg0.getValue().getActTime());
 				}
 			}); 
 			
@@ -288,6 +287,5 @@ public class TopActionBolt extends AbstractConfigUpdateBolt {
 			Save(mergeValueBuilder);
 		}
 	}
-
 	
 }

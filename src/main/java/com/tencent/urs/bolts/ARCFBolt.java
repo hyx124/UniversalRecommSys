@@ -1,7 +1,6 @@
 package com.tencent.urs.bolts;
 
 import java.text.SimpleDateFormat;
-import java.util.HashMap;
 import java.util.HashSet;
 import java.util.List;
 import java.util.Map;
@@ -9,7 +8,6 @@ import java.util.Set;
 import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.Future;
 
-import org.apache.commons.configuration.ConfigurationException;
 import org.apache.commons.configuration.XMLConfiguration;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -20,6 +18,7 @@ import backtype.storm.tuple.Tuple;
 import backtype.storm.tuple.Values;
 
 import com.google.common.collect.ImmutableList;
+import com.google.protobuf.InvalidProtocolBufferException;
 import com.tencent.monitor.MonitorTools;
 
 import com.tencent.streaming.commons.bolts.config.AbstractConfigUpdateBolt;
@@ -29,11 +28,11 @@ import com.tencent.tde.client.TairClient.TairOption;
 import com.tencent.tde.client.error.TairFlowLimit;
 import com.tencent.tde.client.error.TairQueueOverflow;
 import com.tencent.tde.client.error.TairRpcError;
+import com.tencent.tde.client.error.TairTimeout;
 import com.tencent.tde.client.impl.MutiThreadCallbackClient.MutiClientCallBack;
-import com.tencent.urs.combine.ActionCombinerValue;
+import com.tencent.urs.asyncupdate.UpdateCallBackContext;
 import com.tencent.urs.combine.GroupActionCombinerValue;
 import com.tencent.urs.combine.UpdateKey;
-import com.tencent.urs.conf.AlgModuleConf;
 import com.tencent.urs.protobuf.Recommend;
 import com.tencent.urs.protobuf.Recommend.ActiveType;
 import com.tencent.urs.protobuf.Recommend.UserActiveDetail;
@@ -72,6 +71,7 @@ public class ARCFBolt extends AbstractConfigUpdateBolt{
 		super.prepare(conf, context, collector);
 		this.updateConfig(super.config);
 
+		this.collector = collector;
 		this.mtClientList = TDEngineClientFactory.createMTClientList(conf);
 		this.mt = MonitorTools.getMonitorInstance(conf);
 		this.combinerMap = new ConcurrentHashMap<UpdateKey,GroupActionCombinerValue>(1024);
@@ -106,9 +106,67 @@ public class ARCFBolt extends AbstractConfigUpdateBolt{
 			return;
 		}
 		
-		GroupActionCombinerValue value = new GroupActionCombinerValue(actType,Long.valueOf(actionTime));
-		UpdateKey key = new UpdateKey(bid,Long.valueOf(qq),Integer.valueOf(groupId),adpos,itemId);
-		combinerKeys(key,value);	
+		//GroupActionCombinerValue value = new GroupActionCombinerValue(actType,Long.valueOf(actionTime));
+		UpdateKey key = new UpdateKey(bid,Long.valueOf(qq),Integer.valueOf(groupId),adpos,"345");
+		//combinerKeys(key,value);	
+		String testKey = bid+"#"+key.getItemId()+"#adpos#AR#"+key.getGroupId();
+		Double weight = (double) (1000-Long.valueOf(actionTime)%100);
+		Values values_cf = new Values(testKey,key.getItemId()+Long.valueOf(actionTime)%100,weight,"CF");
+		//this.collector.emit("computer_result",values_cf);
+		//test(key,actionTime);
+		this.collector.emit("computer_result",values_cf);
+	}
+	
+	private void test(UpdateKey key,String actionTime){
+		Recommend.RecommendResult.Builder HeapBuilder = Recommend.RecommendResult.newBuilder();
+		String testKey = "345#"+key.getAdpos()+"#AR#"+key.getGroupId();
+		for(int i=0;i<=100;i++){
+			Recommend.RecommendResult.Result.Builder valueBuilder = Recommend.RecommendResult.Result.newBuilder();
+			valueBuilder.setItem(key.getItemId()+String.valueOf(i)).setWeight(1000-i);
+			HeapBuilder.addResults(valueBuilder.build());
+		}
+		
+		
+		for(ClientAttr clientEntry:mtClientList ){
+			logger.info("start in save,client="+clientEntry.getGroupname()+",kye="+testKey+",count="+HeapBuilder.getResultsCount());
+			TairOption putopt = new TairOption(clientEntry.getTimeout(),(short)0, dataExpireTime);
+			try {
+				Future<Result<Void>> future = 
+				clientEntry.getClient().putAsync((short)310, 
+						testKey.getBytes(), HeapBuilder.build().toByteArray(), putopt);
+			} catch (Exception e){
+				logger.error(e.toString());
+			}
+		}
+		
+		TairOption getopt = new TairOption(mtClientList.get(0).getTimeout());
+		try {
+			Result<byte[]> res = mtClientList.get(0).getClient().get((short)310, testKey.getBytes(), getopt);
+			if(res.isSuccess() && res.getResult() != null)
+			{
+				Recommend.RecommendResult oldHeap = Recommend.RecommendResult.parseFrom(res.getResult());
+				for( Recommend.RecommendResult.Result each:oldHeap.getResultsList() ){
+					logger.info("from tde:itemid="+each.getItem()+",weight="+each.getWeight());
+				}
+			}			
+		} catch (TairRpcError e) {
+			// TODO Auto-generated catch block
+			e.printStackTrace();
+		} catch (TairFlowLimit e) {
+			// TODO Auto-generated catch block
+			e.printStackTrace();
+		} catch (TairTimeout e) {
+			// TODO Auto-generated catch block
+			e.printStackTrace();
+		} catch (InterruptedException e) {
+			// TODO Auto-generated catch block
+			e.printStackTrace();
+		} catch (InvalidProtocolBufferException e) {
+			// TODO Auto-generated catch block
+			e.printStackTrace();
+		}
+		
+		
 	}
 	
 	private void setCombinerTime(final int second) {
@@ -191,15 +249,28 @@ public class ARCFBolt extends AbstractConfigUpdateBolt{
 				Result<byte[]> result = afuture.get();	
 				if(result.isSuccess() && result.getResult()!=null){
 					Integer  pairCount = Integer.valueOf(new String(result.getResult()));
-					
 					Double arWeight = computeARWeight(itemCount1,itemCount2,pairCount);
 					Double cfWeight = computeCFWeight(itemCount1,itemCount2,pairCount);
-					//bid,adpos,group_id,item_id,other_item,weight, alg_name
-					Values values_ar = new Values(getKey,key.getBid(),key.getAdpos(),key.getGroupId(),key.getItemId(),otherItem,arWeight,"AR");
-					Values values_cf = new Values(getKey,key.getBid(),key.getAdpos(),key.getGroupId(),key.getItemId(),otherItem,cfWeight,"CF");
 					
-					collector.emit("computer_result",values_ar);
-					collector.emit("computer_result",values_cf);
+					
+					String key1 = Utils.getAlgKey(key.getBid(), key.getItemId(), key.getAdpos(), "AR", String.valueOf(key.getGroupId()));		
+					Values values_ar1 = new Values(key1,key.getAdpos(),otherItem,arWeight,"AR");
+					collector.emit("computer_result",values_ar1);
+					
+					String key2 = Utils.getAlgKey(key.getBid(), key.getItemId(), key.getAdpos(), "CF", String.valueOf(key.getGroupId()));
+					Values values_cf2 = new Values(key2,key.getAdpos(),otherItem,cfWeight,"CF");
+					collector.emit("computer_result",values_cf2);
+					
+					
+					String key3 = Utils.getAlgKey(key.getBid(), otherItem, key.getAdpos(), "AR", String.valueOf(key.getGroupId()));
+					Values values_ar3 = new Values(key3,key.getAdpos(),key.getItemId(),arWeight,"AR");
+					collector.emit("computer_result",values_ar3);
+					
+					
+					String key4 = Utils.getAlgKey(key.getBid(), otherItem, key.getAdpos(), "CF", String.valueOf(key.getGroupId()));
+					Values values_cf4 = new Values(key4,key.getAdpos(),key.getItemId(),cfWeight,"CF");
+					collector.emit("computer_result",values_cf4);
+					
 				}
 			} catch (Exception e) {
 				

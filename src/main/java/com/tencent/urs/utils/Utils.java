@@ -136,4 +136,10 @@ public class Utils {
 		// TODO Auto-generated method stub
 		return true;
 	}
+	
+	public static String getAlgKey(String bid,String itemId,String adpos,String algName,String groupId){
+		StringBuffer getKey = new StringBuffer(bid);		
+		getKey.append("#").append(itemId).append("#").append(adpos).append("#").append(algName).append("#").append(groupId);	
+		return getKey.toString();
+	}
 }

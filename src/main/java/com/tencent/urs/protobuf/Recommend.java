@@ -7413,11 +7413,15 @@ public final class Recommend {
     public interface TimeSegmentOrBuilder
         extends com.google.protobuf.MessageLiteOrBuilder {
       
-      // required uint64 click = 1;
+      // required uint64 timeId = 1;
+      boolean hasTimeId();
+      long getTimeId();
+      
+      // optional uint64 click = 2;
       boolean hasClick();
       long getClick();
       
-      // optional uint64 impress = 2;
+      // optional uint64 impress = 3;
       boolean hasImpress();
       long getImpress();
     }
@@ -7440,27 +7444,38 @@ public final class Recommend {
       }
       
       private int bitField0_;
-      // required uint64 click = 1;
-      public static final int CLICK_FIELD_NUMBER = 1;
+      // required uint64 timeId = 1;
+      public static final int TIMEID_FIELD_NUMBER = 1;
+      private long timeId_;
+      public boolean hasTimeId() {
+        return ((bitField0_ & 0x00000001) == 0x00000001);
+      }
+      public long getTimeId() {
+        return timeId_;
+      }
+      
+      // optional uint64 click = 2;
+      public static final int CLICK_FIELD_NUMBER = 2;
       private long click_;
       public boolean hasClick() {
-        return ((bitField0_ & 0x00000001) == 0x00000001);
+        return ((bitField0_ & 0x00000002) == 0x00000002);
       }
       public long getClick() {
         return click_;
       }
       
-      // optional uint64 impress = 2;
-      public static final int IMPRESS_FIELD_NUMBER = 2;
+      // optional uint64 impress = 3;
+      public static final int IMPRESS_FIELD_NUMBER = 3;
       private long impress_;
       public boolean hasImpress() {
-        return ((bitField0_ & 0x00000002) == 0x00000002);
+        return ((bitField0_ & 0x00000004) == 0x00000004);
       }
       public long getImpress() {
         return impress_;
       }
       
       private void initFields() {
+        timeId_ = 0L;
         click_ = 0L;
         impress_ = 0L;
       }
@@ -7469,7 +7484,7 @@ public final class Recommend {
         byte isInitialized = memoizedIsInitialized;
         if (isInitialized != -1) return isInitialized == 1;
         
-        if (!hasClick()) {
+        if (!hasTimeId()) {
           memoizedIsInitialized = 0;
           return false;
         }
@@ -7481,10 +7496,13 @@ public final class Recommend {
                           throws java.io.IOException {
         getSerializedSize();
         if (((bitField0_ & 0x00000001) == 0x00000001)) {
-          output.writeUInt64(1, click_);
+          output.writeUInt64(1, timeId_);
         }
         if (((bitField0_ & 0x00000002) == 0x00000002)) {
-          output.writeUInt64(2, impress_);
+          output.writeUInt64(2, click_);
+        }
+        if (((bitField0_ & 0x00000004) == 0x00000004)) {
+          output.writeUInt64(3, impress_);
         }
       }
       
@@ -7496,11 +7514,15 @@ public final class Recommend {
         size = 0;
         if (((bitField0_ & 0x00000001) == 0x00000001)) {
           size += com.google.protobuf.CodedOutputStream
-            .computeUInt64Size(1, click_);
+            .computeUInt64Size(1, timeId_);
         }
         if (((bitField0_ & 0x00000002) == 0x00000002)) {
           size += com.google.protobuf.CodedOutputStream
-            .computeUInt64Size(2, impress_);
+            .computeUInt64Size(2, click_);
+        }
+        if (((bitField0_ & 0x00000004) == 0x00000004)) {
+          size += com.google.protobuf.CodedOutputStream
+            .computeUInt64Size(3, impress_);
         }
         memoizedSerializedSize = size;
         return size;
@@ -7604,10 +7626,12 @@ public final class Recommend {
         
         public Builder clear() {
           super.clear();
-          click_ = 0L;
+          timeId_ = 0L;
           bitField0_ = (bitField0_ & ~0x00000001);
-          impress_ = 0L;
+          click_ = 0L;
           bitField0_ = (bitField0_ & ~0x00000002);
+          impress_ = 0L;
+          bitField0_ = (bitField0_ & ~0x00000004);
           return this;
         }
         
@@ -7644,9 +7668,13 @@ public final class Recommend {
           if (((from_bitField0_ & 0x00000001) == 0x00000001)) {
             to_bitField0_ |= 0x00000001;
           }
-          result.click_ = click_;
+          result.timeId_ = timeId_;
           if (((from_bitField0_ & 0x00000002) == 0x00000002)) {
             to_bitField0_ |= 0x00000002;
+          }
+          result.click_ = click_;
+          if (((from_bitField0_ & 0x00000004) == 0x00000004)) {
+            to_bitField0_ |= 0x00000004;
           }
           result.impress_ = impress_;
           result.bitField0_ = to_bitField0_;
@@ -7655,6 +7683,9 @@ public final class Recommend {
         
         public Builder mergeFrom(com.tencent.urs.protobuf.Recommend.CtrInfo.TimeSegment other) {
           if (other == com.tencent.urs.protobuf.Recommend.CtrInfo.TimeSegment.getDefaultInstance()) return this;
+          if (other.hasTimeId()) {
+            setTimeId(other.getTimeId());
+          }
           if (other.hasClick()) {
             setClick(other.getClick());
           }
@@ -7665,7 +7696,7 @@ public final class Recommend {
         }
         
         public final boolean isInitialized() {
-          if (!hasClick()) {
+          if (!hasTimeId()) {
             
             return false;
           }
@@ -7691,11 +7722,16 @@ public final class Recommend {
               }
               case 8: {
                 bitField0_ |= 0x00000001;
-                click_ = input.readUInt64();
+                timeId_ = input.readUInt64();
                 break;
               }
               case 16: {
                 bitField0_ |= 0x00000002;
+                click_ = input.readUInt64();
+                break;
+              }
+              case 24: {
+                bitField0_ |= 0x00000004;
                 impress_ = input.readUInt64();
                 break;
               }
@@ -7705,43 +7741,64 @@ public final class Recommend {
         
         private int bitField0_;
         
-        // required uint64 click = 1;
+        // required uint64 timeId = 1;
+        private long timeId_ ;
+        public boolean hasTimeId() {
+          return ((bitField0_ & 0x00000001) == 0x00000001);
+        }
+        public long getTimeId() {
+          return timeId_;
+        }
+        public Builder setTimeId(long value) {
+          bitField0_ |= 0x00000001;
+          timeId_ = value;
+          
+          return this;
+        }
+        public Builder clearTimeId() {
+          bitField0_ = (bitField0_ & ~0x00000001);
+          timeId_ = 0L;
+          
+          return this;
+        }
+        
+        // optional uint64 click = 2;
         private long click_ ;
         public boolean hasClick() {
-          return ((bitField0_ & 0x00000001) == 0x00000001);
+          return ((bitField0_ & 0x00000002) == 0x00000002);
         }
         public long getClick() {
           return click_;
         }
         public Builder setClick(long value) {
-          bitField0_ |= 0x00000001;
+          bitField0_ |= 0x00000002;
           click_ = value;
           
           return this;
         }
         public Builder clearClick() {
-          bitField0_ = (bitField0_ & ~0x00000001);
+          bitField0_ = (bitField0_ & ~0x00000002);
           click_ = 0L;
           
           return this;
         }
         
-        // optional uint64 impress = 2;
+        // optional uint64 impress = 3;
         private long impress_ ;
         public boolean hasImpress() {
-          return ((bitField0_ & 0x00000002) == 0x00000002);
+          return ((bitField0_ & 0x00000004) == 0x00000004);
         }
         public long getImpress() {
           return impress_;
         }
         public Builder setImpress(long value) {
-          bitField0_ |= 0x00000002;
+          bitField0_ |= 0x00000004;
           impress_ = value;
           
           return this;
         }
         public Builder clearImpress() {
-          bitField0_ = (bitField0_ & ~0x00000002);
+          bitField0_ = (bitField0_ & ~0x00000004);
           impress_ = 0L;
           
           return this;
