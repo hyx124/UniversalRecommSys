@@ -34,7 +34,7 @@ import com.tencent.urs.tdengine.TDEngineClientFactory.ClientAttr;
 import com.tencent.urs.utils.Constants;
 import com.tencent.urs.utils.Utils;
 
-public class HotTopByGroupId extends AbstractConfigUpdateBolt{
+public class HotTopBolt extends AbstractConfigUpdateBolt{
 
 	private static final long serialVersionUID = 4730598061697463554L;
 	private List<ClientAttr> mtClientList;	
@@ -46,10 +46,10 @@ public class HotTopByGroupId extends AbstractConfigUpdateBolt{
 
 	
 	private static Logger logger = LoggerFactory
-			.getLogger(HotTopByGroupId.class);
+			.getLogger(HotTopBolt.class);
 	
 	
-	public HotTopByGroupId(String config, ImmutableList<Output> outputField) {
+	public HotTopBolt(String config, ImmutableList<Output> outputField) {
 		super(config, outputField, Constants.config_stream);
 	}
 

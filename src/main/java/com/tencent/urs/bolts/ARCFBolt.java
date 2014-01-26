@@ -82,8 +82,8 @@ public class ARCFBolt extends AbstractConfigUpdateBolt{
 	
 	@Override
 	public void updateConfig(XMLConfiguration config) {
-		nsGroupPairTableId = config.getInt("pair_count_table",303);
-		nsGroupCountTableId = config.getInt("item_count_table",304);
+		nsGroupCountTableId = config.getInt("group_count_table",304);
+		nsGroupPairTableId = config.getInt("group_pair_table",306);
 		nsDetailTableId = config.getInt("dependent_table",302);
 		dataExpireTime = config.getInt("data_expiretime",1*24*3600);
 		cacheExpireTime = config.getInt("cache_expiretime",3600);

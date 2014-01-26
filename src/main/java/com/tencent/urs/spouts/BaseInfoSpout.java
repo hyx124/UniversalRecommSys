@@ -1,7 +1,6 @@
 package com.tencent.urs.spouts;
 
 import java.util.Arrays;
-import java.util.HashMap;
 import java.util.Map;
 
 import com.tencent.streaming.commons.spouts.tdbank.Output;
@@ -31,6 +30,7 @@ public class BaseInfoSpout extends TdbankSpout {
 	private MonitorTools mt;
 	private DataFilterConf dfConf;
 	private boolean debug;
+	private int count;
 
 	public BaseInfoSpout(String config, ImmutableList<Output> outputField) {
 		super(config, outputField);
@@ -47,65 +47,53 @@ public class BaseInfoSpout extends TdbankSpout {
 
 	@Override
 	public void processMessage(byte[] message){	
-		int length = message.length;
-		if (length <= 0) {
-			logger.info("Msg message length is <0:");
-			return ;
-		} 
-
-		int bodyIndex = searchIndex(message, SPEARATOR);
-		if (bodyIndex == -1 || bodyIndex == length - 1) {
-			logger.error("check data failed,not found attr,message ="+ message.toString());
-			return;
-		}
-
-		byte[] eventByte = Arrays.copyOfRange(message, 0, bodyIndex);
-		byte[] attrByte = Arrays.copyOfRange(message, bodyIndex + 1, length - 1);
-
-		String cate = new String(attrByte);
-		String[] attrs = cate.split(",|:",-1);
+		Long now = System.currentTimeMillis()/1000L;
+		String itemId = String.valueOf(now%30+1);
+		String actType = String.valueOf(now%10);
+		String qq = "389687043";
+		String category = String.valueOf(now%10);
+		String fa_category = String.valueOf(now%10+100);
+		if(count %1000 == 0){
+			/*<output_fields>
+			<stream_id>item_detail_info</stream_id>
+			<fields>hash_key,topic,bid,imp_date,item_id,cate_id1,cate_id2,cate_id3,cate_name1,cate_name2,cate_name3,free,publish
+			,price,text,item_time,expire_time,plat_form,score</fields>
+		</output_fields>
 		
-		String categoryId = "";
-		if (attrs.length >= 4) {
-			categoryId = attrs[1];
-		}
-						
-		String event = new String(eventByte);
-		String[] event_array = event.split("\t",-1);
-
-		if (categoryId.equals("yxpv") && event_array.length >= 30) {			
-			String uin = event_array[2];
-			String uid = event_array[3];
-			String action_time = event_array[5];
-			String itemId = event_array[7];
-			String adpos = event_array[29];
-			String action_type = "";
-							
-			if (event_array[22].indexOf("searchex.yixun.com") >= 0
-					&& event_array[22].indexOf("searchex.yixun.com") < 15) {
-				action_type = "1";
-			} else if (event_array[22].indexOf("direct enter") != -1) {
-				action_type = "2";
-			} else if (event_array[22].indexOf("sale.yixun.com/morningmarket.html") != -1
-					|| event_array[22].indexOf("sale.yixun.com/nightmarket.html") != -1
-					|| event_array[22].indexOf("tuan.yixun.com") != -1) {
-				action_type = "3";	
-			} else if (event_array[22].indexOf("www.baidu.com") != -1) {
-				action_type = "4";
-			} else if (event_array[22].indexOf("event.yixun.com") != -1) {
-				action_type = "5";
-			} else{
-				this.collector.emit("filter_data",new Values(""));
-				return;			
-			}
-						
-			//output=[1, UserAction, 20806747, 160821738, 4001, 1, 1389582548, 700919, , , , ]
+		<output_fields>
+			<stream_id>user_detail_info</stream_id>
+			<fields>hash_key,topic,bid,imp_date,qq,imei,uid,level,reg_date, reg_time</fields>
+		</output_fields>
+		
+		<output_fields>
+			<stream_id>action_weight_info</stream_id>
+			<fields>hash_key,topic,bid,imp_date,type_id,weight</fields>
+		</output_fields>
+		
+		<output_fields>
+			<stream_id>category_level_info</stream_id>
+			<fields>hash_key,topic,bid,imp_date,cate_id,cate_name,level,father_id</fields>
+		</output_fields>*/
 			
-			String[] dealMsg ={"1","UserAction",uin,uid,adpos,action_type,action_time,itemId,"","","",""}; 
-			dealMsgByConfig("1","UserAction",dealMsg);
+			String[] dealMsg1 ={"1#"+itemId,"item_detail_info","1","20140126",
+					itemId,"1","2","3","大类1","中类2","小类3","0","0","10.0","--",String.valueOf(now),String.valueOf(now+3000000),"iOS;Android","100"}; 
+			String[] dealMsg2 ={"1#"+qq,"user_detail_info","1","20130126",
+					qq,"IMEI12222","17139104","5","20140126",String.valueOf(now)}; 
+			
+			String[] dealMsg3 ={"1#"+actType,"action_weight_info","1","20140126",
+					actType,actType}; 
+			String[] dealMsg4 ={"1#"+category,"category_level_info","1","20140126",
+					category,"类目"+category,category,fa_category}; 
+			
+			dealMsgByConfig("1","item_detail_info",dealMsg1);
+			dealMsgByConfig("1","user_detail_info",dealMsg2);
+			dealMsgByConfig("1","action_weight_info",dealMsg3);
+			dealMsgByConfig("1","category_level_info",dealMsg4);
+			count = 0;
 		}else{
 			this.collector.emit("filter_data",new Values(""));
 		}
+		count ++;
 	}
 	
 	private void dealMsgByConfig(String bid,String topic,String[] msg_array){	

@@ -35,13 +35,11 @@ import com.tencent.tde.client.TairClient.TairOption;
 import com.tencent.tde.client.error.TairFlowLimit;
 import com.tencent.tde.client.error.TairQueueOverflow;
 import com.tencent.tde.client.error.TairRpcError;
-import com.tencent.tde.client.error.TairTimeout;
 import com.tencent.tde.client.impl.MutiThreadCallbackClient.MutiClientCallBack;
 import com.tencent.urs.asyncupdate.UpdateCallBack;
 import com.tencent.urs.asyncupdate.UpdateCallBackContext;
 import com.tencent.urs.combine.GroupActionCombinerValue;
 import com.tencent.urs.combine.UpdateKey;
-import com.tencent.urs.conf.AlgModuleConf;
 import com.tencent.urs.tdengine.TDEngineClientFactory;
 import com.tencent.urs.tdengine.TDEngineClientFactory.ClientAttr;
 import com.tencent.urs.utils.Constants;
@@ -181,12 +179,8 @@ public class ItemCountBolt extends AbstractConfigUpdateBolt{
 					clientEntry.getClient().notifyFuture(future, this,clientEntry);	
 				}			
 				
-			} catch (TairQueueOverflow e) {
-				//log.error(e.toString());
-			} catch (TairRpcError e) {
-				//log.error(e.toString());
-			} catch (TairFlowLimit e) {
-				//log.error(e.toString());
+			} catch (Exception e){
+				logger.error(e.toString());
 			}
 		}
 

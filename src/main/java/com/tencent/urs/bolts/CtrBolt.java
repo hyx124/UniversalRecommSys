@@ -47,7 +47,6 @@ import com.tencent.urs.bolts.CtrStorBolt.CtrCombinerValue;
 import com.tencent.urs.combine.ActionCombinerValue;
 import com.tencent.urs.combine.GroupActionCombinerValue;
 import com.tencent.urs.combine.UpdateKey;
-import com.tencent.urs.conf.AlgModuleConf;
 import com.tencent.urs.tdengine.TDEngineClientFactory;
 import com.tencent.urs.tdengine.TDEngineClientFactory.ClientAttr;
 import com.tencent.urs.utils.Constants;
@@ -62,7 +61,6 @@ public class CtrBolt extends AbstractConfigUpdateBolt{
 	private UpdateCallBack putCallBack;
 	//private ConcurrentHashMap<String, ActionCombinerValue> combinerMap;
 	private ConcurrentHashMap<CtrCombinerKey,Long> combinerMap;
-	private AlgModuleConf algInfo;
 	private int nsTableId;
 	private int dataExpireTime;
 	private int cacheExpireTime;

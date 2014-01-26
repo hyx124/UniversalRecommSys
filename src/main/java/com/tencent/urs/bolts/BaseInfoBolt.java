@@ -27,7 +27,10 @@ import com.tencent.tde.client.error.TairRpcError;
 
 import com.tencent.urs.asyncupdate.UpdateCallBack;
 import com.tencent.urs.asyncupdate.UpdateCallBackContext;
-import com.tencent.urs.conf.AlgModuleConf;
+import com.tencent.urs.protobuf.Recommend;
+import com.tencent.urs.protobuf.Recommend.ActiveType;
+import com.tencent.urs.protobuf.Recommend.ChargeType;
+import com.tencent.urs.protobuf.Recommend.ItemDetailInfo.PublicType;
 import com.tencent.urs.tdengine.TDEngineClientFactory;
 import com.tencent.urs.tdengine.TDEngineClientFactory.ClientAttr;
 import com.tencent.urs.utils.Constants;
@@ -38,9 +41,13 @@ public class BaseInfoBolt extends AbstractConfigUpdateBolt{
 	private List<ClientAttr> mtClientList;	
 	private MonitorTools mt;
 	private UpdateCallBack putCallBack;
-	private ConcurrentHashMap<String, byte[]> combinerMap;
 	private int nsTableID;
-	private AlgModuleConf algInfo;
+	private int nsItemDetailTableId;
+	private int nsUserDetailTableId;
+	private int nsActionWeightTableId;
+	private int nsCateLevelTableId;
+	private int dataExpireTime;
+	private boolean debug;
 	
 	private static Logger logger = LoggerFactory
 			.getLogger(BaseInfoBolt.class);
@@ -55,93 +62,139 @@ public class BaseInfoBolt extends AbstractConfigUpdateBolt{
 	public void prepare(Map conf, TopologyContext context, OutputCollector collector){
 		super.prepare(conf, context, collector);
 		updateConfig(super.config);
-		
-		this.nsTableID = Utils.getInt(conf, "tableid", 11);
-		
+				
 		this.mtClientList = TDEngineClientFactory.createMTClientList(conf);
 		this.mt = MonitorTools.getMonitorInstance(conf);
 		this.putCallBack = new UpdateCallBack(mt, Constants.systemID, Constants.tde_interfaceID, this.getClass().getName());
-			
-		this.combinerMap = new ConcurrentHashMap<String,byte[]>(1024);
-		int expireTime = Utils.getInt(conf, "expireTime",5*3600);
-		setCombinerTime(expireTime);
-	}
-
-	
-	private void setCombinerTime(final int second) {
-		new Thread(new Runnable() {
-			@Override
-			public void run() {
-				try {
-					while (true) {
-						Thread.sleep(second * 1000);
-						Set<String> keySet = combinerMap.keySet();
-						for (String key : keySet) {
-							byte[] expireTimeValue  = combinerMap.remove(key);
-							try{
-								Save(key,expireTimeValue);
-							}catch(Exception e){
-								//mt.addCountEntry(systemID, interfaceID, item, count)
-							}
-						}
-					}
-				} catch (Exception e) {
-					logger.error("Schedule thread error:" + e, e);
-				}
-			}
-		}).start();
 	}
 	
-	//基础属性的value不需要合并，直接覆盖
-	private void combinerKeys(String key,byte[] value) {
-		combinerMap.put(key,value);
-	}	
-	
-	private void Save(String key,byte[] values) 
-			throws TairRpcError, TairFlowLimit, TairQueueOverflow{	
+	private void save(Integer tablId,String key,byte[] values) {
 		for(ClientAttr clientEntry:mtClientList){
-			TairOption opt = new TairOption(clientEntry.getTimeout());
-			Future<Result<Void>> future = clientEntry.getClient().putAsync((short)nsTableID, 
-								key.toString().getBytes(), values.toString().getBytes(), opt);	
-			clientEntry.getClient().notifyFuture(future, putCallBack, 
-					new UpdateCallBackContext(clientEntry,key.toString(),values.toString().getBytes(),opt));
+			TairOption putopt = new TairOption(clientEntry.getTimeout(),(short)0, dataExpireTime);
+			Future<Result<Void>> future;
+			try {
+				future = clientEntry.getClient().putAsync((short)nsTableID, 
+									key.toString().getBytes(), values.toString().getBytes(), putopt);
+				clientEntry.getClient().notifyFuture(future, putCallBack, 
+						new UpdateCallBackContext(clientEntry,key.toString(),values.toString().getBytes(),putopt));
+			} catch (Exception e){
+				logger.error(e.toString());
+			}	
 		}
 	}
 
-	private byte[] genPbBytes(String bid,Tuple input) {
+	private byte[] genItemInfoPbValue(String itemId,Tuple input) {
+		//String itemId = input.getStringByField("item_id");
+		Long impDate = input.getLongByField("imp_date");
+		String bigType = input.getStringByField("cate_id1");
+		String midType = input.getStringByField("cate_id2");
+		String smallType = input.getStringByField("cate_id3");
+		String bigTypeName = input.getStringByField("cate_name1");
+		String midTypeName = input.getStringByField("cate_name2");
+		String smallTypeName = input.getStringByField("cate_name3");
+		ChargeType freeFlag = (Recommend.ChargeType) input.getValueByField("free");
+		PublicType publicFlag = (Recommend.ItemDetailInfo.PublicType) input.getValueByField("publish");
+		Float price = input.getFloatByField("price");
+		String text = input.getStringByField("text");
+		
+		Long itemTime = input.getLongByField("item_time");
+		Long platForm = input.getLongByField("plat_form");
+		Long score = input.getLongByField("score");
+		
+		Recommend.ItemDetailInfo.Builder builder =
+				Recommend.ItemDetailInfo.newBuilder();
+		builder.setItem(itemId).setFreeFlag(freeFlag).setPublicFlag(publicFlag).setImpDate(impDate)
+				.setPrice(price).setText(text).setItemTime(itemTime).setPlatform(platForm).setScore(score)
+				.setBigType(Long.valueOf(bigType)).setBigTypeName(bigTypeName)
+				.setMiddleType(Long.valueOf(midType)).setMiddleTypeName(midTypeName)
+				.setSmallType(Long.valueOf(smallType)).setSmallTypeName(smallTypeName);
+		
+		return builder.build().toByteArray();
+	}
+
+
+	private byte[] genCateLevelPbValue(String cate_id, Tuple input) {
+		Long impDate = input.getLongByField("imp_date");
+		String cateName = input.getStringByField("cate_name");
+		String level = input.getStringByField("level");
+		String bigTypeName = input.getStringByField("father_id");
+		String midTypeName = input.getStringByField("cate_name2");
+		String smallTypeName = input.getStringByField("cate_name3");
+		
 		return null;
 	}
-	
-	private String genKey(String sid,Tuple input) {
-		String bid = input.getStringByField("bid");
-		String key="";
-		if(sid.equals("")){
-			key =  bid+"#"+input.getStringByField("qq")+"#"+algInfo.getAlgName();
-		}else if(sid.equals("")){
-			key =  bid+"#"+input.getStringByField("item_id")+"#"+algInfo.getAlgName();
-		}else{
-			key = null;
-		}
-		return key;
+
+	private byte[] genActionWeightPbValue(ActiveType actionType, Tuple input) {
+		
+		return null;
 	}
 
+	private byte[] genUserInfoPbValue(String qq, Tuple input) {
+		Long impDate = input.getLongByField("imp_date");
+		String imei = input.getStringByField("imei");
+		String uid = input.getStringByField("uid");
+		Integer level = input.getIntegerByField("level");
+		Long regDate = input.getLongByField("reg_date");
+		Long regTime = input.getLongByField("reg_time");
+		
+		Recommend.UserDetailInfo.Builder builder = Recommend.UserDetailInfo.newBuilder();
+		builder.setImpDate(impDate).setImei(imei)
+				.setQQNum(qq).setLevel(level).setUid(uid)
+				.setRegDate(regDate).setRegTime(regTime);
+		return builder.build().toByteArray();
+	}
+
+	
 	@Override
 	public void updateConfig(XMLConfiguration config) {
-		try {
-			this.algInfo.load(config);
-		} catch (ConfigurationException e) {
-			logger.error(e.toString());
-		}
+		nsItemDetailTableId = config.getInt("item_detail_table",311);
+		nsUserDetailTableId = config.getInt("user_detail_table",312);
+		nsActionWeightTableId = config.getInt("action_weight_table",313);
+		nsCateLevelTableId = config.getInt("category_level_table",314);
+		
+		dataExpireTime = config.getInt("data_expiretime",100*24*3600);
+		debug = config.getBoolean("debug",false);
 	}
 
 	@Override
 	public void processEvent(String sid, Tuple tuple) {
-		String key = genKey(sid,tuple);			
-		byte[] value = genPbBytes(sid,tuple);
+		String bid = tuple.getStringByField("bid");
+		String topic = tuple.getStringByField("topic");
 		
-		if(key!=null && value!=null){
-			combinerKeys(key,value);
+		Integer tableId = null;
+		String key = null;
+		byte[] value = null;
+		
+		if(topic.equals("item_detail_info")){
+			String itemId = tuple.getStringByField("item_id");
+			key = bid+"#"+itemId;
+			tableId = nsItemDetailTableId;
+			
+			value = genItemInfoPbValue(itemId,tuple);		
+		}else if(topic.equals("user_detail_info")){
+			String qq = tuple.getStringByField("qq");
+			key = bid+"#"+qq;
+			tableId = nsUserDetailTableId;
+			
+			value = genUserInfoPbValue(qq,tuple);
+		}else if(topic.equals("action_weight_info")){
+			Recommend.ActiveType actionType = (Recommend.ActiveType) tuple.getValueByField("action_type");
+			key = bid+"#"+actionType;
+			tableId = nsActionWeightTableId;
+			
+			value = genActionWeightPbValue(actionType,tuple);
+		}else if(topic.equals("category_level_info")){
+			String cate_id = tuple.getStringByField("cate_id");
+			key = bid+"#"+cate_id;
+			tableId = nsCateLevelTableId;
+			
+			value = genCateLevelPbValue(cate_id,tuple);
+		}else{
+			return;
 		}
+		
+		save(tableId,key,value);
+		//
 	}
 
 }
