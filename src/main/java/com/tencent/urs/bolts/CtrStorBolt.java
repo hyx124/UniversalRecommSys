@@ -196,7 +196,6 @@ public class CtrStorBolt extends AbstractConfigUpdateBolt{
 		}
 	}	
 
-
 	private class CtrUpdateCallBack implements MutiClientCallBack{
 		private final String key;
 		private final CtrCombinerValue values;
@@ -207,10 +206,10 @@ public class CtrStorBolt extends AbstractConfigUpdateBolt{
 		}
 	
 		public void excute() {
-			try {
-				if(ctrCache.hasKey(key)){		
-					SoftReference<CtrInfo> oldCtr = ctrCache.get(key);	
-					mergeHeap(oldCtr.get());
+			try {			
+				CtrInfo oldCtr = ctrCache.get(key).get();
+				if(oldCtr != null){		
+					mergeHeap(oldCtr);
 				}else{
 					ClientAttr clientEntry = mtClientList.get(0);		
 					TairOption opt = new TairOption(clientEntry.getTimeout());

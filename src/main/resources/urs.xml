@@ -1,7 +1,7 @@
 <?xml version="1.0" encoding="UTF-8" ?>
 <topology name="urs-topology" works="20" ackers="0" debug="false">	
 	<spouts>
-		<spout name="TestSpout" class="com.tencent.urs.spouts.TestSpout" parallelism="1">
+		<spout name="UserActionSpout" class="com.tencent.urs.spouts.TestSpout" parallelism="1">
 			<tdbank_zookeeper_address>sk-zk-td1:2181,sk-zk-td2:2181,sk-zk-td3:2181,sk-zk-td4:2181,sk-zk-td5:2181</tdbank_zookeeper_address>
 			<tdbank_zookeeper_timeout>10000</tdbank_zookeeper_timeout>
 			<tdbank_zookeeper_connecttimeout>30000</tdbank_zookeeper_connecttimeout>
@@ -33,18 +33,6 @@
 			</output_fields>	
 		</bolt>
 
-		<bolt name="BaseInfoBolt" class="com.tencent.urs.bolts.BaseInfoBolt" parallelsim="1">
-			<grouping type="field">
-				<fields>hashKey</fields>
-				<component>UserActionSpout</component>
-				<streaming_ids>UserAction</streaming_ids>
-			</grouping>
-			
-			<output_fields>
-				<stream_id>UserAction</stream_id>
-				<fields>bid,topic,old_qq,uid,adpos,action_type,action_time,item_id,action_result,imei,platform,lbs_info,qq,group_id</fields>
-			</output_fields>	
-		</bolt>
 
 		<bolt name="TopActionBolt" class="com.tencent.urs.bolts.TopActionBolt" parallelsim="1">
 			<grouping type="field">
@@ -53,6 +41,7 @@
 				<streaming_ids>UserAction</streaming_ids>
 			</grouping>
 			
+			<debug>true</debug>
 			<storage_table>301</storage_table>
 			<data_expiretime>259200</data_expiretime>
 			<cache_expiretime>3600</cache_expiretime>
@@ -66,6 +55,7 @@
 				<streaming_ids>UserAction</streaming_ids>
 			</grouping>
 		
+			<debug>true</debug>
 			<storage_table>302</storage_table>
 			<data_expiretime>259200</data_expiretime>
 			<cache_expiretime>3600</cache_expiretime>
@@ -78,6 +68,7 @@
 				<streaming_ids>UserAction</streaming_ids>
 			</grouping>
 		
+			<debug>true</debug>
 			<user_count_table>303</user_count_table>
 			<group_count_table>304</group_count_table>
 			<dependent_table>302</dependent_table>
@@ -92,6 +83,7 @@
 				<streaming_ids>UserAction</streaming_ids>
 			</grouping>
 		
+			<debug>true</debug>
 			<user_count_table>305</user_count_table>
 			<group_count_table>306</group_count_table>
 			<dependent_table>302</dependent_table>
@@ -105,7 +97,8 @@
 				<component>PretreatmentBolt</component>
 				<streaming_ids>UserAction</streaming_ids>
 			</grouping>
-		
+			
+			<debug>true</debug>
 			<storage_table>306</storage_table>
 			<data_expiretime>259200</data_expiretime>
 			<cache_expiretime>3600</cache_expiretime>
@@ -118,6 +111,7 @@
 				<streaming_ids>UserAction</streaming_ids>
 			</grouping>
 		
+			<debug>true</debug>
 			<item_count_table>304</item_count_table>
 			<pair_count_table>306</pair_count_table>
 			<dependent_table>302</dependent_table>
@@ -137,41 +131,8 @@
 				<streaming_ids>UserAction</streaming_ids>
 			</grouping>
 		
+			<debug>true</debug>
 			<dependent_table>306</dependent_table>
-			<data_expiretime>259200</data_expiretime>
-			<cache_expiretime>3600</cache_expiretime>
-			
-			<output_fields>
-				<stream_id>computer_result</stream_id>
-				<fields>key,item_id,weight,alg_name</fields>
-			</output_fields>
-		</bolt>
-		
-		<bolt name="HotTopByCategory" class="com.tencent.urs.bolts.HotTopByCategory" parallelsim="1">
-			<grouping type="field">
-				<fields>qq</fields>
-				<component>PretreatmentBolt</component>
-				<streaming_ids>UserAction</streaming_ids>
-			</grouping>
-		
-			<item_count_table>304</item_count_table>
-			<data_expiretime>259200</data_expiretime>
-			<cache_expiretime>3600</cache_expiretime>
-			
-			<output_fields>
-				<stream_id>computer_result</stream_id>
-				<fields>key,item_id,weight,alg_name</fields>
-			</output_fields>
-		</bolt>
-		
-		<bolt name="HotTopByGroupId" class="com.tencent.urs.bolts.HotTopByGroupId" parallelsim="1">
-			<grouping type="field">
-				<fields>qq</fields>
-				<component>PretreatmentBolt</component>
-				<streaming_ids>UserAction</streaming_ids>
-			</grouping>
-		
-			<item_count_table>304</item_count_table>
 			<data_expiretime>259200</data_expiretime>
 			<cache_expiretime>3600</cache_expiretime>
 			
@@ -194,18 +155,7 @@
 				<streaming_ids>computer_result</streaming_ids>
 			</grouping>
 			
-			<grouping type="field">
-				<fields>key</fields>
-				<component>HotTopByCategory</component>
-				<streaming_ids>computer_result</streaming_ids>
-			</grouping>
-			
-			<grouping type="field">
-				<fields>key</fields>
-				<component>HotTopByGroupId</component>
-				<streaming_ids>computer_result</streaming_ids>
-			</grouping>
-			
+			<debug>true</debug>
 			<top_num>100</top_num>
 			<storage_table>310</storage_table>
 			<data_expiretime>259200</data_expiretime>

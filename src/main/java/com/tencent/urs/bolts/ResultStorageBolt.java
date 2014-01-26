@@ -38,7 +38,6 @@ public class ResultStorageBolt extends AbstractConfigUpdateBolt {
 	private List<ClientAttr> mtClientList;	
 	private DataCache<RecommendResult> resCache;
 	private MonitorTools mt;
-	private UpdateCallBack putCallBack;
 	//private ConcurrentHashMap<String, RecommendResult> combinerMap;
 	private int dataExpireTime;
 	private int nsTableId;
@@ -55,7 +54,7 @@ public class ResultStorageBolt extends AbstractConfigUpdateBolt {
 	@Override
 	public void updateConfig(XMLConfiguration config) {
 		nsTableId = config.getInt("storage_table",310);
-		dataExpireTime = config.getInt("data_expiretime",1*24*3600);
+		dataExpireTime = config.getInt("data_expiretime",10*24*3600);
 		cacheExpireTime = config.getInt("cache_expiretime",3600);
 		topNum = config.getInt("top_num",100);
 	}
@@ -66,9 +65,11 @@ public class ResultStorageBolt extends AbstractConfigUpdateBolt {
 		String key = tuple.getStringByField("key");
 		String itemId = tuple.getStringByField("item_id");
 		Double weight = tuple.getDoubleByField("weight");
+	
 		Recommend.RecommendResult.Result.Builder value =
 				Recommend.RecommendResult.Result.newBuilder();
-		value.setItem(itemId).setWeight(weight);
+		value.setItem(itemId).setWeight(weight).setPrice(100).setFreeFlag(Recommend.ChargeType.NormalFee)
+			.setUpdateTime(System.currentTimeMillis()/1000L);
 		new putToTDEUpdateCallBack(key,value.build(),algName).excute();
 		
 	}
@@ -82,7 +83,6 @@ public class ResultStorageBolt extends AbstractConfigUpdateBolt {
 		this.resCache = new DataCache<RecommendResult>(conf);
 		this.mtClientList = TDEngineClientFactory.createMTClientList(conf);
 		this.mt = MonitorTools.getMonitorInstance(conf);
-		this.putCallBack = new UpdateCallBack(mt, Constants.systemID, Constants.tde_interfaceID, "ResultStorage");
 		
 		//this.combinerMap = new ConcurrentHashMap<String,RecommendResult>(1024);
 		//int combinerExpireTime = Utils.getInt(conf, "combiner.expireTime",5);
@@ -108,7 +108,10 @@ public class ResultStorageBolt extends AbstractConfigUpdateBolt {
 			try {
 				Result<byte[]> res = afuture.get();
 				if(res.getCode().equals(ResultCode.OK) && res.getResult() != null){
+					logger.info("get from tde success");
 					oldValue = Recommend.RecommendResult.parseFrom(res.getResult());
+				}else{
+					logger.info("get from tde falied,result_code="+res.getCode());
 				}
 			} catch (Exception e) {
 				logger.error(e.toString());
@@ -119,13 +122,15 @@ public class ResultStorageBolt extends AbstractConfigUpdateBolt {
 		public void excute() {
 			SoftReference<RecommendResult> oldValue = resCache.get(key);
 			if(oldValue != null){
+				logger.info("get in cache");
 				sortValues(oldValue.get());
 			}else{
 				try{
+					logger.info("get in tde");
 					ClientAttr clientEntry = mtClientList.get(0);		
 					TairOption opt = new TairOption(clientEntry.getTimeout());
 					Future<Result<byte[]>> future = clientEntry.getClient().getAsync((short)nsTableId,key.getBytes(),opt);
-					clientEntry.getClient().notifyFuture(future, putCallBack,clientEntry);	
+					clientEntry.getClient().notifyFuture(future, this,clientEntry);	
 				}catch(Exception e){
 					logger.error(e.toString());
 				}
@@ -155,14 +160,17 @@ public class ResultStorageBolt extends AbstractConfigUpdateBolt {
 						alreadyIn.add(eachItem.getItem());
 					}
 				}
+			}else{
+				logger.info("merge oldvalue is null");
 			}
-
 			
 			if(!alreadyIn.contains(value.getItem())  
 					&& mergeValueBuilder.getResultsCount() < topNum){
 				mergeValueBuilder.addResults(value);
 				alreadyIn.add(value.getItem());
 			}	
+			logger.info("merge success ,count="+mergeValueBuilder.getResultsCount());
+			
 			SaveValues(key,mergeValueBuilder);
 		}
 
@@ -176,7 +184,7 @@ public class ResultStorageBolt extends AbstractConfigUpdateBolt {
 				logger.info(res.getItem()+",weight="+res.getWeight());
 			}*/
 			
-			
+			logger.info("key ="+key+",count="+mergeValueBuilder.getResultsCount());
 			Future<Result<Void>> future = null;
 			for(ClientAttr clientEntry:mtClientList ){
 				TairOption putopt = new TairOption(clientEntry.getTimeout(),(short)0, dataExpireTime);

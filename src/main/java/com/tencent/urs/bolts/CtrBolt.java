@@ -207,18 +207,11 @@ public class CtrBolt extends AbstractConfigUpdateBolt{
 	
 		public void excute() {
 			try {			
-					String getKey = key.getCtrCheckKey();
-					if(ctrCache.hasKey(getKey)){		
-						SoftReference<CtrInfo> ctr = ctrCache.get(getKey);	
-						computerWeight(ctr.get());
-					}else{
-						ClientAttr clientEntry = mtClientList.get(0);		
-						TairOption opt = new TairOption(clientEntry.getTimeout());
-						Future<Result<byte[]>> future = clientEntry.getClient().getAsync((short)nsTableId,getKey.getBytes(),opt);
-						clientEntry.getClient().notifyFuture(future, this,clientEntry);	
-					}		
-				
-	
+				String getKey = key.getCtrCheckKey();
+				ClientAttr clientEntry = mtClientList.get(0);		
+				TairOption opt = new TairOption(clientEntry.getTimeout());
+				Future<Result<byte[]>> future = clientEntry.getClient().getAsync((short)nsTableId,getKey.getBytes(),opt);
+				clientEntry.getClient().notifyFuture(future, this,clientEntry);	
 			} catch (TairQueueOverflow e) {
 				//log.error(e.toString());
 			} catch (TairRpcError e) {

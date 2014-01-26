@@ -107,14 +107,28 @@ public class ARCFBolt extends AbstractConfigUpdateBolt{
 		}
 		
 		//GroupActionCombinerValue value = new GroupActionCombinerValue(actType,Long.valueOf(actionTime));
-		UpdateKey key = new UpdateKey(bid,Long.valueOf(qq),Integer.valueOf(groupId),adpos,"345");
+		UpdateKey key = new UpdateKey(bid,Long.valueOf(qq),Integer.valueOf(groupId),adpos,itemId);
 		//combinerKeys(key,value);	
-		String testKey = bid+"#"+key.getItemId()+"#adpos#AR#"+key.getGroupId();
+		
 		Double weight = (double) (1000-Long.valueOf(actionTime)%100);
-		Values values_cf = new Values(testKey,key.getItemId()+Long.valueOf(actionTime)%100,weight,"CF");
-		//this.collector.emit("computer_result",values_cf);
-		//test(key,actionTime);
-		this.collector.emit("computer_result",values_cf);
+		//doEmit("A1001",itemId,groupId,actionTime,weight);
+		//doEmit("B1001",itemId,groupId,actionTime,weight);
+		doEmit("C1001",itemId,groupId,actionTime,weight);
+		
+		doEmit("A1001",itemId,"0",actionTime,weight);
+		doEmit("B1001",itemId,"0",actionTime,weight);
+		//doEmit("C1001",itemId,"0",actionTime,weight);
+		
+	}
+	
+	private void  doEmit(String algName, String itemId, String groupId,String actionTime,double weight){
+		String testKey_c = "1#"+itemId+"#1#"+algName+"#"+groupId;
+		
+		Long now = System.currentTimeMillis()/1000L;
+		String otheritemId = String.valueOf(now%30+1);
+		Values values_c = new Values(testKey_c,otheritemId,weight,algName);
+		this.collector.emit("computer_result",values_c);
+
 	}
 	
 	private void test(UpdateKey key,String actionTime){
@@ -149,21 +163,7 @@ public class ARCFBolt extends AbstractConfigUpdateBolt{
 					logger.info("from tde:itemid="+each.getItem()+",weight="+each.getWeight());
 				}
 			}			
-		} catch (TairRpcError e) {
-			// TODO Auto-generated catch block
-			e.printStackTrace();
-		} catch (TairFlowLimit e) {
-			// TODO Auto-generated catch block
-			e.printStackTrace();
-		} catch (TairTimeout e) {
-			// TODO Auto-generated catch block
-			e.printStackTrace();
-		} catch (InterruptedException e) {
-			// TODO Auto-generated catch block
-			e.printStackTrace();
-		} catch (InvalidProtocolBufferException e) {
-			// TODO Auto-generated catch block
-			e.printStackTrace();
+		} catch (Exception e) {
 		}
 		
 		
@@ -218,18 +218,16 @@ public class ARCFBolt extends AbstractConfigUpdateBolt{
 				Future<Result<byte[]>> future = clientEntry.getClient().getAsync((short)nsGroupPairTableId,getKey.toString().getBytes(),opt);
 				clientEntry.getClient().notifyFuture(future, this,clientEntry);			
 			} catch (TairQueueOverflow e) {
-				//log.error(e.toString());
+				logger.error(e.toString());
 			} catch (TairRpcError e) {
-				//log.error(e.toString());
+				logger.error(e.toString());
 			} catch (TairFlowLimit e) {
-				//log.error(e.toString());
+				logger.error(e.toString());
 			}
 		}
 
-
 		public Double computeARWeight(Integer itemCount1, Integer itemCount2,
 				Integer pairCount) {	
-			//AR
 			Double simAR = (double) (pairCount/itemCount1);
 			return simAR;
 		}
@@ -245,35 +243,43 @@ public class ARCFBolt extends AbstractConfigUpdateBolt{
 		public void handle(Future<?> future, Object context) {			
 			@SuppressWarnings("unchecked")
 			Future<Result<byte[]>> afuture = (Future<Result<byte[]>>) future;
+			Integer pairCount = 0;
 			try {
 				Result<byte[]> result = afuture.get();	
 				if(result.isSuccess() && result.getResult()!=null){
-					Integer  pairCount = Integer.valueOf(new String(result.getResult()));
-					Double arWeight = computeARWeight(itemCount1,itemCount2,pairCount);
-					Double cfWeight = computeCFWeight(itemCount1,itemCount2,pairCount);
-					
-					
-					String key1 = Utils.getAlgKey(key.getBid(), key.getItemId(), key.getAdpos(), "AR", String.valueOf(key.getGroupId()));		
-					Values values_ar1 = new Values(key1,key.getAdpos(),otherItem,arWeight,"AR");
-					collector.emit("computer_result",values_ar1);
-					
-					String key2 = Utils.getAlgKey(key.getBid(), key.getItemId(), key.getAdpos(), "CF", String.valueOf(key.getGroupId()));
-					Values values_cf2 = new Values(key2,key.getAdpos(),otherItem,cfWeight,"CF");
-					collector.emit("computer_result",values_cf2);
-					
-					
-					String key3 = Utils.getAlgKey(key.getBid(), otherItem, key.getAdpos(), "AR", String.valueOf(key.getGroupId()));
-					Values values_ar3 = new Values(key3,key.getAdpos(),key.getItemId(),arWeight,"AR");
-					collector.emit("computer_result",values_ar3);
-					
-					
-					String key4 = Utils.getAlgKey(key.getBid(), otherItem, key.getAdpos(), "CF", String.valueOf(key.getGroupId()));
-					Values values_cf4 = new Values(key4,key.getAdpos(),key.getItemId(),cfWeight,"CF");
-					collector.emit("computer_result",values_cf4);
-					
+					pairCount = Integer.valueOf(new String(result.getResult()));
 				}
 			} catch (Exception e) {
 				
+			}
+			
+			Double arWeight = computeARWeight(itemCount1,itemCount2,pairCount);
+			Double cfWeight = computeCFWeight(itemCount1,itemCount2,pairCount);
+			doEmit(key.getBid(),key.getItemId(),key.getAdpos(),otherItem,Constants.alg_cf,String.valueOf(key.getGroupId()),cfWeight);
+			doEmit(key.getBid(),key.getItemId(),key.getAdpos(),otherItem,Constants.alg_ar,String.valueOf(key.getGroupId()),arWeight);	
+		}
+		
+		private void doEmit(String bid,String itemId,String adpos,String otherItem,  String algName, String groupId, double weight){
+			String resultKey = Utils.getAlgKey(bid,itemId, adpos, algName, groupId);		
+			Values values = new Values(resultKey,adpos,otherItem,weight,algName);
+			
+			
+			String resultKey2 = Utils.getAlgKey(bid,otherItem, adpos, algName, groupId);		
+			Values values2 = new Values(resultKey2,adpos,itemId,weight,algName);
+			
+			collector.emit("computer_result",values);
+			collector.emit("computer_result",values2);
+			
+			if(!groupId.equals("0")){
+				
+				String resultKey3 = Utils.getAlgKey(bid,itemId, adpos, algName, "0");		
+				Values values3 = new Values(resultKey3,adpos,otherItem,weight,algName);
+				
+				
+				String resultKey4 = Utils.getAlgKey(bid,otherItem, adpos, algName, "0");		
+				Values values4 = new Values(resultKey4,adpos,itemId,weight,algName);
+				collector.emit("computer_result",values3);
+				collector.emit("computer_result",values4);
 			}
 			
 		}
@@ -321,19 +327,21 @@ public class ARCFBolt extends AbstractConfigUpdateBolt{
 		public void handle(Future<?> future, Object context) {			
 			@SuppressWarnings("unchecked")
 			Future<Result<byte[]>> afuture = (Future<Result<byte[]>>) future;
+			String count = "0";
 			try {
 				if(afuture.get().isSuccess() && afuture.get().getResult()!=null){
-					String count = new String(afuture.get().getResult());
-					if(step == 1){
-						new GetItemCountCallBack(key,otherItem,Integer.valueOf(count),2).excute();
-					}else if(step == 2){
-						new GetPairsCountCallBack(key,otherItem,itemCount,Integer.valueOf(count)).excute();
-					}
-					
+					count = new String(afuture.get().getResult());
 				}
 			} catch (Exception e) {
 				
 			}
+			
+			if(step == 1){
+				new GetItemCountCallBack(key,otherItem,Integer.valueOf(count),2).excute();
+			}else if(step == 2){
+				new GetPairsCountCallBack(key,otherItem,itemCount,Integer.valueOf(count)).excute();
+			}
+			
 			
 		}
 	}

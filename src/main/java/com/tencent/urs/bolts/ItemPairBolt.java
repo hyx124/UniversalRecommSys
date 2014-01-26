@@ -240,14 +240,14 @@ public class ItemPairBolt  extends AbstractConfigUpdateBolt{
 		
 	}
 	
-	private class compareWeighCallBack implements MutiClientCallBack{
+	private class UserPairUpdateCallBack implements MutiClientCallBack{
 		
 		private UpdateKey key;
 		private Integer count;
 		private String userPairKey;
 		private String itemId;
 
-		public compareWeighCallBack(UpdateKey key,String otherItem, Integer count) {
+		public UserPairUpdateCallBack(UpdateKey key,String otherItem, Integer count) {
 			this.key = key ; 
 			this.count = count;	
 			this.itemId = otherItem;
@@ -354,25 +354,16 @@ public class ItemPairBolt  extends AbstractConfigUpdateBolt{
 		private void next(String item, HashMap<String,Integer> itemMap){
 
 			for(String itemId:itemMap.keySet()){
-				new compareWeighCallBack(key, itemId, itemMap.get(itemId)).excute();
+				new UserPairUpdateCallBack(key, itemId, itemMap.get(itemId)).excute();
 			}
 		}
 		
 		public void excute() {
 			try {
-				if(userActionCache.hasKey(checkKey)){		
-					SoftReference<UserActiveDetail> oldValueHeap = userActionCache.get(checkKey);	
-					
-					HashMap<String,Integer> weightMap = getPairItems(oldValueHeap.get() , values);
-					next(key.getItemId(),weightMap);
-					
-				}else{
-					ClientAttr clientEntry = mtClientList.get(0);		
-					TairOption opt = new TairOption(clientEntry.getTimeout());
-					Future<Result<byte[]>> future = clientEntry.getClient().getAsync((short)nsDetailTableId,checkKey.getBytes(),opt);
-					clientEntry.getClient().notifyFuture(future, this,clientEntry);	
-				}			
-				
+				ClientAttr clientEntry = mtClientList.get(0);		
+				TairOption opt = new TairOption(clientEntry.getTimeout());
+				Future<Result<byte[]>> future = clientEntry.getClient().getAsync((short)nsDetailTableId,checkKey.getBytes(),opt);
+				clientEntry.getClient().notifyFuture(future, this,clientEntry);	
 			} catch (TairQueueOverflow e) {
 				//log.error(e.toString());
 			} catch (TairRpcError e) {

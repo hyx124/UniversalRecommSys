@@ -50,10 +50,10 @@ public class TestSpout extends TdbankSpout {
 	@Override
 	public void processMessage(byte[] message){	
 		Long now = System.currentTimeMillis()/1000L;
-		String itemId = String.valueOf(now%100);
+		String itemId = String.valueOf(now%30+1);
 		String actType = String.valueOf(now%10);
 		//output=[1, UserAction, 20806747, 160821738, 4001, 1, 1389582548, 700919, , , , ]
-		String[] dealMsg ={"1","UserAction","389687043","123","adpos","1",String.valueOf(now),itemId,"","","",""}; 
+		String[] dealMsg ={"1","UserAction","389687043","123","1","1",String.valueOf(now),itemId,"","","",""}; 
 		if(count %1000 == 0){
 			dealMsgByConfig("1","UserAction",dealMsg);
 			count = 0;

@@ -39,6 +39,7 @@ import com.tencent.urs.asyncupdate.UpdateCallBack;
 import com.tencent.urs.asyncupdate.UpdateCallBackContext;
 import com.tencent.urs.combine.ActionCombinerValue;
 import com.tencent.urs.combine.GroupActionCombinerValue;
+import com.tencent.urs.combine.UpdateKey;
 import com.tencent.urs.tdengine.TDEngineClientFactory;
 import com.tencent.urs.tdengine.TDEngineClientFactory.ClientAttr;
 import com.tencent.urs.utils.Constants;
@@ -57,6 +58,7 @@ public class ActionDetailBolt extends AbstractConfigUpdateBolt{
 	private int dataExpireTime;
 	private int cacheExpireTime;
 	private int topNum;
+	private boolean debug;
 	
 	
 	private static Logger logger = LoggerFactory
@@ -72,6 +74,7 @@ public class ActionDetailBolt extends AbstractConfigUpdateBolt{
 		dataExpireTime = config.getInt("data_expiretime",1*24*3600);
 		cacheExpireTime = config.getInt("cache_expiretime",3600);
 		topNum = config.getInt("topNum",30);
+		debug = config.getBoolean("debug",false);
 	}
 	
 	@SuppressWarnings("unchecked")
@@ -93,6 +96,7 @@ public class ActionDetailBolt extends AbstractConfigUpdateBolt{
 	@Override
 	public void processEvent(String sid, Tuple tuple) {
 		String bid = tuple.getStringByField("bid");
+		String adpos = tuple.getStringByField("adpos");
 		String qq = tuple.getStringByField("qq");
 		String itemId = tuple.getStringByField("item_id");
 		
@@ -114,9 +118,9 @@ public class ActionDetailBolt extends AbstractConfigUpdateBolt{
 
 		ActionCombinerValue value = new ActionCombinerValue();
 		value.init(itemId,actBuilder.build());
+		UpdateKey key = new UpdateKey(bid, Long.valueOf(qq), 0, adpos, itemId);
 		
-		String key = bid+"#"+qq+"#ActionDetail";
-		combinerKeys(key,value);	
+		combinerKeys(key.getDetailKey(),value);	
 	}
 	
 	private void setCombinerTime(final int second) {
@@ -166,13 +170,19 @@ public class ActionDetailBolt extends AbstractConfigUpdateBolt{
 		}
 
 		public void excute() {
-			try {
-				if(cacheMap.hasKey(key)){		
-					SoftReference<Recommend.UserActiveDetail> oldValue = cacheMap.get(key);	
+			try {		
+				Recommend.UserActiveDetail oldValue = cacheMap.get(key).get();			
+				if(oldValue != null){	
+					if(debug){
+						logger.info("get key="+key+",in caceh");
+					}
 					UserActiveDetail.Builder mergeValueBuilder = Recommend.UserActiveDetail.newBuilder();
-					mergeToHeap(values,oldValue.get(),mergeValueBuilder);
+					mergeToHeap(values,oldValue,mergeValueBuilder);
 					Save(mergeValueBuilder);
 				}else{
+					if(debug){
+						logger.info("get key="+key+",in tde");
+					}
 					ClientAttr clientEntry = mtClientList.get(0);		
 					TairOption opt = new TairOption(clientEntry.getTimeout());
 					Future<Result<byte[]>> future = clientEntry.getClient().getAsync((short)nsTableId,key.getBytes(),opt);
@@ -276,14 +286,18 @@ public class ActionDetailBolt extends AbstractConfigUpdateBolt{
 						= new HashMap<Long,HashMap<String,HashMap<Recommend.ActiveType,ActType>>>();
 			if(oldValueHeap != null && oldValueHeap.getTsegsCount()>0){
 				mergeOldToMap(oldValueHeap,detailMap);
-				logger.info("add old,size="+oldValueHeap.getTsegsCount());
+				if(debug){
+					logger.info("add old values,now size="+oldValueHeap.getTsegsCount());
+				}
 			}
 			
 			for(String item:newValueList.getActRecodeMap().keySet()){
 				ActiveRecord action = newValueList.getActRecodeMap().get(item);
 				Long winId = getWinIdByTime(action.getActTime());				
 				mergeNewRecordsToMap(winId,item,action,detailMap);
-				logger.info("add new,size="+detailMap.get(winId).size());
+				if(debug){
+					logger.info("add new values,size="+detailMap.get(winId).size());
+				}
 			}	
 			changeMapToPB(detailMap,mergeValueBuilder);
 		}
@@ -326,22 +340,24 @@ public class ActionDetailBolt extends AbstractConfigUpdateBolt{
 				for(UserActiveDetail.TimeSegment.ItemInfo item: tsegs.getItemsList()){	
 					logger.info("-------item="+item.getItem());
 					for(UserActiveDetail.TimeSegment.ItemInfo.ActType act: item.getActsList()){
-						logger.info("act="+act.getActType()+",count="+act.getCount()+",time="+act.getLastUpdateTime());
+						logger.info("-----------act="+act.getActType()+",count="+act.getCount()+",time="+act.getLastUpdateTime());
 					}
 				}
 			}
 		}
 		
 		private void Save(Recommend.UserActiveDetail.Builder mergeValueBuilder){	
-			printOut(mergeValueBuilder.build());
+			if(debug){
+				printOut(mergeValueBuilder.build());
+			}
+			
 			
 			
 			Future<Result<Void>> future = null;
 			UserActiveDetail pbValue = mergeValueBuilder.build();
 			synchronized(cacheMap){
 				cacheMap.set(key, new SoftReference<UserActiveDetail>(pbValue), cacheExpireTime);
-			}
-			
+			}			
 			
 			for(ClientAttr clientEntry:mtClientList ){
 				TairOption putopt = new TairOption(clientEntry.getTimeout(),(short)0, dataExpireTime);
@@ -376,12 +392,16 @@ public class ActionDetailBolt extends AbstractConfigUpdateBolt{
 			} catch (Exception e) {	
 			}
 			
+			if(debug){
+				if(oldValueHeap == null){
+					logger.info("get key="+key+",from tde ,but null");
+				}else{
+					logger.info("get key="+key+",from tde success");
+				}
+			}
 			mergeToHeap(values,oldValueHeap,mergeValueBuilder);
 			Save(mergeValueBuilder);
 		}
 	}
 
-	public static void main(String[] args){
-
-	}
 }

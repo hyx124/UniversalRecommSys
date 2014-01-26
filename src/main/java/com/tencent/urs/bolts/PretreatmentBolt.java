@@ -74,7 +74,7 @@ public class PretreatmentBolt extends AbstractConfigUpdateBolt {
 		TairOption opt = new TairOption(clientEntry.getTimeout(),(short)0, 24*3600);
 		try {
 			clientEntry.getClient().put((short) nsTableUin, "17139104".getBytes(), "389687043".getBytes(), opt);
-			clientEntry.getClient().put((short) nsTableGroup, "389687043".getBytes(), "51".getBytes(), opt);
+			clientEntry.getClient().put((short) nsTableGroup, "389687043".getBytes(), "1,51|2,52|3,53".getBytes(), opt);
 		} catch (TairRpcError e) {
 			// TODO Auto-generated catch block
 			e.printStackTrace();
@@ -205,9 +205,15 @@ public class PretreatmentBolt extends AbstractConfigUpdateBolt {
 			try {
 				Result<byte[]> res = afuture.get();
 				if(res.getCode().equals(ResultCode.OK) && res.getResult() != null){
-					
-					groupId = new String(res.getResult());
-					logger.info("get groupid success, uin="+groupId);
+			
+					String tde_gid = new String(res.getResult());
+					String[] grouplist = (tde_gid).split(",|\\|");
+					if(grouplist.length>=2){
+						groupId = grouplist[1];
+						logger.info("get groupid success, uin="+groupId);
+					}else{
+						logger.error("gid format is bad"+tde_gid);
+					}							
 				}else{
 					logger.error("get groupId from tde failed!");
 				}

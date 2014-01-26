@@ -139,7 +139,18 @@ public class Utils {
 	
 	public static String getAlgKey(String bid,String itemId,String adpos,String algName,String groupId){
 		StringBuffer getKey = new StringBuffer(bid);		
-		getKey.append("#").append(itemId).append("#").append(adpos).append("#").append(algName).append("#").append(groupId);	
+		getKey.append("#").append(itemId)
+			.append("#").append(adpos)
+			.append("#").append(algName)
+			.append("#").append(groupId);	
+		return getKey.toString();
+	}
+	
+	public static String getDetailKey(String bid,String adpos,String uin,String algName){
+		StringBuffer getKey = new StringBuffer(bid);		
+		getKey.append("#").append(adpos)
+			.append("#").append(uin)
+			.append("#").append(algName);
 		return getKey.toString();
 	}
 }
