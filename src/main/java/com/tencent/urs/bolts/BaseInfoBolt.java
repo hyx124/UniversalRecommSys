@@ -69,23 +69,25 @@ public class BaseInfoBolt extends AbstractConfigUpdateBolt{
 	}
 	
 	private void save(Integer tablId,String key,byte[] values) {
-		for(ClientAttr clientEntry:mtClientList){
-			TairOption putopt = new TairOption(clientEntry.getTimeout(),(short)0, dataExpireTime);
-			Future<Result<Void>> future;
-			try {
-				future = clientEntry.getClient().putAsync((short)nsTableID, 
-									key.toString().getBytes(), values.toString().getBytes(), putopt);
-				clientEntry.getClient().notifyFuture(future, putCallBack, 
-						new UpdateCallBackContext(clientEntry,key.toString(),values.toString().getBytes(),putopt));
-			} catch (Exception e){
-				logger.error(e.toString());
-			}	
+		if(values != null){
+			for(ClientAttr clientEntry:mtClientList){
+				TairOption putopt = new TairOption(clientEntry.getTimeout(),(short)0, dataExpireTime);
+				Future<Result<Void>> future;
+				try {
+					future = clientEntry.getClient().putAsync((short)nsTableID, 
+										key.toString().getBytes(), values.toString().getBytes(), putopt);
+					clientEntry.getClient().notifyFuture(future, putCallBack, 
+							new UpdateCallBackContext(clientEntry,key.toString(),values.toString().getBytes(),putopt));
+				} catch (Exception e){
+					logger.error(e.toString());
+				}	
+			}
 		}
 	}
 
 	private byte[] genItemInfoPbValue(String itemId,Tuple input) {
 		//String itemId = input.getStringByField("item_id");
-		Long impDate = input.getLongByField("imp_date");
+		String impDate = input.getStringByField("imp_date");
 		String bigType = input.getStringByField("cate_id1");
 		String midType = input.getStringByField("cate_id2");
 		String smallType = input.getStringByField("cate_id3");
@@ -103,7 +105,7 @@ public class BaseInfoBolt extends AbstractConfigUpdateBolt{
 		
 		Recommend.ItemDetailInfo.Builder builder =
 				Recommend.ItemDetailInfo.newBuilder();
-		builder.setItem(itemId).setFreeFlag(freeFlag).setPublicFlag(publicFlag).setImpDate(impDate)
+		builder.setItem(itemId).setFreeFlag(freeFlag).setPublicFlag(publicFlag).setImpDate(Long.valueOf(impDate))
 				.setPrice(price).setText(text).setItemTime(itemTime).setPlatform(platForm).setScore(score)
 				.setBigType(Long.valueOf(bigType)).setBigTypeName(bigTypeName)
 				.setMiddleType(Long.valueOf(midType)).setMiddleTypeName(midTypeName)
@@ -112,25 +114,30 @@ public class BaseInfoBolt extends AbstractConfigUpdateBolt{
 		return builder.build().toByteArray();
 	}
 
-
 	private byte[] genCateLevelPbValue(String cate_id, Tuple input) {
-		Long impDate = input.getLongByField("imp_date");
+		String impDate = input.getStringByField("imp_date");
 		String cateName = input.getStringByField("cate_name");
 		String level = input.getStringByField("level");
-		String bigTypeName = input.getStringByField("father_id");
-		String midTypeName = input.getStringByField("cate_name2");
-		String smallTypeName = input.getStringByField("cate_name3");
+		String fatherId = input.getStringByField("father_id");
 		
-		return null;
+		Recommend.CateLevelInfo.Builder builder = Recommend.CateLevelInfo.newBuilder();
+		builder.setImpDate(Long.valueOf(impDate)).setLevel(level).setName(cateName).setFatherId(Integer.valueOf(fatherId));
+		
+		return builder.build().toByteArray();
 	}
 
 	private byte[] genActionWeightPbValue(ActiveType actionType, Tuple input) {
+		String impDate = input.getStringByField("imp_date");
+		String weight = input.getStringByField("weight");
 		
-		return null;
+		Recommend.ActionWeightInfo.Builder builder = Recommend.ActionWeightInfo.newBuilder();
+		builder.setImpDate(Long.valueOf(impDate)).setWeight(Float.valueOf(weight));	
+		
+		return builder.build().toByteArray();
 	}
 
 	private byte[] genUserInfoPbValue(String qq, Tuple input) {
-		Long impDate = input.getLongByField("imp_date");
+		String impDate = input.getStringByField("imp_date");
 		String imei = input.getStringByField("imei");
 		String uid = input.getStringByField("uid");
 		Integer level = input.getIntegerByField("level");
@@ -138,13 +145,12 @@ public class BaseInfoBolt extends AbstractConfigUpdateBolt{
 		Long regTime = input.getLongByField("reg_time");
 		
 		Recommend.UserDetailInfo.Builder builder = Recommend.UserDetailInfo.newBuilder();
-		builder.setImpDate(impDate).setImei(imei)
+		builder.setImpDate(Long.valueOf(impDate)).setImei(imei)
 				.setQQNum(qq).setLevel(level).setUid(uid)
 				.setRegDate(regDate).setRegTime(regTime);
 		return builder.build().toByteArray();
 	}
 
-	
 	@Override
 	public void updateConfig(XMLConfiguration config) {
 		nsItemDetailTableId = config.getInt("item_detail_table",311);
@@ -152,7 +158,7 @@ public class BaseInfoBolt extends AbstractConfigUpdateBolt{
 		nsActionWeightTableId = config.getInt("action_weight_table",313);
 		nsCateLevelTableId = config.getInt("category_level_table",314);
 		
-		dataExpireTime = config.getInt("data_expiretime",100*24*3600);
+		dataExpireTime = config.getInt("data_expiretime",10*24*3600);
 		debug = config.getBoolean("debug",false);
 	}
 
@@ -194,7 +200,6 @@ public class BaseInfoBolt extends AbstractConfigUpdateBolt{
 		}
 		
 		save(tableId,key,value);
-		//
 	}
 
 }

@@ -16,7 +16,6 @@ import com.tencent.tde.client.Result;
 import com.tencent.tde.client.Result.ResultCode;
 import com.tencent.tde.client.TairClient.TairOption;
 import com.tencent.tde.client.impl.MutiThreadCallbackClient.MutiClientCallBack;
-import com.tencent.urs.bolts.PretreatmentBolt.GetGroupIdUpdateCallBack;
 import com.tencent.urs.protobuf.Recommend;
 import com.tencent.urs.protobuf.Recommend.ChargeType;
 import com.tencent.urs.protobuf.Recommend.ItemDetailInfo;
@@ -24,7 +23,6 @@ import com.tencent.urs.tdengine.TDEngineClientFactory;
 import com.tencent.urs.tdengine.TDEngineClientFactory.ClientAttr;
 import com.tencent.urs.utils.Constants;
 import com.tencent.urs.utils.DataCache;
-import com.tencent.urs.utils.Utils;
 
 import backtype.storm.task.OutputCollector;
 import backtype.storm.task.TopologyContext;
@@ -51,7 +49,7 @@ public class AddItemInfoBolt extends AbstractConfigUpdateBolt {
 	@Override 
 	public void prepare(Map conf, TopologyContext context, OutputCollector collector){
 		super.prepare(conf, context, collector);
-		this.updateConfig(super.config);
+		updateConfig(super.config);
 		
 		this.collector = collector;
 		this.itemCache = new DataCache<ItemDetailInfo>(conf);
@@ -63,14 +61,13 @@ public class AddItemInfoBolt extends AbstractConfigUpdateBolt {
 	
 	@Override
 	public void updateConfig(XMLConfiguration config) {
-		nsTableId = config.getInt("item_detail_table",303);
-		cacheExpireTime = config.getInt("cache_expiretime",3600);
+		nsTableId = config.getInt("item_detail_table",311);
+		cacheExpireTime = config.getInt("cache_expiretime",24*3600);
 		debug = config.getBoolean("debug",false);
 	}
 
 	@Override
 	public void processEvent(String sid, Tuple tuple) {
-		//key,item_id,weight,alg_name
 		String bid = tuple.getStringByField("bid");
 		String key = tuple.getStringByField("key");	
 		String itemId = tuple.getStringByField("item_id");	
@@ -105,6 +102,7 @@ public class AddItemInfoBolt extends AbstractConfigUpdateBolt {
 				Result<byte[]> res = afuture.get();
 				if(res.getCode().equals(ResultCode.OK) && res.getResult() != null){
 					itemInfo = Recommend.ItemDetailInfo.parseFrom(res.getResult());
+					itemCache.set(cacheKey, new SoftReference<ItemDetailInfo>(itemInfo),cacheExpireTime);
 				}
 			} catch (Exception e) {
 			}
@@ -115,6 +113,7 @@ public class AddItemInfoBolt extends AbstractConfigUpdateBolt {
 
 		private void emitData(ItemDetailInfo itemInfo){
 			Values value = new Values(key,itemId,weight,algName);
+
 			if(itemInfo != null){
 				value.add(itemInfo.getBigType());
 				value.add(itemInfo.getMiddleType());
@@ -126,7 +125,7 @@ public class AddItemInfoBolt extends AbstractConfigUpdateBolt {
 				value.add(0L);
 				value.add(0L);
 				value.add(ChargeType.NormalFee);
-				value.add(0F);		
+				value.add(0L);		
 			}
 			
 			collector.emit("computer_result",value);			
@@ -146,7 +145,6 @@ public class AddItemInfoBolt extends AbstractConfigUpdateBolt {
 				}catch(Exception e){
 					logger.error(e.toString());
 				}
-				//
 			}
 
 		}

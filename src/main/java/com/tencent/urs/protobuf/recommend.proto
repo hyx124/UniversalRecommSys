@@ -71,6 +71,20 @@ message UserDetailInfo
 	optional uint64 RegTime = 7;			//注册时间
 }
 
+message ActionWeightInfo
+{
+	optional uint64 impDate = 1;  			//更新日期
+	optional float weight = 2;				//权重
+}
+
+message CateLevelInfo
+{
+	optional uint64 impDate = 1;  			//更新日期
+	optional string name = 2;				//业务帐号
+	optional string level = 3;				//业务帐号
+	optional uint32 fatherId = 4;			//父类ID
+}
+
 message RecommendResult
 {	
     message Result

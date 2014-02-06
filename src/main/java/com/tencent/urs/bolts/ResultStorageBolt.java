@@ -22,6 +22,7 @@ import com.tencent.tde.client.impl.MutiThreadCallbackClient.MutiClientCallBack;
 import com.tencent.urs.asyncupdate.UpdateCallBack;
 import com.tencent.urs.asyncupdate.UpdateCallBackContext;
 import com.tencent.urs.protobuf.Recommend;
+import com.tencent.urs.protobuf.Recommend.ChargeType;
 import com.tencent.urs.protobuf.Recommend.RecommendResult;
 import com.tencent.urs.protobuf.Recommend.RecommendResult.Builder;
 import com.tencent.urs.tdengine.TDEngineClientFactory;
@@ -32,6 +33,7 @@ import com.tencent.urs.utils.DataCache;
 import backtype.storm.task.OutputCollector;
 import backtype.storm.task.TopologyContext;
 import backtype.storm.tuple.Tuple;
+import backtype.storm.tuple.Values;
 
 public class ResultStorageBolt extends AbstractConfigUpdateBolt {
 	private static final long serialVersionUID = 1L;
@@ -66,9 +68,17 @@ public class ResultStorageBolt extends AbstractConfigUpdateBolt {
 		String itemId = tuple.getStringByField("item_id");
 		Double weight = tuple.getDoubleByField("weight");
 	
+		Integer bigType = (Integer) tuple.getValueByField("big_type");
+		Integer midType = (Integer) tuple.getValueByField("mid_type");
+		Integer smallType = (Integer) tuple.getValueByField("small_type");
+		
+		Recommend.ChargeType charType = (Recommend.ChargeType) tuple.getValueByField("free_flag");
+		Long price = tuple.getLongByField("price");
+		
 		Recommend.RecommendResult.Result.Builder value =
 				Recommend.RecommendResult.Result.newBuilder();
-		value.setItem(itemId).setWeight(weight).setPrice(100).setFreeFlag(Recommend.ChargeType.NormalFee)
+		value.setBigType(bigType).setMiddleType(midType).setSmallType(smallType).setPrice(price)
+			.setItem(itemId).setWeight(weight).setFreeFlag(charType)
 			.setUpdateTime(System.currentTimeMillis()/1000L);
 		new putToTDEUpdateCallBack(key,value.build(),algName).excute();
 		

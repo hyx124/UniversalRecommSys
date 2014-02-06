@@ -18,7 +18,6 @@ import backtype.storm.tuple.Tuple;
 import backtype.storm.tuple.Values;
 
 import com.google.common.collect.ImmutableList;
-import com.google.protobuf.InvalidProtocolBufferException;
 import com.tencent.monitor.MonitorTools;
 
 import com.tencent.streaming.commons.bolts.config.AbstractConfigUpdateBolt;
@@ -28,9 +27,7 @@ import com.tencent.tde.client.TairClient.TairOption;
 import com.tencent.tde.client.error.TairFlowLimit;
 import com.tencent.tde.client.error.TairQueueOverflow;
 import com.tencent.tde.client.error.TairRpcError;
-import com.tencent.tde.client.error.TairTimeout;
 import com.tencent.tde.client.impl.MutiThreadCallbackClient.MutiClientCallBack;
-import com.tencent.urs.asyncupdate.UpdateCallBackContext;
 import com.tencent.urs.combine.GroupActionCombinerValue;
 import com.tencent.urs.combine.UpdateKey;
 import com.tencent.urs.protobuf.Recommend;
@@ -39,7 +36,6 @@ import com.tencent.urs.protobuf.Recommend.UserActiveDetail;
 import com.tencent.urs.tdengine.TDEngineClientFactory;
 import com.tencent.urs.tdengine.TDEngineClientFactory.ClientAttr;
 import com.tencent.urs.utils.Constants;
-import com.tencent.urs.utils.DataCache;
 import com.tencent.urs.utils.Utils;
 
 public class ARCFBolt extends AbstractConfigUpdateBolt{
@@ -50,14 +46,11 @@ public class ARCFBolt extends AbstractConfigUpdateBolt{
 	private List<ClientAttr> mtClientList;	
 	private MonitorTools mt;
 	private ConcurrentHashMap<UpdateKey, GroupActionCombinerValue> combinerMap;
-	private DataCache<UserActiveDetail> cacheMap;
-	//private DataCache<UserActiveDetail> cacheMap;
 	private OutputCollector collector;
 	private int nsGroupPairTableId;
 	private int nsGroupCountTableId;
 	private int nsDetailTableId;
 	private int dataExpireTime;
-	private int cacheExpireTime;
 	
 	private static Logger logger = LoggerFactory.getLogger(ARCFBolt.class);
 
@@ -86,7 +79,7 @@ public class ARCFBolt extends AbstractConfigUpdateBolt{
 		nsGroupPairTableId = config.getInt("group_pair_table",306);
 		nsDetailTableId = config.getInt("dependent_table",302);
 		dataExpireTime = config.getInt("data_expiretime",1*24*3600);
-		cacheExpireTime = config.getInt("cache_expiretime",3600);
+		//cacheExpireTime = config.getInt("cache_expiretime",3600);
 	}
 
 	@Override
@@ -97,10 +90,10 @@ public class ARCFBolt extends AbstractConfigUpdateBolt{
 		String itemId = tuple.getStringByField("item_id");
 		String adpos = tuple.getStringByField("adpos");
 		
-		String actionType = tuple.getStringByField("action_type");
+		//String actionType = tuple.getStringByField("action_type");
 		String actionTime = tuple.getStringByField("action_time");
 		
-		ActiveType actType = Utils.getActionTypeByString(actionType);
+		//ActiveType actType = Utils.getActionTypeByString(actionType);
 		
 		if(!Utils.isBidValid(bid) || !Utils.isQNumValid(qq) || !Utils.isGroupIdVaild(groupId) || !Utils.isItemIdValid(itemId)){
 			return;

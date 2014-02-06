@@ -1,11 +1,8 @@
 package com.tencent.urs.combine;
 
 import java.io.Serializable;
-import java.util.HashMap;
-
 import com.tencent.urs.protobuf.Recommend;
-import com.tencent.urs.protobuf.Recommend.UserActiveHistory.ActiveRecord;
-import com.tencent.urs.utils.Utils;
+
 
 public class GroupActionCombinerValue implements Combiner<GroupActionCombinerValue>,Serializable{
 

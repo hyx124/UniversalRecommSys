@@ -2221,6 +2221,874 @@ public final class Recommend {
     // @@protoc_insertion_point(class_scope:com.tencent.urs.protobuf.UserDetailInfo)
   }
   
+  public interface ActionWeightInfoOrBuilder
+      extends com.google.protobuf.MessageLiteOrBuilder {
+    
+    // optional uint64 impDate = 1;
+    boolean hasImpDate();
+    long getImpDate();
+    
+    // optional float weight = 2;
+    boolean hasWeight();
+    float getWeight();
+  }
+  public static final class ActionWeightInfo extends
+      com.google.protobuf.GeneratedMessageLite
+      implements ActionWeightInfoOrBuilder {
+    // Use ActionWeightInfo.newBuilder() to construct.
+    private ActionWeightInfo(Builder builder) {
+      super(builder);
+    }
+    private ActionWeightInfo(boolean noInit) {}
+    
+    private static final ActionWeightInfo defaultInstance;
+    public static ActionWeightInfo getDefaultInstance() {
+      return defaultInstance;
+    }
+    
+    public ActionWeightInfo getDefaultInstanceForType() {
+      return defaultInstance;
+    }
+    
+    private int bitField0_;
+    // optional uint64 impDate = 1;
+    public static final int IMPDATE_FIELD_NUMBER = 1;
+    private long impDate_;
+    public boolean hasImpDate() {
+      return ((bitField0_ & 0x00000001) == 0x00000001);
+    }
+    public long getImpDate() {
+      return impDate_;
+    }
+    
+    // optional float weight = 2;
+    public static final int WEIGHT_FIELD_NUMBER = 2;
+    private float weight_;
+    public boolean hasWeight() {
+      return ((bitField0_ & 0x00000002) == 0x00000002);
+    }
+    public float getWeight() {
+      return weight_;
+    }
+    
+    private void initFields() {
+      impDate_ = 0L;
+      weight_ = 0F;
+    }
+    private byte memoizedIsInitialized = -1;
+    public final boolean isInitialized() {
+      byte isInitialized = memoizedIsInitialized;
+      if (isInitialized != -1) return isInitialized == 1;
+      
+      memoizedIsInitialized = 1;
+      return true;
+    }
+    
+    public void writeTo(com.google.protobuf.CodedOutputStream output)
+                        throws java.io.IOException {
+      getSerializedSize();
+      if (((bitField0_ & 0x00000001) == 0x00000001)) {
+        output.writeUInt64(1, impDate_);
+      }
+      if (((bitField0_ & 0x00000002) == 0x00000002)) {
+        output.writeFloat(2, weight_);
+      }
+    }
+    
+    private int memoizedSerializedSize = -1;
+    public int getSerializedSize() {
+      int size = memoizedSerializedSize;
+      if (size != -1) return size;
+    
+      size = 0;
+      if (((bitField0_ & 0x00000001) == 0x00000001)) {
+        size += com.google.protobuf.CodedOutputStream
+          .computeUInt64Size(1, impDate_);
+      }
+      if (((bitField0_ & 0x00000002) == 0x00000002)) {
+        size += com.google.protobuf.CodedOutputStream
+          .computeFloatSize(2, weight_);
+      }
+      memoizedSerializedSize = size;
+      return size;
+    }
+    
+    private static final long serialVersionUID = 0L;
+    @java.lang.Override
+    protected java.lang.Object writeReplace()
+        throws java.io.ObjectStreamException {
+      return super.writeReplace();
+    }
+    
+    public static com.tencent.urs.protobuf.Recommend.ActionWeightInfo parseFrom(
+        com.google.protobuf.ByteString data)
+        throws com.google.protobuf.InvalidProtocolBufferException {
+      return newBuilder().mergeFrom(data).buildParsed();
+    }
+    public static com.tencent.urs.protobuf.Recommend.ActionWeightInfo parseFrom(
+        com.google.protobuf.ByteString data,
+        com.google.protobuf.ExtensionRegistryLite extensionRegistry)
+        throws com.google.protobuf.InvalidProtocolBufferException {
+      return newBuilder().mergeFrom(data, extensionRegistry)
+               .buildParsed();
+    }
+    public static com.tencent.urs.protobuf.Recommend.ActionWeightInfo parseFrom(byte[] data)
+        throws com.google.protobuf.InvalidProtocolBufferException {
+      return newBuilder().mergeFrom(data).buildParsed();
+    }
+    public static com.tencent.urs.protobuf.Recommend.ActionWeightInfo parseFrom(
+        byte[] data,
+        com.google.protobuf.ExtensionRegistryLite extensionRegistry)
+        throws com.google.protobuf.InvalidProtocolBufferException {
+      return newBuilder().mergeFrom(data, extensionRegistry)
+               .buildParsed();
+    }
+    public static com.tencent.urs.protobuf.Recommend.ActionWeightInfo parseFrom(java.io.InputStream input)
+        throws java.io.IOException {
+      return newBuilder().mergeFrom(input).buildParsed();
+    }
+    public static com.tencent.urs.protobuf.Recommend.ActionWeightInfo parseFrom(
+        java.io.InputStream input,
+        com.google.protobuf.ExtensionRegistryLite extensionRegistry)
+        throws java.io.IOException {
+      return newBuilder().mergeFrom(input, extensionRegistry)
+               .buildParsed();
+    }
+    public static com.tencent.urs.protobuf.Recommend.ActionWeightInfo parseDelimitedFrom(java.io.InputStream input)
+        throws java.io.IOException {
+      Builder builder = newBuilder();
+      if (builder.mergeDelimitedFrom(input)) {
+        return builder.buildParsed();
+      } else {
+        return null;
+      }
+    }
+    public static com.tencent.urs.protobuf.Recommend.ActionWeightInfo parseDelimitedFrom(
+        java.io.InputStream input,
+        com.google.protobuf.ExtensionRegistryLite extensionRegistry)
+        throws java.io.IOException {
+      Builder builder = newBuilder();
+      if (builder.mergeDelimitedFrom(input, extensionRegistry)) {
+        return builder.buildParsed();
+      } else {
+        return null;
+      }
+    }
+    public static com.tencent.urs.protobuf.Recommend.ActionWeightInfo parseFrom(
+        com.google.protobuf.CodedInputStream input)
+        throws java.io.IOException {
+      return newBuilder().mergeFrom(input).buildParsed();
+    }
+    public static com.tencent.urs.protobuf.Recommend.ActionWeightInfo parseFrom(
+        com.google.protobuf.CodedInputStream input,
+        com.google.protobuf.ExtensionRegistryLite extensionRegistry)
+        throws java.io.IOException {
+      return newBuilder().mergeFrom(input, extensionRegistry)
+               .buildParsed();
+    }
+    
+    public static Builder newBuilder() { return Builder.create(); }
+    public Builder newBuilderForType() { return newBuilder(); }
+    public static Builder newBuilder(com.tencent.urs.protobuf.Recommend.ActionWeightInfo prototype) {
+      return newBuilder().mergeFrom(prototype);
+    }
+    public Builder toBuilder() { return newBuilder(this); }
+    
+    public static final class Builder extends
+        com.google.protobuf.GeneratedMessageLite.Builder<
+          com.tencent.urs.protobuf.Recommend.ActionWeightInfo, Builder>
+        implements com.tencent.urs.protobuf.Recommend.ActionWeightInfoOrBuilder {
+      // Construct using com.tencent.urs.protobuf.Recommend.ActionWeightInfo.newBuilder()
+      private Builder() {
+        maybeForceBuilderInitialization();
+      }
+      
+      private void maybeForceBuilderInitialization() {
+      }
+      private static Builder create() {
+        return new Builder();
+      }
+      
+      public Builder clear() {
+        super.clear();
+        impDate_ = 0L;
+        bitField0_ = (bitField0_ & ~0x00000001);
+        weight_ = 0F;
+        bitField0_ = (bitField0_ & ~0x00000002);
+        return this;
+      }
+      
+      public Builder clone() {
+        return create().mergeFrom(buildPartial());
+      }
+      
+      public com.tencent.urs.protobuf.Recommend.ActionWeightInfo getDefaultInstanceForType() {
+        return com.tencent.urs.protobuf.Recommend.ActionWeightInfo.getDefaultInstance();
+      }
+      
+      public com.tencent.urs.protobuf.Recommend.ActionWeightInfo build() {
+        com.tencent.urs.protobuf.Recommend.ActionWeightInfo result = buildPartial();
+        if (!result.isInitialized()) {
+          throw newUninitializedMessageException(result);
+        }
+        return result;
+      }
+      
+      private com.tencent.urs.protobuf.Recommend.ActionWeightInfo buildParsed()
+          throws com.google.protobuf.InvalidProtocolBufferException {
+        com.tencent.urs.protobuf.Recommend.ActionWeightInfo result = buildPartial();
+        if (!result.isInitialized()) {
+          throw newUninitializedMessageException(
+            result).asInvalidProtocolBufferException();
+        }
+        return result;
+      }
+      
+      public com.tencent.urs.protobuf.Recommend.ActionWeightInfo buildPartial() {
+        com.tencent.urs.protobuf.Recommend.ActionWeightInfo result = new com.tencent.urs.protobuf.Recommend.ActionWeightInfo(this);
+        int from_bitField0_ = bitField0_;
+        int to_bitField0_ = 0;
+        if (((from_bitField0_ & 0x00000001) == 0x00000001)) {
+          to_bitField0_ |= 0x00000001;
+        }
+        result.impDate_ = impDate_;
+        if (((from_bitField0_ & 0x00000002) == 0x00000002)) {
+          to_bitField0_ |= 0x00000002;
+        }
+        result.weight_ = weight_;
+        result.bitField0_ = to_bitField0_;
+        return result;
+      }
+      
+      public Builder mergeFrom(com.tencent.urs.protobuf.Recommend.ActionWeightInfo other) {
+        if (other == com.tencent.urs.protobuf.Recommend.ActionWeightInfo.getDefaultInstance()) return this;
+        if (other.hasImpDate()) {
+          setImpDate(other.getImpDate());
+        }
+        if (other.hasWeight()) {
+          setWeight(other.getWeight());
+        }
+        return this;
+      }
+      
+      public final boolean isInitialized() {
+        return true;
+      }
+      
+      public Builder mergeFrom(
+          com.google.protobuf.CodedInputStream input,
+          com.google.protobuf.ExtensionRegistryLite extensionRegistry)
+          throws java.io.IOException {
+        while (true) {
+          int tag = input.readTag();
+          switch (tag) {
+            case 0:
+              
+              return this;
+            default: {
+              if (!parseUnknownField(input, extensionRegistry, tag)) {
+                
+                return this;
+              }
+              break;
+            }
+            case 8: {
+              bitField0_ |= 0x00000001;
+              impDate_ = input.readUInt64();
+              break;
+            }
+            case 21: {
+              bitField0_ |= 0x00000002;
+              weight_ = input.readFloat();
+              break;
+            }
+          }
+        }
+      }
+      
+      private int bitField0_;
+      
+      // optional uint64 impDate = 1;
+      private long impDate_ ;
+      public boolean hasImpDate() {
+        return ((bitField0_ & 0x00000001) == 0x00000001);
+      }
+      public long getImpDate() {
+        return impDate_;
+      }
+      public Builder setImpDate(long value) {
+        bitField0_ |= 0x00000001;
+        impDate_ = value;
+        
+        return this;
+      }
+      public Builder clearImpDate() {
+        bitField0_ = (bitField0_ & ~0x00000001);
+        impDate_ = 0L;
+        
+        return this;
+      }
+      
+      // optional float weight = 2;
+      private float weight_ ;
+      public boolean hasWeight() {
+        return ((bitField0_ & 0x00000002) == 0x00000002);
+      }
+      public float getWeight() {
+        return weight_;
+      }
+      public Builder setWeight(float value) {
+        bitField0_ |= 0x00000002;
+        weight_ = value;
+        
+        return this;
+      }
+      public Builder clearWeight() {
+        bitField0_ = (bitField0_ & ~0x00000002);
+        weight_ = 0F;
+        
+        return this;
+      }
+      
+      // @@protoc_insertion_point(builder_scope:com.tencent.urs.protobuf.ActionWeightInfo)
+    }
+    
+    static {
+      defaultInstance = new ActionWeightInfo(true);
+      defaultInstance.initFields();
+    }
+    
+    // @@protoc_insertion_point(class_scope:com.tencent.urs.protobuf.ActionWeightInfo)
+  }
+  
+  public interface CateLevelInfoOrBuilder
+      extends com.google.protobuf.MessageLiteOrBuilder {
+    
+    // optional uint64 impDate = 1;
+    boolean hasImpDate();
+    long getImpDate();
+    
+    // optional string name = 2;
+    boolean hasName();
+    String getName();
+    
+    // optional string level = 3;
+    boolean hasLevel();
+    String getLevel();
+    
+    // optional uint32 fatherId = 4;
+    boolean hasFatherId();
+    int getFatherId();
+  }
+  public static final class CateLevelInfo extends
+      com.google.protobuf.GeneratedMessageLite
+      implements CateLevelInfoOrBuilder {
+    // Use CateLevelInfo.newBuilder() to construct.
+    private CateLevelInfo(Builder builder) {
+      super(builder);
+    }
+    private CateLevelInfo(boolean noInit) {}
+    
+    private static final CateLevelInfo defaultInstance;
+    public static CateLevelInfo getDefaultInstance() {
+      return defaultInstance;
+    }
+    
+    public CateLevelInfo getDefaultInstanceForType() {
+      return defaultInstance;
+    }
+    
+    private int bitField0_;
+    // optional uint64 impDate = 1;
+    public static final int IMPDATE_FIELD_NUMBER = 1;
+    private long impDate_;
+    public boolean hasImpDate() {
+      return ((bitField0_ & 0x00000001) == 0x00000001);
+    }
+    public long getImpDate() {
+      return impDate_;
+    }
+    
+    // optional string name = 2;
+    public static final int NAME_FIELD_NUMBER = 2;
+    private java.lang.Object name_;
+    public boolean hasName() {
+      return ((bitField0_ & 0x00000002) == 0x00000002);
+    }
+    public String getName() {
+      java.lang.Object ref = name_;
+      if (ref instanceof String) {
+        return (String) ref;
+      } else {
+        com.google.protobuf.ByteString bs = 
+            (com.google.protobuf.ByteString) ref;
+        String s = bs.toStringUtf8();
+        if (com.google.protobuf.Internal.isValidUtf8(bs)) {
+          name_ = s;
+        }
+        return s;
+      }
+    }
+    private com.google.protobuf.ByteString getNameBytes() {
+      java.lang.Object ref = name_;
+      if (ref instanceof String) {
+        com.google.protobuf.ByteString b = 
+            com.google.protobuf.ByteString.copyFromUtf8((String) ref);
+        name_ = b;
+        return b;
+      } else {
+        return (com.google.protobuf.ByteString) ref;
+      }
+    }
+    
+    // optional string level = 3;
+    public static final int LEVEL_FIELD_NUMBER = 3;
+    private java.lang.Object level_;
+    public boolean hasLevel() {
+      return ((bitField0_ & 0x00000004) == 0x00000004);
+    }
+    public String getLevel() {
+      java.lang.Object ref = level_;
+      if (ref instanceof String) {
+        return (String) ref;
+      } else {
+        com.google.protobuf.ByteString bs = 
+            (com.google.protobuf.ByteString) ref;
+        String s = bs.toStringUtf8();
+        if (com.google.protobuf.Internal.isValidUtf8(bs)) {
+          level_ = s;
+        }
+        return s;
+      }
+    }
+    private com.google.protobuf.ByteString getLevelBytes() {
+      java.lang.Object ref = level_;
+      if (ref instanceof String) {
+        com.google.protobuf.ByteString b = 
+            com.google.protobuf.ByteString.copyFromUtf8((String) ref);
+        level_ = b;
+        return b;
+      } else {
+        return (com.google.protobuf.ByteString) ref;
+      }
+    }
+    
+    // optional uint32 fatherId = 4;
+    public static final int FATHERID_FIELD_NUMBER = 4;
+    private int fatherId_;
+    public boolean hasFatherId() {
+      return ((bitField0_ & 0x00000008) == 0x00000008);
+    }
+    public int getFatherId() {
+      return fatherId_;
+    }
+    
+    private void initFields() {
+      impDate_ = 0L;
+      name_ = "";
+      level_ = "";
+      fatherId_ = 0;
+    }
+    private byte memoizedIsInitialized = -1;
+    public final boolean isInitialized() {
+      byte isInitialized = memoizedIsInitialized;
+      if (isInitialized != -1) return isInitialized == 1;
+      
+      memoizedIsInitialized = 1;
+      return true;
+    }
+    
+    public void writeTo(com.google.protobuf.CodedOutputStream output)
+                        throws java.io.IOException {
+      getSerializedSize();
+      if (((bitField0_ & 0x00000001) == 0x00000001)) {
+        output.writeUInt64(1, impDate_);
+      }
+      if (((bitField0_ & 0x00000002) == 0x00000002)) {
+        output.writeBytes(2, getNameBytes());
+      }
+      if (((bitField0_ & 0x00000004) == 0x00000004)) {
+        output.writeBytes(3, getLevelBytes());
+      }
+      if (((bitField0_ & 0x00000008) == 0x00000008)) {
+        output.writeUInt32(4, fatherId_);
+      }
+    }
+    
+    private int memoizedSerializedSize = -1;
+    public int getSerializedSize() {
+      int size = memoizedSerializedSize;
+      if (size != -1) return size;
+    
+      size = 0;
+      if (((bitField0_ & 0x00000001) == 0x00000001)) {
+        size += com.google.protobuf.CodedOutputStream
+          .computeUInt64Size(1, impDate_);
+      }
+      if (((bitField0_ & 0x00000002) == 0x00000002)) {
+        size += com.google.protobuf.CodedOutputStream
+          .computeBytesSize(2, getNameBytes());
+      }
+      if (((bitField0_ & 0x00000004) == 0x00000004)) {
+        size += com.google.protobuf.CodedOutputStream
+          .computeBytesSize(3, getLevelBytes());
+      }
+      if (((bitField0_ & 0x00000008) == 0x00000008)) {
+        size += com.google.protobuf.CodedOutputStream
+          .computeUInt32Size(4, fatherId_);
+      }
+      memoizedSerializedSize = size;
+      return size;
+    }
+    
+    private static final long serialVersionUID = 0L;
+    @java.lang.Override
+    protected java.lang.Object writeReplace()
+        throws java.io.ObjectStreamException {
+      return super.writeReplace();
+    }
+    
+    public static com.tencent.urs.protobuf.Recommend.CateLevelInfo parseFrom(
+        com.google.protobuf.ByteString data)
+        throws com.google.protobuf.InvalidProtocolBufferException {
+      return newBuilder().mergeFrom(data).buildParsed();
+    }
+    public static com.tencent.urs.protobuf.Recommend.CateLevelInfo parseFrom(
+        com.google.protobuf.ByteString data,
+        com.google.protobuf.ExtensionRegistryLite extensionRegistry)
+        throws com.google.protobuf.InvalidProtocolBufferException {
+      return newBuilder().mergeFrom(data, extensionRegistry)
+               .buildParsed();
+    }
+    public static com.tencent.urs.protobuf.Recommend.CateLevelInfo parseFrom(byte[] data)
+        throws com.google.protobuf.InvalidProtocolBufferException {
+      return newBuilder().mergeFrom(data).buildParsed();
+    }
+    public static com.tencent.urs.protobuf.Recommend.CateLevelInfo parseFrom(
+        byte[] data,
+        com.google.protobuf.ExtensionRegistryLite extensionRegistry)
+        throws com.google.protobuf.InvalidProtocolBufferException {
+      return newBuilder().mergeFrom(data, extensionRegistry)
+               .buildParsed();
+    }
+    public static com.tencent.urs.protobuf.Recommend.CateLevelInfo parseFrom(java.io.InputStream input)
+        throws java.io.IOException {
+      return newBuilder().mergeFrom(input).buildParsed();
+    }
+    public static com.tencent.urs.protobuf.Recommend.CateLevelInfo parseFrom(
+        java.io.InputStream input,
+        com.google.protobuf.ExtensionRegistryLite extensionRegistry)
+        throws java.io.IOException {
+      return newBuilder().mergeFrom(input, extensionRegistry)
+               .buildParsed();
+    }
+    public static com.tencent.urs.protobuf.Recommend.CateLevelInfo parseDelimitedFrom(java.io.InputStream input)
+        throws java.io.IOException {
+      Builder builder = newBuilder();
+      if (builder.mergeDelimitedFrom(input)) {
+        return builder.buildParsed();
+      } else {
+        return null;
+      }
+    }
+    public static com.tencent.urs.protobuf.Recommend.CateLevelInfo parseDelimitedFrom(
+        java.io.InputStream input,
+        com.google.protobuf.ExtensionRegistryLite extensionRegistry)
+        throws java.io.IOException {
+      Builder builder = newBuilder();
+      if (builder.mergeDelimitedFrom(input, extensionRegistry)) {
+        return builder.buildParsed();
+      } else {
+        return null;
+      }
+    }
+    public static com.tencent.urs.protobuf.Recommend.CateLevelInfo parseFrom(
+        com.google.protobuf.CodedInputStream input)
+        throws java.io.IOException {
+      return newBuilder().mergeFrom(input).buildParsed();
+    }
+    public static com.tencent.urs.protobuf.Recommend.CateLevelInfo parseFrom(
+        com.google.protobuf.CodedInputStream input,
+        com.google.protobuf.ExtensionRegistryLite extensionRegistry)
+        throws java.io.IOException {
+      return newBuilder().mergeFrom(input, extensionRegistry)
+               .buildParsed();
+    }
+    
+    public static Builder newBuilder() { return Builder.create(); }
+    public Builder newBuilderForType() { return newBuilder(); }
+    public static Builder newBuilder(com.tencent.urs.protobuf.Recommend.CateLevelInfo prototype) {
+      return newBuilder().mergeFrom(prototype);
+    }
+    public Builder toBuilder() { return newBuilder(this); }
+    
+    public static final class Builder extends
+        com.google.protobuf.GeneratedMessageLite.Builder<
+          com.tencent.urs.protobuf.Recommend.CateLevelInfo, Builder>
+        implements com.tencent.urs.protobuf.Recommend.CateLevelInfoOrBuilder {
+      // Construct using com.tencent.urs.protobuf.Recommend.CateLevelInfo.newBuilder()
+      private Builder() {
+        maybeForceBuilderInitialization();
+      }
+      
+      private void maybeForceBuilderInitialization() {
+      }
+      private static Builder create() {
+        return new Builder();
+      }
+      
+      public Builder clear() {
+        super.clear();
+        impDate_ = 0L;
+        bitField0_ = (bitField0_ & ~0x00000001);
+        name_ = "";
+        bitField0_ = (bitField0_ & ~0x00000002);
+        level_ = "";
+        bitField0_ = (bitField0_ & ~0x00000004);
+        fatherId_ = 0;
+        bitField0_ = (bitField0_ & ~0x00000008);
+        return this;
+      }
+      
+      public Builder clone() {
+        return create().mergeFrom(buildPartial());
+      }
+      
+      public com.tencent.urs.protobuf.Recommend.CateLevelInfo getDefaultInstanceForType() {
+        return com.tencent.urs.protobuf.Recommend.CateLevelInfo.getDefaultInstance();
+      }
+      
+      public com.tencent.urs.protobuf.Recommend.CateLevelInfo build() {
+        com.tencent.urs.protobuf.Recommend.CateLevelInfo result = buildPartial();
+        if (!result.isInitialized()) {
+          throw newUninitializedMessageException(result);
+        }
+        return result;
+      }
+      
+      private com.tencent.urs.protobuf.Recommend.CateLevelInfo buildParsed()
+          throws com.google.protobuf.InvalidProtocolBufferException {
+        com.tencent.urs.protobuf.Recommend.CateLevelInfo result = buildPartial();
+        if (!result.isInitialized()) {
+          throw newUninitializedMessageException(
+            result).asInvalidProtocolBufferException();
+        }
+        return result;
+      }
+      
+      public com.tencent.urs.protobuf.Recommend.CateLevelInfo buildPartial() {
+        com.tencent.urs.protobuf.Recommend.CateLevelInfo result = new com.tencent.urs.protobuf.Recommend.CateLevelInfo(this);
+        int from_bitField0_ = bitField0_;
+        int to_bitField0_ = 0;
+        if (((from_bitField0_ & 0x00000001) == 0x00000001)) {
+          to_bitField0_ |= 0x00000001;
+        }
+        result.impDate_ = impDate_;
+        if (((from_bitField0_ & 0x00000002) == 0x00000002)) {
+          to_bitField0_ |= 0x00000002;
+        }
+        result.name_ = name_;
+        if (((from_bitField0_ & 0x00000004) == 0x00000004)) {
+          to_bitField0_ |= 0x00000004;
+        }
+        result.level_ = level_;
+        if (((from_bitField0_ & 0x00000008) == 0x00000008)) {
+          to_bitField0_ |= 0x00000008;
+        }
+        result.fatherId_ = fatherId_;
+        result.bitField0_ = to_bitField0_;
+        return result;
+      }
+      
+      public Builder mergeFrom(com.tencent.urs.protobuf.Recommend.CateLevelInfo other) {
+        if (other == com.tencent.urs.protobuf.Recommend.CateLevelInfo.getDefaultInstance()) return this;
+        if (other.hasImpDate()) {
+          setImpDate(other.getImpDate());
+        }
+        if (other.hasName()) {
+          setName(other.getName());
+        }
+        if (other.hasLevel()) {
+          setLevel(other.getLevel());
+        }
+        if (other.hasFatherId()) {
+          setFatherId(other.getFatherId());
+        }
+        return this;
+      }
+      
+      public final boolean isInitialized() {
+        return true;
+      }
+      
+      public Builder mergeFrom(
+          com.google.protobuf.CodedInputStream input,
+          com.google.protobuf.ExtensionRegistryLite extensionRegistry)
+          throws java.io.IOException {
+        while (true) {
+          int tag = input.readTag();
+          switch (tag) {
+            case 0:
+              
+              return this;
+            default: {
+              if (!parseUnknownField(input, extensionRegistry, tag)) {
+                
+                return this;
+              }
+              break;
+            }
+            case 8: {
+              bitField0_ |= 0x00000001;
+              impDate_ = input.readUInt64();
+              break;
+            }
+            case 18: {
+              bitField0_ |= 0x00000002;
+              name_ = input.readBytes();
+              break;
+            }
+            case 26: {
+              bitField0_ |= 0x00000004;
+              level_ = input.readBytes();
+              break;
+            }
+            case 32: {
+              bitField0_ |= 0x00000008;
+              fatherId_ = input.readUInt32();
+              break;
+            }
+          }
+        }
+      }
+      
+      private int bitField0_;
+      
+      // optional uint64 impDate = 1;
+      private long impDate_ ;
+      public boolean hasImpDate() {
+        return ((bitField0_ & 0x00000001) == 0x00000001);
+      }
+      public long getImpDate() {
+        return impDate_;
+      }
+      public Builder setImpDate(long value) {
+        bitField0_ |= 0x00000001;
+        impDate_ = value;
+        
+        return this;
+      }
+      public Builder clearImpDate() {
+        bitField0_ = (bitField0_ & ~0x00000001);
+        impDate_ = 0L;
+        
+        return this;
+      }
+      
+      // optional string name = 2;
+      private java.lang.Object name_ = "";
+      public boolean hasName() {
+        return ((bitField0_ & 0x00000002) == 0x00000002);
+      }
+      public String getName() {
+        java.lang.Object ref = name_;
+        if (!(ref instanceof String)) {
+          String s = ((com.google.protobuf.ByteString) ref).toStringUtf8();
+          name_ = s;
+          return s;
+        } else {
+          return (String) ref;
+        }
+      }
+      public Builder setName(String value) {
+        if (value == null) {
+    throw new NullPointerException();
+  }
+  bitField0_ |= 0x00000002;
+        name_ = value;
+        
+        return this;
+      }
+      public Builder clearName() {
+        bitField0_ = (bitField0_ & ~0x00000002);
+        name_ = getDefaultInstance().getName();
+        
+        return this;
+      }
+      void setName(com.google.protobuf.ByteString value) {
+        bitField0_ |= 0x00000002;
+        name_ = value;
+        
+      }
+      
+      // optional string level = 3;
+      private java.lang.Object level_ = "";
+      public boolean hasLevel() {
+        return ((bitField0_ & 0x00000004) == 0x00000004);
+      }
+      public String getLevel() {
+        java.lang.Object ref = level_;
+        if (!(ref instanceof String)) {
+          String s = ((com.google.protobuf.ByteString) ref).toStringUtf8();
+          level_ = s;
+          return s;
+        } else {
+          return (String) ref;
+        }
+      }
+      public Builder setLevel(String value) {
+        if (value == null) {
+    throw new NullPointerException();
+  }
+  bitField0_ |= 0x00000004;
+        level_ = value;
+        
+        return this;
+      }
+      public Builder clearLevel() {
+        bitField0_ = (bitField0_ & ~0x00000004);
+        level_ = getDefaultInstance().getLevel();
+        
+        return this;
+      }
+      void setLevel(com.google.protobuf.ByteString value) {
+        bitField0_ |= 0x00000004;
+        level_ = value;
+        
+      }
+      
+      // optional uint32 fatherId = 4;
+      private int fatherId_ ;
+      public boolean hasFatherId() {
+        return ((bitField0_ & 0x00000008) == 0x00000008);
+      }
+      public int getFatherId() {
+        return fatherId_;
+      }
+      public Builder setFatherId(int value) {
+        bitField0_ |= 0x00000008;
+        fatherId_ = value;
+        
+        return this;
+      }
+      public Builder clearFatherId() {
+        bitField0_ = (bitField0_ & ~0x00000008);
+        fatherId_ = 0;
+        
+        return this;
+      }
+      
+      // @@protoc_insertion_point(builder_scope:com.tencent.urs.protobuf.CateLevelInfo)
+    }
+    
+    static {
+      defaultInstance = new CateLevelInfo(true);
+      defaultInstance.initFields();
+    }
+    
+    // @@protoc_insertion_point(class_scope:com.tencent.urs.protobuf.CateLevelInfo)
+  }
+  
   public interface RecommendResultOrBuilder
       extends com.google.protobuf.MessageLiteOrBuilder {
     

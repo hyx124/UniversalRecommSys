@@ -1,7 +1,7 @@
 <?xml version="1.0" encoding="UTF-8" ?>
 <topology name="urs-topology" works="20" ackers="0" debug="false">	
 	<spouts>
-		<spout name="UserActionSpout" class="com.tencent.urs.spouts.TestUserActionSpout" parallelism="1">
+		<spout name="UserActionSpout" class="com.tencent.urs.spouts.TestSpout" parallelism="1">
 			<tdbank_zookeeper_address>sk-zk-td1:2181,sk-zk-td2:2181,sk-zk-td3:2181,sk-zk-td4:2181,sk-zk-td5:2181</tdbank_zookeeper_address>
 			<tdbank_zookeeper_timeout>10000</tdbank_zookeeper_timeout>
 			<tdbank_zookeeper_connecttimeout>30000</tdbank_zookeeper_connecttimeout>
@@ -11,13 +11,15 @@
 			<tdbank_topic>ecc_51buy_real</tdbank_topic>
 			<tdbank_group>urs-group-test1</tdbank_group>
 			<tdbank_maxoffset>true</tdbank_maxoffset>
+			
 			<output_fields>
 				<stream_id>user_action</stream_id>
 				<fields>bid,topic,qq,uid,adpos,action_type,action_time,item_id,action_result,imei,platform,lbs_info</fields>
 			</output_fields>
+			
 		</spout>
 		
-		<spout name="BaseInfoSpout" class="com.tencent.urs.spouts.TestBaseInfoSpout" parallelism="1">
+		<spout name="BaseInfoSpout" class="com.tencent.urs.spouts.BaseInfoSpout" parallelism="1">
 			<tdbank_zookeeper_address>sk-zk-td1:2181,sk-zk-td2:2181,sk-zk-td3:2181,sk-zk-td4:2181,sk-zk-td5:2181</tdbank_zookeeper_address>
 			<tdbank_zookeeper_timeout>10000</tdbank_zookeeper_timeout>
 			<tdbank_zookeeper_connecttimeout>30000</tdbank_zookeeper_connecttimeout>
@@ -51,28 +53,27 @@
 	</spouts>
 	
 	<bolts>
-	
 		<bolt name="BaseInfo" class="com.tencent.urs.bolts.PretreatmentBolt" parallelsim="1">
 			<grouping type="field">
-				<fields>hashKey</fields>
+				<fields>hash_key</fields>
 				<component>BaseInfoSpout</component>
 				<streaming_ids>item_detail_info</streaming_ids>
 			</grouping>
 			
 			<grouping type="field">
-				<fields>hashKey</fields>
+				<fields>hash_key</fields>
 				<component>BaseInfoSpout</component>
 				<streaming_ids>user_detail_info</streaming_ids>
 			</grouping>
 			
 			<grouping type="field">
-				<fields>hashKey</fields>
+				<fields>hash_key</fields>
 				<component>BaseInfoSpout</component>
 				<streaming_ids>action_weight_info</streaming_ids>
 			</grouping>
 			
 			<grouping type="field">
-				<fields>hashKey</fields>
+				<fields>hash_key</fields>
 				<component>BaseInfoSpout</component>
 				<streaming_ids>category_level_info</streaming_ids>
 			</grouping>
@@ -80,8 +81,8 @@
 			<debug>true</debug>
 			<item_detail_table>311</item_detail_table>
 			<user_detail_table>312</user_detail_table>
-			<action_weight_table>313</item_weight_table>
-			<category_level_table>314</item_weight_table>
+			<action_weight_table>313</action_weight_table>
+			<category_level_table>314</category_level_table>
 			
 			<data_expiretime>259200</data_expiretime>
 			<cache_expiretime>3600</cache_expiretime>
@@ -97,16 +98,15 @@
 			
 			<output_fields>
 				<stream_id>user_action</stream_id>
-				<fields>bid,topic,old_qq,uid,adpos,action_type,action_time,item_id,action_result,imei,platform,lbs_info,qq,group_id</fields>
+				<fields>bid,topic,old_qq,uid,adpos,action_type,action_time,item_id,action_result,imei,platform,lbs_info,action_weight,qq,group_id</fields>
 			</output_fields>	
 		</bolt>
-
 
 		<bolt name="TopActionBolt" class="com.tencent.urs.bolts.TopActionBolt" parallelsim="1">
 			<grouping type="field">
 				<fields>qq</fields>
 				<component>PretreatmentBolt</component>
-				<streaming_ids>UserAction</streaming_ids>
+				<streaming_ids>user_action</streaming_ids>
 			</grouping>
 			
 			<debug>true</debug>
@@ -114,13 +114,12 @@
 			<data_expiretime>259200</data_expiretime>
 			<cache_expiretime>3600</cache_expiretime>
 		</bolt>
-		
-				
+						
 		<bolt name="ActionDetailBolt" class="com.tencent.urs.bolts.ActionDetailBolt" parallelsim="1">
 			<grouping type="field">
 				<fields>qq</fields>
 				<component>PretreatmentBolt</component>
-				<streaming_ids>UserAction</streaming_ids>
+				<streaming_ids>user_action</streaming_ids>
 			</grouping>
 		
 			<debug>true</debug>
@@ -133,7 +132,7 @@
 			<grouping type="field">
 				<fields>qq</fields>
 				<component>PretreatmentBolt</component>
-				<streaming_ids>UserAction</streaming_ids>
+				<streaming_ids>user_action</streaming_ids>
 			</grouping>
 		
 			<debug>true</debug>
@@ -148,7 +147,7 @@
 			<grouping type="field">
 				<fields>qq</fields>
 				<component>PretreatmentBolt</component>
-				<streaming_ids>UserAction</streaming_ids>
+				<streaming_ids>user_action</streaming_ids>
 			</grouping>
 		
 			<debug>true</debug>
@@ -163,7 +162,7 @@
 			<grouping type="field">
 				<fields>qq</fields>
 				<component>PretreatmentBolt</component>
-				<streaming_ids>UserAction</streaming_ids>
+				<streaming_ids>user_action</streaming_ids>
 			</grouping>
 			
 			<debug>true</debug>
@@ -176,7 +175,7 @@
 			<grouping type="field">
 				<fields>qq</fields>
 				<component>PretreatmentBolt</component>
-				<streaming_ids>UserAction</streaming_ids>
+				<streaming_ids>user_action</streaming_ids>
 			</grouping>
 		
 			<debug>true</debug>
@@ -196,7 +195,7 @@
 			<grouping type="field">
 				<fields>qq</fields>
 				<component>PretreatmentBolt</component>
-				<streaming_ids>UserAction</streaming_ids>
+				<streaming_ids>user_action</streaming_ids>
 			</grouping>
 		
 			<debug>true</debug>
@@ -213,8 +212,8 @@
 		<bolt name="CtrBolt" class="com.tencent.urs.bolts.CtrBolt" parallelsim="1">
 			<grouping type="field">
 				<fields>qq</fields>
-				<component>ARCFBolt</component>
-				<streaming_ids>UserAction</streaming_ids>
+				<component>PretreatmentBolt</component>
+				<streaming_ids>user_action</streaming_ids>
 			</grouping>
 		
 			<debug>true</debug>
@@ -230,27 +229,27 @@
 		
 		<bolt name="AddItemInfoBolt" class="com.tencent.urs.bolts.AddItemInfoBolt" parallelsim="1">
 			<grouping type="field">
-				<fields>bid,qq</fields>
-				<component>PretreatmentBolt</component>
+				<fields>bid,item_id</fields>
+				<component>ARCFBolt</component>
 				<streaming_ids>computer_result</streaming_ids>
 			</grouping>
 			
 			<grouping type="field">
-				<fields>bid,qq</fields>
+				<fields>bid,item_id</fields>
 				<component>HotTopBolt</component>
 				<streaming_ids>computer_result</streaming_ids>
 			</grouping>
 			
 			<grouping type="field">
-				<fields>bid,qq</fields>
+				<fields>bid,item_id</fields>
 				<component>CtrBolt</component>
 				<streaming_ids>computer_result</streaming_ids>
 			</grouping>
 		
 			<debug>true</debug>
-			<item_detail_table>306</item_detail_table>
+			<item_detail_table>311</item_detail_table>
 			<data_expiretime>259200</data_expiretime>
-			<cache_expiretime>3600</cache_expiretime>
+			<cache_expiretime>86400</cache_expiretime>
 			
 			<output_fields>
 				<stream_id>computer_result</stream_id>
@@ -259,6 +258,11 @@
 		</bolt>
 		
 		<bolt name="ResultStorageBolt" class="com.tencent.urs.bolts.ResultStorageBolt" parallelsim="1">
+			<grouping type="field">
+				<fields>key</fields>
+				<component>AddItemInfoBolt</component>
+				<streaming_ids>computer_result</streaming_ids>
+			</grouping>
 		
 			<debug>true</debug>
 			<top_num>100</top_num>
@@ -299,7 +303,6 @@
 			<key> tdbank.monitor.iplist</key>
 			<value>10.208.133.235:46801;10.208.133.237:46801;10.208.133.28:46801;10.208.133.76:46801;10.208.133.84:46801;10.208.133.86:46801;10.208.134.22:46801;10.198.143.101:46801;10.198.143.105:46801;10.198.143.106:46801;10.198.143.107:46801;10.198.143.108:46801;10.198.145.230:46801;10.198.145.232:46801;10.198.146.175:46801;10.198.146.176:46801;10.198.146.177:46801;10.198.146.178:46801;10.208.134.47:46801;10.208.134.48:46801</value>
 		</config>
-
 
 		<config>
 			<key>tdbank.monitor.systemid</key>

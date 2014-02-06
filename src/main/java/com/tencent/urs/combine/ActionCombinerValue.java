@@ -2,16 +2,9 @@ package com.tencent.urs.combine;
 
 import java.io.Serializable;
 import java.util.HashMap;
-
 import com.tencent.urs.protobuf.Recommend;
-import com.tencent.urs.protobuf.Recommend.UserActiveHistory.ActiveRecord;
-import com.tencent.urs.utils.Utils;
 
 public class ActionCombinerValue implements Combiner<ActionCombinerValue>,Serializable{
-
-	/**
-	 * 
-	 */
 	private static final long serialVersionUID = 305886042186738812L;
 	
 	private HashMap<String,Recommend.UserActiveHistory.ActiveRecord> actRecordMap;

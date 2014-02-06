@@ -22,10 +22,13 @@ import com.tencent.tde.client.TairClient.TairOption;
 import com.tencent.tde.client.error.TairFlowLimit;
 import com.tencent.tde.client.error.TairRpcError;
 import com.tencent.tde.client.error.TairTimeout;
+import com.tencent.tde.client.impl.MutiThreadCallbackClient;
 import com.tencent.tde.client.impl.MutiThreadCallbackClient.MutiClientCallBack;
 import com.tencent.urs.combine.ActionCombinerValue;
 import com.tencent.urs.combine.UpdateKey;
 import com.tencent.urs.conf.DataFilterConf;
+import com.tencent.urs.protobuf.Recommend;
+import com.tencent.urs.protobuf.Recommend.ActionWeightInfo;
 import com.tencent.urs.tdengine.TDEngineClientFactory;
 import com.tencent.urs.tdengine.TDEngineClientFactory.ClientAttr;
 import com.tencent.urs.utils.Constants;
@@ -43,6 +46,7 @@ import backtype.storm.tuple.Values;
 public class PretreatmentBolt extends AbstractConfigUpdateBolt {
 	private static final long serialVersionUID = 1L;
 	private List<ClientAttr> mtClientList;	
+	private DataCache<Float> actWeightCache;
 	private DataCache<String> qqCache;
 	private DataCache<String> groupIdCache;
 	private OutputCollector collector;
@@ -50,6 +54,7 @@ public class PretreatmentBolt extends AbstractConfigUpdateBolt {
 	private int cacheExpireTime;
 	private int nsTableGroup;
 	private int nsTableUin;
+	private int nsTableWeight;
 	
 	private static Logger logger = LoggerFactory
 			.getLogger(PretreatmentBolt.class);
@@ -64,10 +69,9 @@ public class PretreatmentBolt extends AbstractConfigUpdateBolt {
 		this.collector = collector;
 		this.qqCache = new DataCache<String>(conf);
 		this.groupIdCache = new DataCache<String>(conf);
+		this.actWeightCache = new DataCache<Float>(conf);
 		this.collector = collector;
-		this.cacheExpireTime = 1*24*3600;
-		this.nsTableGroup = Utils.getInt(conf, "tdengine.table.indival", 319);
-		this.nsTableUin = Utils.getInt(conf, "tdengine.table.indival", 320);
+
 		
 		this.mtClientList = TDEngineClientFactory.createMTClientList(conf);
 		ClientAttr clientEntry = mtClientList.get(0);		
@@ -91,7 +95,11 @@ public class PretreatmentBolt extends AbstractConfigUpdateBolt {
 	} 
 	
 	@Override
-	public void updateConfig(XMLConfiguration config) {
+	public void updateConfig(XMLConfiguration config) {		
+		nsTableGroup = config.getInt("tdengine.table.group", 319);
+		nsTableUin = config.getInt("tdengine.table.uin", 320);		
+		nsTableWeight = config.getInt("action_weight_table",313);
+		cacheExpireTime = config.getInt("cache_expiretime",24*3600);
 	}
 
 	@Override
@@ -99,12 +107,16 @@ public class PretreatmentBolt extends AbstractConfigUpdateBolt {
 		String topic = tuple.getStringByField("topic");	
 		String qq = tuple.getStringByField("qq");
 		String uid = tuple.getStringByField("uid");	
-
+		String actType = tuple.getStringByField("action_type");	
+		
 		Values outputValues = new Values();
-	
+
 		for(String field:tuple.getFields()){
 			outputValues.add(tuple.getStringByField(field));
 		}
+		
+		Float actWeight = getWeightByType(actType);
+		outputValues.add(actWeight);
 
 		if(topic.equals(Constants.actions_stream)){
 			if(!Utils.isQNumValid(qq)){
@@ -122,6 +134,30 @@ public class PretreatmentBolt extends AbstractConfigUpdateBolt {
 		}
 	}
 
+	private Float getWeightByType(String actionType){
+		Float weight = actWeightCache.get(actionType).get();
+		if(weight != null){
+			return weight;
+		}else{
+			try{
+				MutiThreadCallbackClient clientEntry = mtClientList.get(0).getClient();
+				TairOption opt = new TairOption(mtClientList.get(0).getTimeout());
+				Result<byte[]> res =  clientEntry.get((short)nsTableWeight, actionType.getBytes(), opt);
+				if(res.isSuccess() && res.getResult()!=null)
+				{
+						
+					ActionWeightInfo pbWeightInfo = Recommend.ActionWeightInfo.parseFrom(res.getResult());
+					if(pbWeightInfo.getWeight()>=0){
+						actWeightCache.set(actionType, new SoftReference<Float>(weight),cacheExpireTime);
+						return pbWeightInfo.getWeight();
+					}
+				}					
+			}catch(Exception e){
+			}
+		}
+		return 0F;
+	}
+	
 	public class GetQQUpdateCallBack implements MutiClientCallBack{
 		private String qq;
 		private String uid;
