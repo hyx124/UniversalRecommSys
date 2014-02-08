@@ -94,19 +94,35 @@ public class BaseInfoBolt extends AbstractConfigUpdateBolt{
 		String bigTypeName = input.getStringByField("cate_name1");
 		String midTypeName = input.getStringByField("cate_name2");
 		String smallTypeName = input.getStringByField("cate_name3");
-		ChargeType freeFlag = (Recommend.ChargeType) input.getValueByField("free");
-		PublicType publicFlag = (Recommend.ItemDetailInfo.PublicType) input.getValueByField("publish");
-		Float price = input.getFloatByField("price");
+		String freeFlag_str = input.getStringByField("free");
+		Recommend.ChargeType freeFlag = Recommend.ChargeType.NormalFee;
+		if(freeFlag_str.equals("1")){
+			freeFlag = Recommend.ChargeType.Free;
+		}else if(freeFlag_str.equals("2")){
+			freeFlag = Recommend.ChargeType.VipFree;
+		}
+		
+		String publicFlag_str = input.getStringByField("publish");
+		Recommend.ItemDetailInfo.PublicType publicFlag = Recommend.ItemDetailInfo.PublicType.NotPublic;
+		if(publicFlag_str.equals("1")){
+			publicFlag = Recommend.ItemDetailInfo.PublicType.OnSell;
+		}else if(publicFlag_str.equals("2")){
+			publicFlag = Recommend.ItemDetailInfo.PublicType.SellOut;
+		}
+		
+		
+		String price = input.getStringByField("price");
 		String text = input.getStringByField("text");
 		
-		Long itemTime = input.getLongByField("item_time");
-		Long platForm = input.getLongByField("plat_form");
-		Long score = input.getLongByField("score");
+		String itemTime = input.getStringByField("item_time");
+		String platForm = input.getStringByField("plat_form");
+		String score = input.getStringByField("score");
 		
 		Recommend.ItemDetailInfo.Builder builder =
 				Recommend.ItemDetailInfo.newBuilder();
 		builder.setItem(itemId).setFreeFlag(freeFlag).setPublicFlag(publicFlag).setImpDate(Long.valueOf(impDate))
-				.setPrice(price).setText(text).setItemTime(itemTime).setPlatform(platForm).setScore(score)
+				.setPrice(Float.parseFloat(price)).setText(text)
+				.setItemTime(Long.valueOf(itemTime)).setPlatform(Long.valueOf(platForm)).setScore(Long.valueOf(score))
 				.setBigType(Long.valueOf(bigType)).setBigTypeName(bigTypeName)
 				.setMiddleType(Long.valueOf(midType)).setMiddleTypeName(midTypeName)
 				.setSmallType(Long.valueOf(smallType)).setSmallTypeName(smallTypeName);
@@ -140,14 +156,14 @@ public class BaseInfoBolt extends AbstractConfigUpdateBolt{
 		String impDate = input.getStringByField("imp_date");
 		String imei = input.getStringByField("imei");
 		String uid = input.getStringByField("uid");
-		Integer level = input.getIntegerByField("level");
-		Long regDate = input.getLongByField("reg_date");
-		Long regTime = input.getLongByField("reg_time");
+		String level = input.getStringByField("level");
+		String regDate = input.getStringByField("reg_date");
+		String regTime = input.getStringByField("reg_time");
 		
 		Recommend.UserDetailInfo.Builder builder = Recommend.UserDetailInfo.newBuilder();
 		builder.setImpDate(Long.valueOf(impDate)).setImei(imei)
-				.setQQNum(qq).setLevel(level).setUid(uid)
-				.setRegDate(regDate).setRegTime(regTime);
+				.setQQNum(qq).setLevel(Integer.valueOf(level)).setUid(uid)
+				.setRegDate(Long.valueOf(regDate)).setRegTime(Long.valueOf(regTime));
 		return builder.build().toByteArray();
 	}
 
