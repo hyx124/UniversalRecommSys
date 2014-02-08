@@ -77,7 +77,7 @@ public class ResultStorageBolt extends AbstractConfigUpdateBolt {
 		
 		Recommend.RecommendResult.Result.Builder value =
 				Recommend.RecommendResult.Result.newBuilder();
-		value.setBigType(bigType).setMiddleType(midType).setSmallType(smallType).setPrice(price)
+		value.setBigType(bigType).setMiddleType(midType).setSmallType(smallType).setPrice(Long.valueOf(price))
 			.setItem(itemId).setWeight(weight).setFreeFlag(charType)
 			.setUpdateTime(System.currentTimeMillis()/1000L);
 		new putToTDEUpdateCallBack(key,value.build(),algName).excute();

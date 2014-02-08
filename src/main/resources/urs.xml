@@ -18,7 +18,7 @@
 			</output_fields>
 			
 		</spout>
-		
+		<!--
 		<spout name="BaseInfoSpout" class="com.tencent.urs.spouts.BaseInfoSpout" parallelism="1">
 			<tdbank_zookeeper_address>sk-zk-td1:2181,sk-zk-td2:2181,sk-zk-td3:2181,sk-zk-td4:2181,sk-zk-td5:2181</tdbank_zookeeper_address>
 			<tdbank_zookeeper_timeout>10000</tdbank_zookeeper_timeout>
@@ -50,9 +50,11 @@
 				<fields>hash_key,topic,bid,imp_date,cate_id,cate_name,level,father_id</fields>
 			</output_fields>
 		</spout>
+		-->
 	</spouts>
 	
 	<bolts>
+		<!-- 
 		<bolt name="BaseInfo" class="com.tencent.urs.bolts.PretreatmentBolt" parallelsim="1">
 			<grouping type="field">
 				<fields>hash_key</fields>
@@ -85,10 +87,10 @@
 			<category_level_table>314</category_level_table>
 			
 			<data_expiretime>259200</data_expiretime>
-			<cache_expiretime>3600</cache_expiretime>
-		
+			<cache_expiretime>3600</cache_expiretime>		
 		</bolt>
-	
+	 	-->
+	 	
 		<bolt name="PretreatmentBolt" class="com.tencent.urs.bolts.PretreatmentBolt" parallelsim="1">
 			<grouping type="field">
 				<fields>qq</fields>
@@ -98,7 +100,7 @@
 			
 			<output_fields>
 				<stream_id>user_action</stream_id>
-				<fields>bid,topic,old_qq,uid,adpos,action_type,action_time,item_id,action_result,imei,platform,lbs_info,action_weight,qq,group_id</fields>
+				<fields>bid,topic,old_qq,uid,adpos,action_type,action_time,item_id,action_result,imei,platform,lbs_info,qq,group_id</fields>
 			</output_fields>	
 		</bolt>
 
@@ -253,7 +255,7 @@
 			
 			<output_fields>
 				<stream_id>computer_result</stream_id>
-				<fields>bid,key,item_id,weight,alg_name</fields>
+				<fields>bid,key,item_id,weight,alg_name,big_type,mid_type,small_type,free,price</fields>
 			</output_fields>
 		</bolt>
 		

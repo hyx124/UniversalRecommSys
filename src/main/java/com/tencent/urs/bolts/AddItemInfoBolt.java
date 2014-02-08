@@ -113,13 +113,14 @@ public class AddItemInfoBolt extends AbstractConfigUpdateBolt {
 
 		private void emitData(ItemDetailInfo itemInfo){
 			Values value = new Values(key,itemId,weight,algName);
-
 			if(itemInfo != null){
 				value.add(itemInfo.getBigType());
 				value.add(itemInfo.getMiddleType());
 				value.add(itemInfo.getSmallType());
 				value.add(itemInfo.getFreeFlag());
-				value.add(itemInfo.getPrice());		
+				Float price = itemInfo.getPrice();
+				
+				value.add(price.longValue());		
 			}else{
 				value.add(0L);
 				value.add(0L);
@@ -132,7 +133,12 @@ public class AddItemInfoBolt extends AbstractConfigUpdateBolt {
 		}
 		
 		public void excute() {
-			ItemDetailInfo itemInfo = itemCache.get(cacheKey).get();
+			ItemDetailInfo itemInfo = null;
+			try{
+				itemInfo = itemCache.get(cacheKey).get();
+			}catch(Exception e){				
+			}
+			
 			if(itemInfo != null){
 				emitData(itemInfo);
 			}else{

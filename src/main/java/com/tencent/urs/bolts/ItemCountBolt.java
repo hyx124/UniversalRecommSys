@@ -3,21 +3,18 @@ package com.tencent.urs.bolts;
 import com.google.common.collect.ImmutableList;
 import com.tencent.urs.protobuf.Recommend;
 import com.tencent.urs.protobuf.Recommend.ActiveType;
-import com.tencent.urs.protobuf.Recommend.UserActiveDetail;
 import com.tencent.urs.protobuf.Recommend.UserActiveDetail.TimeSegment;
 import com.tencent.urs.protobuf.Recommend.UserActiveDetail.TimeSegment.ItemInfo;
 import com.tencent.urs.protobuf.Recommend.UserActiveDetail.TimeSegment.ItemInfo.ActType;
 
 import java.lang.ref.SoftReference;
 import java.text.SimpleDateFormat;
-import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
 import java.util.Set;
 import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.Future;
 
-import org.apache.commons.configuration.ConfigurationException;
 import org.apache.commons.configuration.XMLConfiguration;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -35,6 +32,7 @@ import com.tencent.tde.client.TairClient.TairOption;
 import com.tencent.tde.client.error.TairFlowLimit;
 import com.tencent.tde.client.error.TairQueueOverflow;
 import com.tencent.tde.client.error.TairRpcError;
+import com.tencent.tde.client.impl.MutiThreadCallbackClient;
 import com.tencent.tde.client.impl.MutiThreadCallbackClient.MutiClientCallBack;
 import com.tencent.urs.asyncupdate.UpdateCallBack;
 import com.tencent.urs.asyncupdate.UpdateCallBackContext;
@@ -50,14 +48,19 @@ public class ItemCountBolt extends AbstractConfigUpdateBolt{
 	private static final long serialVersionUID = 2972911860800045348L;
 	private List<ClientAttr> mtClientList;	
 	private MonitorTools mt;
-	private DataCache<Integer> groupCountCache;
-	private DataCache<Integer> userCountCache;
+	private DataCache<Float> groupCountCache;
+	private DataCache<Float> userCountCache;
+
 	private ConcurrentHashMap<UpdateKey, GroupActionCombinerValue> combinerMap;
+	private ConcurrentHashMap<Recommend.ActiveType, Float> actWeightMap;
+	private Long lastUpdateTime; 
 	private UpdateCallBack putCallBack;	
 	
 	private int nsUserCountTableId;
 	private int nsGroupCountTableId;
 	private int nsDetailTableId;
+	private int nsActWeightTableId;
+	
 	private int dataExpireTime;
 	private int cacheExpireTime;
 	private boolean debug;
@@ -71,10 +74,11 @@ public class ItemCountBolt extends AbstractConfigUpdateBolt{
 		nsUserCountTableId = config.getInt("user_count_table",303);
 		nsGroupCountTableId = config.getInt("group_count_table",304);
 		nsDetailTableId = config.getInt("dependent_table",302);
+		
+		nsActWeightTableId = config.getInt("act_weight_table",314);
 		dataExpireTime = config.getInt("data_expiretime",1*24*3600);
 		cacheExpireTime = config.getInt("cache_expiretime",3600);
 		debug = config.getBoolean("debug",false);
-		//topNum = config.getInt("topNum",30);
 	}
 	
 	@Override
@@ -82,10 +86,14 @@ public class ItemCountBolt extends AbstractConfigUpdateBolt{
 		super.prepare(conf, context, collector);
 		updateConfig(super.config);
 	
+		this.lastUpdateTime = 0L;
 		this.mtClientList = TDEngineClientFactory.createMTClientList(conf);
 		this.mt = MonitorTools.getMonitorInstance(conf);
-		this.groupCountCache = new DataCache<Integer>(conf);
-		this.userCountCache = new DataCache<Integer>(conf);
+		this.groupCountCache = new DataCache<Float>(conf);
+		this.userCountCache = new DataCache<Float>(conf);
+		
+		this.actWeightMap = new ConcurrentHashMap<Recommend.ActiveType, Float>(20);
+		
 		this.combinerMap = new ConcurrentHashMap<UpdateKey,GroupActionCombinerValue>(1024);
 				
 		this.putCallBack = new UpdateCallBack(mt, Constants.systemID, Constants.tde_interfaceID, this.getClass().getName());
@@ -155,21 +163,52 @@ public class ItemCountBolt extends AbstractConfigUpdateBolt{
 			
 		}
 	}	
+	
+	private Float getWeightByType(Recommend.ActiveType actionType){
+		
+		Long now = System.currentTimeMillis()/1000L;
+		if(lastUpdateTime > (now - 3600*24)  ){
+			actWeightMap.clear();
+			lastUpdateTime = now;
+		}
+		
+		if(actWeightMap.containsKey(actionType)){
+			return actWeightMap.get(actionType);
+		}else{
+			try{
+				MutiThreadCallbackClient clientEntry = mtClientList.get(0).getClient();
+				TairOption opt = new TairOption(mtClientList.get(0).getTimeout());
+				Result<byte[]> res =  clientEntry.get((short)nsActWeightTableId, actionType.toString().getBytes(), opt);
+				if(res.isSuccess() && res.getResult()!=null)
+				{
+						
+					Recommend.ActionWeightInfo pbWeightInfo = Recommend.ActionWeightInfo.parseFrom(res.getResult());
+					if(pbWeightInfo.getWeight()>=0){
+						actWeightMap.put(actionType, pbWeightInfo.getWeight());
+						return pbWeightInfo.getWeight();
+					}
+				}					
+			}catch(Exception e){
+				logger.error(e.toString());
+			}
+		}
+		return 0F;
+	}
 
 	private class GroupCountUpdateCallback implements MutiClientCallBack{
-		private final Integer value;
+		private final Float value;
 		private final String putKey;
 
-		public GroupCountUpdateCallback(UpdateKey key, Integer value) {
+		public GroupCountUpdateCallback(UpdateKey key, Float value) {
 			this.value = value;		
 			this.putKey = key.getGroupCountKey();
 		}
 		
 		public void excute() {
 			try {
-				Integer oldValue = groupCountCache.get(putKey).get();
+				Float oldValue = groupCountCache.get(putKey).get();
 				if(oldValue != null){		
-					Integer newValue = oldValue+value;
+					Float newValue = oldValue+value;
 					logger.info("get step3 key="+putKey+",group old count="+oldValue+",new count="+this.value+",merge count="+newValue);
 					Save(putKey,newValue);
 				}else{
@@ -184,9 +223,9 @@ public class ItemCountBolt extends AbstractConfigUpdateBolt{
 			}
 		}
 
-		private void Save(String key,Integer value){		
+		private void Save(String key,Float value){		
 			synchronized(groupCountCache){
-				groupCountCache.set(key, new SoftReference<Integer>(value), cacheExpireTime);
+				groupCountCache.set(key, new SoftReference<Float>(value), cacheExpireTime);
 			}
 			
 			logger.info("key="+key+",value="+value);
@@ -216,10 +255,10 @@ public class ItemCountBolt extends AbstractConfigUpdateBolt{
 			// TODO Auto-generated method stub
 			@SuppressWarnings("unchecked")
 			Future<Result<byte[]>> afuture = (Future<Result<byte[]>>) future;
-			int newValue = 0;
+			Float newValue = 0F;
 			try {
 				String oldValue = new String(afuture.get().getResult());
-				newValue = this.value + Integer.valueOf(oldValue);
+				newValue = this.value + Float.parseFloat(oldValue);
 				logger.info("get step3 key="+putKey+",group old count="+oldValue+",new count="+this.value+",merge count="+newValue);
 
 				Save(putKey,newValue);
@@ -234,11 +273,11 @@ public class ItemCountBolt extends AbstractConfigUpdateBolt{
 	private class UserCountUpdateCallBack implements MutiClientCallBack{
 		
 		private UpdateKey key;
-		private Integer count;
+		private Float count;
 		private String userCountKey;
 		private Long time;
 
-		public UserCountUpdateCallBack(UpdateKey key, Integer count) {
+		public UserCountUpdateCallBack(UpdateKey key, Float count) {
 			this.key = key ; 
 			this.count = count;	
 			//this.time = time;
@@ -247,7 +286,7 @@ public class ItemCountBolt extends AbstractConfigUpdateBolt{
 		
 		public void excute() {
 			try {
-				Integer oldCount = userCountCache.get(userCountKey).get();
+				Float oldCount = userCountCache.get(userCountKey).get();
 				if(oldCount != null){		
 					next(oldCount);
 				}else{
@@ -266,7 +305,7 @@ public class ItemCountBolt extends AbstractConfigUpdateBolt{
 			}
 		}
 		
-		public void next(Integer oldCount){
+		public void next(Float oldCount){
 			logger.info("get step2 key="+userCountKey+",old count="+oldCount+",new count="+count);
 			if(count > oldCount){
 				new GroupCountUpdateCallback(key,count-oldCount).excute();
@@ -279,10 +318,10 @@ public class ItemCountBolt extends AbstractConfigUpdateBolt{
 			
 		}
 		
-		private void save(String userCountKey,Integer count){
+		private void save(String userCountKey,Float count){
 			Future<Result<Void>> future = null;
 			synchronized(userCountCache){
-				userCountCache.set(userCountKey, new SoftReference<Integer>(count), cacheExpireTime);
+				userCountCache.set(userCountKey, new SoftReference<Float>(count), cacheExpireTime);
 			}
 			
 			logger.info("key="+userCountKey+",value="+count);
@@ -311,10 +350,10 @@ public class ItemCountBolt extends AbstractConfigUpdateBolt{
 			// TODO Auto-generated method stub
 			@SuppressWarnings("unchecked")
 			Future<Result<byte[]>> afuture = (Future<Result<byte[]>>) future;
-			Integer oldCount = 0;
+			Float oldCount = 0F;
 			try {
 				byte[] oldVal = afuture.get().getResult();
-				oldCount = Integer.valueOf(new String(oldVal));
+				oldCount = Float.parseFloat(new String(oldVal));
 			} catch (Exception e) {
 				
 			}
@@ -334,7 +373,7 @@ public class ItemCountBolt extends AbstractConfigUpdateBolt{
 			this.userCheckKey = key.getDetailKey();
 		}
 
-		public void next(Integer weight){
+		public void next(Float weight){
 			if(debug){
 				logger.info("step1, key="+userCheckKey+",new count="+weight);
 			}
@@ -362,8 +401,8 @@ public class ItemCountBolt extends AbstractConfigUpdateBolt{
 			}
 		}
 			
-		private Integer getWeight(Recommend.UserActiveDetail oldValueHeap){						
-			Integer newWeight = 0;					
+		private Float getWeight(Recommend.UserActiveDetail oldValueHeap){						
+			Float newWeight = 0.0F;					
 			for(TimeSegment ts:oldValueHeap.getTsegsList()){
 				if(ts.getTimeId() < getWinIdByTime(values.getTime() - dataExpireTime)){
 					continue;
@@ -373,7 +412,8 @@ public class ItemCountBolt extends AbstractConfigUpdateBolt{
 					if(item.getItem().equals(key.getItemId())){	
 						for(ActType act: item.getActsList()){	
 							if(act.getLastUpdateTime() > (values.getTime() - dataExpireTime)){
-								newWeight =  Math.max(newWeight,act.getActType().getNumber());
+								Float actWeight = getWeightByType(act.getActType());
+								newWeight =  Math.max(newWeight,actWeight);
 							}
 						}	
 					}					

@@ -2,11 +2,8 @@ package com.tencent.urs.bolts;
 
 import java.util.List;
 import java.util.Map;
-import java.util.Set;
-import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.Future;
 
-import org.apache.commons.configuration.ConfigurationException;
 import org.apache.commons.configuration.XMLConfiguration;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -21,27 +18,19 @@ import com.tencent.streaming.commons.bolts.config.AbstractConfigUpdateBolt;
 import com.tencent.streaming.commons.spouts.tdbank.Output;
 import com.tencent.tde.client.Result;
 import com.tencent.tde.client.TairClient.TairOption;
-import com.tencent.tde.client.error.TairFlowLimit;
-import com.tencent.tde.client.error.TairQueueOverflow;
-import com.tencent.tde.client.error.TairRpcError;
 
 import com.tencent.urs.asyncupdate.UpdateCallBack;
 import com.tencent.urs.asyncupdate.UpdateCallBackContext;
 import com.tencent.urs.protobuf.Recommend;
-import com.tencent.urs.protobuf.Recommend.ActiveType;
-import com.tencent.urs.protobuf.Recommend.ChargeType;
-import com.tencent.urs.protobuf.Recommend.ItemDetailInfo.PublicType;
 import com.tencent.urs.tdengine.TDEngineClientFactory;
 import com.tencent.urs.tdengine.TDEngineClientFactory.ClientAttr;
 import com.tencent.urs.utils.Constants;
-import com.tencent.urs.utils.Utils;
 
 public class BaseInfoBolt extends AbstractConfigUpdateBolt{
 	private static final long serialVersionUID = -1302335947421120663L;
 	private List<ClientAttr> mtClientList;	
 	private MonitorTools mt;
 	private UpdateCallBack putCallBack;
-	private int nsTableID;
 	private int nsItemDetailTableId;
 	private int nsUserDetailTableId;
 	private int nsActionWeightTableId;
@@ -68,16 +57,17 @@ public class BaseInfoBolt extends AbstractConfigUpdateBolt{
 		this.putCallBack = new UpdateCallBack(mt, Constants.systemID, Constants.tde_interfaceID, this.getClass().getName());
 	}
 	
-	private void save(Integer tablId,String key,byte[] values) {
+	private void save(short tablId,String key,byte[] values) {
 		if(values != null){
 			for(ClientAttr clientEntry:mtClientList){
-				TairOption putopt = new TairOption(clientEntry.getTimeout(),(short)0, dataExpireTime);
-				Future<Result<Void>> future;
+				TairOption putopt = new TairOption(clientEntry.getTimeout(),(short)0, dataExpireTime);				
 				try {
-					future = clientEntry.getClient().putAsync((short)nsTableID, 
-										key.toString().getBytes(), values.toString().getBytes(), putopt);
+					Future<Result<Void>> future = clientEntry.getClient().putAsync(tablId, 
+										key.getBytes(), values, putopt);
+					
+					//logger.info("save in tde ,table ="+tablId+",key="+key);
 					clientEntry.getClient().notifyFuture(future, putCallBack, 
-							new UpdateCallBackContext(clientEntry,key.toString(),values.toString().getBytes(),putopt));
+							new UpdateCallBackContext(clientEntry,key,values,putopt));
 				} catch (Exception e){
 					logger.error(e.toString());
 				}	
@@ -142,7 +132,7 @@ public class BaseInfoBolt extends AbstractConfigUpdateBolt{
 		return builder.build().toByteArray();
 	}
 
-	private byte[] genActionWeightPbValue(ActiveType actionType, Tuple input) {
+	private byte[] genActionWeightPbValue(String actionType, Tuple input) {
 		String impDate = input.getStringByField("imp_date");
 		String weight = input.getStringByField("weight");
 		
@@ -200,7 +190,7 @@ public class BaseInfoBolt extends AbstractConfigUpdateBolt{
 			
 			value = genUserInfoPbValue(qq,tuple);
 		}else if(topic.equals("action_weight_info")){
-			Recommend.ActiveType actionType = (Recommend.ActiveType) tuple.getValueByField("action_type");
+			String actionType = tuple.getStringByField("type_id");
 			key = bid+"#"+actionType;
 			tableId = nsActionWeightTableId;
 			
@@ -215,7 +205,7 @@ public class BaseInfoBolt extends AbstractConfigUpdateBolt{
 			return;
 		}
 		
-		save(tableId,key,value);
+		save(tableId.shortValue(),key,value);
 	}
 
 }

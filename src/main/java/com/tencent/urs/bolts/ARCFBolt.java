@@ -104,64 +104,23 @@ public class ARCFBolt extends AbstractConfigUpdateBolt{
 		//combinerKeys(key,value);	
 		
 		Double weight = (double) (1000-Long.valueOf(actionTime)%100);
-		//doEmit("A1001",itemId,groupId,actionTime,weight);
-		//doEmit("B1001",itemId,groupId,actionTime,weight);
-		doEmit("C1001",itemId,groupId,actionTime,weight);
+		doEmit("C1001",bid,itemId,groupId,actionTime,weight);
 		
-		doEmit("A1001",itemId,"0",actionTime,weight);
-		doEmit("B1001",itemId,"0",actionTime,weight);
-		//doEmit("C1001",itemId,"0",actionTime,weight);
+		doEmit("A1001",bid,itemId,"0",actionTime,weight);
+		doEmit("B1001",bid,itemId,"0",actionTime,weight);
 		
 	}
 	
-	private void  doEmit(String algName, String itemId, String groupId,String actionTime,double weight){
+	private void  doEmit(String bid,String algName, String itemId, String groupId,String actionTime,double weight){
 		String testKey_c = "1#"+itemId+"#1#"+algName+"#"+groupId;
 		
 		Long now = System.currentTimeMillis()/1000L;
 		String otheritemId = String.valueOf(now%30+1);
-		Values values_c = new Values(testKey_c,otheritemId,weight,algName);
+		Values values_c = new Values(bid,testKey_c,otheritemId,weight,algName);
 		this.collector.emit("computer_result",values_c);
 
 	}
-	
-	private void test(UpdateKey key,String actionTime){
-		Recommend.RecommendResult.Builder HeapBuilder = Recommend.RecommendResult.newBuilder();
-		String testKey = "345#"+key.getAdpos()+"#AR#"+key.getGroupId();
-		for(int i=0;i<=100;i++){
-			Recommend.RecommendResult.Result.Builder valueBuilder = Recommend.RecommendResult.Result.newBuilder();
-			valueBuilder.setItem(key.getItemId()+String.valueOf(i)).setWeight(1000-i);
-			HeapBuilder.addResults(valueBuilder.build());
-		}
-		
-		
-		for(ClientAttr clientEntry:mtClientList ){
-			logger.info("start in save,client="+clientEntry.getGroupname()+",kye="+testKey+",count="+HeapBuilder.getResultsCount());
-			TairOption putopt = new TairOption(clientEntry.getTimeout(),(short)0, dataExpireTime);
-			try {
-				Future<Result<Void>> future = 
-				clientEntry.getClient().putAsync((short)310, 
-						testKey.getBytes(), HeapBuilder.build().toByteArray(), putopt);
-			} catch (Exception e){
-				logger.error(e.toString());
-			}
-		}
-		
-		TairOption getopt = new TairOption(mtClientList.get(0).getTimeout());
-		try {
-			Result<byte[]> res = mtClientList.get(0).getClient().get((short)310, testKey.getBytes(), getopt);
-			if(res.isSuccess() && res.getResult() != null)
-			{
-				Recommend.RecommendResult oldHeap = Recommend.RecommendResult.parseFrom(res.getResult());
-				for( Recommend.RecommendResult.Result each:oldHeap.getResultsList() ){
-					logger.info("from tde:itemid="+each.getItem()+",weight="+each.getWeight());
-				}
-			}			
-		} catch (Exception e) {
-		}
-		
-		
-	}
-	
+
 	private void setCombinerTime(final int second) {
 		new Thread(new Runnable() {
 			@Override

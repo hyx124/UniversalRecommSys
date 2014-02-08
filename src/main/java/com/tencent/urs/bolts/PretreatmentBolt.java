@@ -46,7 +46,6 @@ import backtype.storm.tuple.Values;
 public class PretreatmentBolt extends AbstractConfigUpdateBolt {
 	private static final long serialVersionUID = 1L;
 	private List<ClientAttr> mtClientList;	
-	private DataCache<Float> actWeightCache;
 	private DataCache<String> qqCache;
 	private DataCache<String> groupIdCache;
 	private OutputCollector collector;
@@ -54,7 +53,6 @@ public class PretreatmentBolt extends AbstractConfigUpdateBolt {
 	private int cacheExpireTime;
 	private int nsTableGroup;
 	private int nsTableUin;
-	private int nsTableWeight;
 	
 	private static Logger logger = LoggerFactory
 			.getLogger(PretreatmentBolt.class);
@@ -66,10 +64,11 @@ public class PretreatmentBolt extends AbstractConfigUpdateBolt {
 	@Override 
 	public void prepare(Map conf, TopologyContext context, OutputCollector collector){
 		super.prepare(conf, context, collector);
+		this.updateConfig(super.config);
+		
 		this.collector = collector;
 		this.qqCache = new DataCache<String>(conf);
 		this.groupIdCache = new DataCache<String>(conf);
-		this.actWeightCache = new DataCache<Float>(conf);
 		this.collector = collector;
 
 		
@@ -79,18 +78,9 @@ public class PretreatmentBolt extends AbstractConfigUpdateBolt {
 		try {
 			clientEntry.getClient().put((short) nsTableUin, "17139104".getBytes(), "389687043".getBytes(), opt);
 			clientEntry.getClient().put((short) nsTableGroup, "389687043".getBytes(), "1,51|2,52|3,53".getBytes(), opt);
-		} catch (TairRpcError e) {
-			// TODO Auto-generated catch block
-			e.printStackTrace();
-		} catch (TairFlowLimit e) {
-			// TODO Auto-generated catch block
-			e.printStackTrace();
-		} catch (TairTimeout e) {
-			// TODO Auto-generated catch block
-			e.printStackTrace();
-		} catch (InterruptedException e) {
-			// TODO Auto-generated catch block
-			e.printStackTrace();
+			logger.info("init tde ");
+		} catch (Exception e){
+			logger.error(e.toString());
 		}
 	} 
 	
@@ -98,7 +88,6 @@ public class PretreatmentBolt extends AbstractConfigUpdateBolt {
 	public void updateConfig(XMLConfiguration config) {		
 		nsTableGroup = config.getInt("tdengine.table.group", 319);
 		nsTableUin = config.getInt("tdengine.table.uin", 320);		
-		nsTableWeight = config.getInt("action_weight_table",313);
 		cacheExpireTime = config.getInt("cache_expiretime",24*3600);
 	}
 
@@ -107,21 +96,17 @@ public class PretreatmentBolt extends AbstractConfigUpdateBolt {
 		String topic = tuple.getStringByField("topic");	
 		String qq = tuple.getStringByField("qq");
 		String uid = tuple.getStringByField("uid");	
-		String actType = tuple.getStringByField("action_type");	
 		
 		Values outputValues = new Values();
 
 		for(String field:tuple.getFields()){
 			outputValues.add(tuple.getStringByField(field));
 		}
-		
-		Float actWeight = getWeightByType(actType);
-		outputValues.add(actWeight);
 
 		if(topic.equals(Constants.actions_stream)){
 			if(!Utils.isQNumValid(qq)){
 				if(!uid.equals("0") && uid.matches("[0-9]+")){
-					new GetQQUpdateCallBack(uid,true,topic,outputValues).excute();
+					new GetQQUpdateCallBack(uid,topic,outputValues).excute();
 				}else{
 					return;
 				}
@@ -130,46 +115,20 @@ public class PretreatmentBolt extends AbstractConfigUpdateBolt {
 				new GetGroupIdUpdateCallBack(qq,topic,outputValues).excute();
 			}						
 		}else{
-			emitData(topic, outputValues);
+			return;
 		}
-	}
-
-	private Float getWeightByType(String actionType){
-		Float weight = actWeightCache.get(actionType).get();
-		if(weight != null){
-			return weight;
-		}else{
-			try{
-				MutiThreadCallbackClient clientEntry = mtClientList.get(0).getClient();
-				TairOption opt = new TairOption(mtClientList.get(0).getTimeout());
-				Result<byte[]> res =  clientEntry.get((short)nsTableWeight, actionType.getBytes(), opt);
-				if(res.isSuccess() && res.getResult()!=null)
-				{
-						
-					ActionWeightInfo pbWeightInfo = Recommend.ActionWeightInfo.parseFrom(res.getResult());
-					if(pbWeightInfo.getWeight()>=0){
-						actWeightCache.set(actionType, new SoftReference<Float>(weight),cacheExpireTime);
-						return pbWeightInfo.getWeight();
-					}
-				}					
-			}catch(Exception e){
-			}
-		}
-		return 0F;
 	}
 	
 	public class GetQQUpdateCallBack implements MutiClientCallBack{
 		private String qq;
 		private String uid;
-		private boolean isNeedGroupId;
 		private String outputStream;
 		private Values outputValues;
 		
-		public GetQQUpdateCallBack(String uid,boolean isNeedGroupId, String outputStream, Values outputValues){
+		public GetQQUpdateCallBack(String uid, String outputStream, Values outputValues){
 			this.uid = uid;
 			this.outputStream = outputStream;
 			this.outputValues = outputValues;
-			this.isNeedGroupId = isNeedGroupId;
 		}
 		
 		@Override
@@ -177,17 +136,13 @@ public class PretreatmentBolt extends AbstractConfigUpdateBolt {
 			Future<Result<byte[]>> afuture = (Future<Result<byte[]>>) future;
 			try {
 				Result<byte[]> res = afuture.get();
-				if(res.getCode().equals(ResultCode.OK) && res.getResult() != null){
+				if(res.isSuccess() && res.getResult() != null){
 					this.qq =  new String(res.getResult());
 					logger.info("get qq success, uin="+qq);
 					outputValues.add(qq);
 					qqCache.set(uid, new SoftReference<String>(qq),cacheExpireTime);
 					
-					if(isNeedGroupId){
-						new GetGroupIdUpdateCallBack(qq,outputStream,outputValues).excute();
-					}else{
-						emitData(outputStream,outputValues);
-					}
+					new GetGroupIdUpdateCallBack(qq,outputStream,outputValues).excute();
 				}else{
 					logger.error("get qq from tde failed!");
 				}
@@ -199,14 +154,16 @@ public class PretreatmentBolt extends AbstractConfigUpdateBolt {
 		}
 
 		public void excute() {
-			SoftReference<String> uin = qqCache.get(uid);
-			if(uin != null){
-				outputValues.add(uin.get());
-				if(isNeedGroupId){					
-					new GetGroupIdUpdateCallBack(uin.get(), outputStream, outputValues).excute();
-				}else{
-					emitData(outputStream, outputValues);
-				}
+			
+			String qq = null;
+			try{
+				qq = qqCache.get(uid).get();
+			}catch(Exception e){
+			}
+			
+			if(qq != null){
+				outputValues.add(qq);
+				new GetGroupIdUpdateCallBack(qq, outputStream, outputValues).excute();
 			}else{
 				try{
 					logger.info("start qq by async-get, uid="+uid);
@@ -217,7 +174,6 @@ public class PretreatmentBolt extends AbstractConfigUpdateBolt {
 				}catch(Exception e){
 					logger.error(e.toString());
 				}
-				//
 			}
 
 		}
@@ -240,8 +196,7 @@ public class PretreatmentBolt extends AbstractConfigUpdateBolt {
 			String groupId = "0";
 			try {
 				Result<byte[]> res = afuture.get();
-				if(res.getCode().equals(ResultCode.OK) && res.getResult() != null){
-			
+				if(res.isSuccess() && res.getResult() != null){
 					String tde_gid = new String(res.getResult());
 					String[] grouplist = (tde_gid).split(",|\\|");
 					if(grouplist.length>=2){
@@ -251,29 +206,34 @@ public class PretreatmentBolt extends AbstractConfigUpdateBolt {
 						logger.error("gid format is bad"+tde_gid);
 					}							
 				}else{
-					logger.error("get groupId from tde failed!");
+					logger.error("get groupId from tde failed! error="+res.getCode());
 				}
 			} catch (Exception e) {
 				logger.error(e.toString());
 			}
 			
 			outputValues.add(groupId);
-			groupIdCache.set(qq.toString(), new SoftReference<String>(groupId),cacheExpireTime);
+			//groupIdCache.set(qq.toString(), new SoftReference<String>(groupId),cacheExpireTime);
 			emitData(outputStream,outputValues);
 		}
 		
 		public void excute(){
-			SoftReference<String> groupId = groupIdCache.get(qq.toString());
+			String groupId = null;
+			try{
+				groupId = groupIdCache.get(qq).get();
+			}catch(Exception e){
+			}
+			
 			if(groupId != null){
-				logger.info("get groupid in cache, groupid="+groupId.get());
-				outputValues.add(groupId.get());
+				logger.info("get groupid in cache, groupid="+groupId);
+				outputValues.add(groupId);
 				emitData(outputStream, outputValues);
 			}else{
 				try{
 					logger.info("start group, uin="+qq);
 					ClientAttr clientEntry = mtClientList.get(0);		
 					TairOption opt = new TairOption(clientEntry.getTimeout());
-					Future<Result<byte[]>> future = clientEntry.getClient().getAsync((short)nsTableGroup,qq.toString().getBytes(),opt);
+					Future<Result<byte[]>> future = clientEntry.getClient().getAsync((short)nsTableGroup,qq.getBytes(),opt);
 					clientEntry.getClient().notifyFuture(future, this,clientEntry);	
 				}catch(Exception e){
 					logger.error(e.toString());

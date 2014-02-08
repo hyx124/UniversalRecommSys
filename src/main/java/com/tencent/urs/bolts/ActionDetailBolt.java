@@ -169,32 +169,35 @@ public class ActionDetailBolt extends AbstractConfigUpdateBolt{
 		}
 
 		public void excute() {
-			try {		
-				Recommend.UserActiveDetail oldValue = cacheMap.get(key).get();			
-				if(oldValue != null){	
-					if(debug){
-						logger.info("get key="+key+",in caceh");
-					}
-					UserActiveDetail.Builder mergeValueBuilder = Recommend.UserActiveDetail.newBuilder();
-					mergeToHeap(values,oldValue,mergeValueBuilder);
-					Save(mergeValueBuilder);
-				}else{
-					if(debug){
-						logger.info("get key="+key+",in tde");
-					}
-					ClientAttr clientEntry = mtClientList.get(0);		
-					TairOption opt = new TairOption(clientEntry.getTimeout());
-					Future<Result<byte[]>> future = clientEntry.getClient().getAsync((short)nsTableId,key.getBytes(),opt);
-					clientEntry.getClient().notifyFuture(future, this,clientEntry);	
-				}			
-				
-			} catch (TairQueueOverflow e) {
-				//log.error(e.toString());
-			} catch (TairRpcError e) {
-				//log.error(e.toString());
-			} catch (TairFlowLimit e) {
-				//log.error(e.toString());
+			Recommend.UserActiveDetail oldValue = null;
+			try{
+				oldValue = cacheMap.get(key).get();	
+			}catch(Exception e){
 			}
+						
+			if(oldValue != null){	
+				if(debug){
+					logger.info("get key="+key+",in caceh");
+				}
+				UserActiveDetail.Builder mergeValueBuilder = Recommend.UserActiveDetail.newBuilder();
+				mergeToHeap(values,oldValue,mergeValueBuilder);
+				Save(mergeValueBuilder);
+			}else{
+				if(debug){
+					logger.info("get key="+key+",in tde");
+				}
+				ClientAttr clientEntry = mtClientList.get(0);		
+				TairOption opt = new TairOption(clientEntry.getTimeout());
+				Future<Result<byte[]>> future;
+				try {
+					future = clientEntry.getClient().getAsync((short)nsTableId,key.getBytes(),opt);
+					clientEntry.getClient().notifyFuture(future, this,clientEntry);	
+				} catch(Exception e){
+					logger.error(e.toString());
+				}
+			
+			}			
+
 		}	
 		
 		private Long getWinIdByTime(Long time){	

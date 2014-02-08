@@ -16,6 +16,8 @@ import backtype.storm.spout.SpoutOutputCollector;
 import backtype.storm.task.TopologyContext;
 
 import backtype.storm.tuple.Values;
+
+import com.tencent.urs.protobuf.Recommend;
 import com.tencent.urs.utils.Utils;
 
 public class BaseInfoSpout extends TdbankSpout {
@@ -46,6 +48,38 @@ public class BaseInfoSpout extends TdbankSpout {
 
 	@Override
 	public void processMessage(byte[] message){	
+		count ++;
+		if(true && (count %1000 == 0)){
+			Long now = System.currentTimeMillis()/1000L;
+			String itemId = String.valueOf(now%30+1);
+			String actType = String.valueOf(now%10);
+			String qq = "389687043";
+			String category = String.valueOf(now%10);
+			String fa_category = String.valueOf(now%10+100);
+			
+			String[] dealMsg1 ={"1#"+itemId,"item_detail_info","1","20140126",
+							itemId,"1","2","3","大类1","中类2","小类3","0","0","10.0","--",String.valueOf(now),String.valueOf(now+3000000),"2","100"}; 
+				
+			String[] dealMsg2 ={"1#"+qq,"user_detail_info","1","20130126",
+						qq,"IMEI12222","17139104","5","20140126",String.valueOf(now)}; 
+				
+			String[] dealMsg3 ={"1#"+actType,"action_weight_info","1","20140126",
+						actType,actType}; 
+			
+			String[] dealMsg4 ={"1#"+category,"category_level_info","1","20140126",
+						category,"类目"+category,category,fa_category}; 
+				
+			dealMsgByConfig("1","item_detail_info",dealMsg1);
+			dealMsgByConfig("1","user_detail_info",dealMsg2);
+			dealMsgByConfig("1","action_weight_info",dealMsg3);
+			dealMsgByConfig("1","category_level_info",dealMsg4);
+			count = 0;
+			return;
+		}else{
+			dealMsgByConfig("1","item_detail_info",null);
+		}
+		/*
+		
 		int length = message.length;
 		if (length <= 0) {
 			logger.info("Msg message length is <0:");
@@ -71,35 +105,8 @@ public class BaseInfoSpout extends TdbankSpout {
 						
 		String event = new String(eventByte);
 		String[] event_array = event.split("\t",-1);
-		count ++;
 		
-		if(true && (count %1000 == 0)){
-			Long now = System.currentTimeMillis()/1000L;
-			String itemId = String.valueOf(now%30+1);
-			String actType = String.valueOf(now%10);
-			String qq = "389687043";
-			String category = String.valueOf(now%10);
-			String fa_category = String.valueOf(now%10+100);
-			
-			String[] dealMsg1 ={"1#"+itemId,"item_detail_info","1","20140126",
-							itemId,"1","2","3","大类1","中类2","小类3","0","0","10.0","--",String.valueOf(now),String.valueOf(now+3000000),"iOS;Android","100"}; 
-				
-			String[] dealMsg2 ={"1#"+qq,"user_detail_info","1","20130126",
-						qq,"IMEI12222","17139104","5","20140126",String.valueOf(now)}; 
-				
-			String[] dealMsg3 ={"1#"+actType,"action_weight_info","1","20140126",
-						actType,actType}; 
-			
-			String[] dealMsg4 ={"1#"+category,"category_level_info","1","20140126",
-						category,"类目"+category,category,fa_category}; 
-				
-			dealMsgByConfig("1","item_detail_info",dealMsg1);
-			dealMsgByConfig("1","user_detail_info",dealMsg2);
-			dealMsgByConfig("1","action_weight_info",dealMsg3);
-			dealMsgByConfig("1","category_level_info",dealMsg4);
-			count = 0;
-			return;
-		}
+		
 		
 		
 		if (categoryId.equals("item_detail_info") && event_array.length >= 17) {	
@@ -161,7 +168,7 @@ public class BaseInfoSpout extends TdbankSpout {
 			//hash_key,topic,bid,imp_date,cate_id,cate_name,level,father_id
 			String[] dealMsg ={cateId,categoryId,bid,impDate,cateId,cateName,level,fatherId};
 			dealMsgByConfig("1",categoryId,dealMsg);
-		}
+		}*/
 	}
 	
 	private void dealMsgByConfig(String bid,String topic,String[] msg_array){	
