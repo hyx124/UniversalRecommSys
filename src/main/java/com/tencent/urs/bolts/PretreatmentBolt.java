@@ -156,9 +156,9 @@ public class PretreatmentBolt extends AbstractConfigUpdateBolt {
 		public void excute() {
 			
 			String qq = null;
-			try{
-				qq = qqCache.get(uid).get();
-			}catch(Exception e){
+			SoftReference<String> sr = qqCache.get(uid);
+			if(sr != null){
+				qq = sr.get();
 			}
 			
 			if(qq != null){
@@ -217,11 +217,11 @@ public class PretreatmentBolt extends AbstractConfigUpdateBolt {
 			emitData(outputStream,outputValues);
 		}
 		
-		public void excute(){
+		public void excute(){	
 			String groupId = null;
-			try{
-				groupId = groupIdCache.get(qq).get();
-			}catch(Exception e){
+			SoftReference<String> sr = groupIdCache.get(qq);
+			if(sr != null){
+				groupId = sr.get();
 			}
 			
 			if(groupId != null){

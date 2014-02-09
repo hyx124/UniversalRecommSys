@@ -134,9 +134,9 @@ public class AddItemInfoBolt extends AbstractConfigUpdateBolt {
 		
 		public void excute() {
 			ItemDetailInfo itemInfo = null;
-			try{
-				itemInfo = itemCache.get(cacheKey).get();
-			}catch(Exception e){				
+			SoftReference<ItemDetailInfo> sr = itemCache.get(cacheKey);
+			if(sr != null){
+				itemInfo = sr.get();
 			}
 			
 			if(itemInfo != null){

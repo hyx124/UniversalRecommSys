@@ -143,8 +143,7 @@ public class HotTopBolt extends AbstractConfigUpdateBolt{
 		}
 
 		public void excute() {
-			try {		
-				
+			try {				
 				ClientAttr clientEntry = mtClientList.get(0);		
 				TairOption opt = new TairOption(clientEntry.getTimeout());
 				Future<Result<byte[]>> future = clientEntry.getClient().getAsync((short)nsGroupCountTableId,getKey.getBytes(),opt);

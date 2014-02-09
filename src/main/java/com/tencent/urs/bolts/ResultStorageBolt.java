@@ -24,6 +24,7 @@ import com.tencent.urs.asyncupdate.UpdateCallBackContext;
 import com.tencent.urs.protobuf.Recommend;
 import com.tencent.urs.protobuf.Recommend.ChargeType;
 import com.tencent.urs.protobuf.Recommend.RecommendResult;
+import com.tencent.urs.protobuf.Recommend.UserActiveHistory;
 import com.tencent.urs.protobuf.Recommend.RecommendResult.Builder;
 import com.tencent.urs.tdengine.TDEngineClientFactory;
 import com.tencent.urs.tdengine.TDEngineClientFactory.ClientAttr;
@@ -130,10 +131,15 @@ public class ResultStorageBolt extends AbstractConfigUpdateBolt {
 		}
 
 		public void excute() {
-			SoftReference<RecommendResult> oldValue = resCache.get(key);
+			RecommendResult oldValue = null;
+			SoftReference<RecommendResult> sr = resCache.get(key);
+		    if(sr != null){
+		    	oldValue = sr.get();
+		    }
+				
 			if(oldValue != null){
 				logger.info("get in cache");
-				sortValues(oldValue.get());
+				sortValues(oldValue);
 			}else{
 				try{
 					logger.info("get in tde");

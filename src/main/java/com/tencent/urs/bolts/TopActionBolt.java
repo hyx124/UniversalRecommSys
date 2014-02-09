@@ -164,14 +164,17 @@ public class TopActionBolt extends AbstractConfigUpdateBolt {
 		}
 
 		public void excute() {
-			try {
-				if(cacheMap.hasKey(key)){		
+			try{
+				UserActiveHistory oldValueHeap = null;
+			    SoftReference<UserActiveHistory> sr = cacheMap.get(key);
+			    if(sr != null){
+			    	oldValueHeap = sr.get();
+			    }
+			    
+				if( oldValueHeap != null){
 					logger.info(key+" get in cache");
-					SoftReference<UserActiveHistory> oldValueHeap = cacheMap.get(key);	
 					UserActiveHistory.Builder mergeValueBuilder = Recommend.UserActiveHistory.newBuilder();
-					
-					mergeToHeap(values,oldValueHeap.get(),mergeValueBuilder);
-					oldValueHeap.clear();
+					mergeToHeap(values,oldValueHeap,mergeValueBuilder);
 					Save(mergeValueBuilder);
 				}else{
 					logger.info(key+" get in tde");
@@ -181,11 +184,7 @@ public class TopActionBolt extends AbstractConfigUpdateBolt {
 					clientEntry.getClient().notifyFuture(future, this, clientEntry);	
 				}			
 				
-			} catch (TairQueueOverflow e) {
-				logger.error(e.toString());
-			} catch (TairRpcError e) {
-				logger.error(e.toString());
-			} catch (TairFlowLimit e) {
+			} catch (Exception e){
 				logger.error(e.toString());
 			}
 		}

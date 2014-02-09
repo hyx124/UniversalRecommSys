@@ -207,7 +207,12 @@ public class CtrStorBolt extends AbstractConfigUpdateBolt{
 	
 		public void excute() {
 			try {			
-				CtrInfo oldCtr = ctrCache.get(key).get();
+				CtrInfo oldCtr = null;
+				SoftReference<CtrInfo> sr = ctrCache.get(key);
+				if(sr != null){
+					oldCtr = sr.get();
+				}
+				
 				if(oldCtr != null){		
 					mergeHeap(oldCtr);
 				}else{

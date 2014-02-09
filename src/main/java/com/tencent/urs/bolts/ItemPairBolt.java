@@ -175,10 +175,14 @@ public class ItemPairBolt  extends AbstractConfigUpdateBolt{
 		
 		public void excute() {
 			try {
-				if(groupPairCache.hasKey(putKey)){		
-					SoftReference<Integer> oldValue = groupPairCache.get(putKey);	
-					Integer newCount = oldValue.get()+changeWeight;
-					Save(putKey,newCount);
+				Integer oldCount = null;
+				SoftReference<Integer> sr = groupPairCache.get(putKey);
+				if(sr != null){
+					oldCount = sr.get();
+				}
+				
+				if(oldCount != null){								
+					Save(putKey,oldCount+changeWeight);
 				}else{
 					ClientAttr clientEntry = mtClientList.get(0);		
 					TairOption opt = new TairOption(clientEntry.getTimeout());
@@ -257,9 +261,14 @@ public class ItemPairBolt  extends AbstractConfigUpdateBolt{
 		
 		public void excute() {
 			try {
-				if(userPairCache.hasKey(userPairKey)){		
-					SoftReference<Integer> oldCount = userPairCache.get(userPairKey);	
-					next(oldCount.get());
+				Integer oldCount = null;
+				SoftReference<Integer> sr = userPairCache.get(userPairKey);	
+				if(sr != null){
+					oldCount = sr.get();
+				}
+				
+				if(oldCount != null){			
+					next(oldCount);
 				}else{
 					ClientAttr clientEntry = mtClientList.get(0);		
 					TairOption opt = new TairOption(clientEntry.getTimeout());

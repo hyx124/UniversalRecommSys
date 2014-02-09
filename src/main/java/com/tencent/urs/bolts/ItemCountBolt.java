@@ -205,8 +205,13 @@ public class ItemCountBolt extends AbstractConfigUpdateBolt{
 		}
 		
 		public void excute() {
-			try {
-				Float oldValue = groupCountCache.get(putKey).get();
+			try {			
+				Float oldValue = null;
+				SoftReference<Float> sr = groupCountCache.get(putKey);
+				if(sr != null){
+					oldValue = sr.get();
+				}
+				
 				if(oldValue != null){		
 					Float newValue = oldValue+value;
 					logger.info("get step3 key="+putKey+",group old count="+oldValue+",new count="+this.value+",merge count="+newValue);
@@ -286,7 +291,12 @@ public class ItemCountBolt extends AbstractConfigUpdateBolt{
 		
 		public void excute() {
 			try {
-				Float oldCount = userCountCache.get(userCountKey).get();
+				Float oldCount = null;
+				SoftReference<Float> sr = userCountCache.get(userCountKey);
+				if(sr != null){
+					oldCount = sr.get();
+				}
+				
 				if(oldCount != null){		
 					next(oldCount);
 				}else{
@@ -449,6 +459,4 @@ public class ItemCountBolt extends AbstractConfigUpdateBolt{
 		}
 	}
 	
-	
-
 }

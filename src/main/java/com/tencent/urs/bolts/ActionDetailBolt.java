@@ -170,9 +170,9 @@ public class ActionDetailBolt extends AbstractConfigUpdateBolt{
 
 		public void excute() {
 			Recommend.UserActiveDetail oldValue = null;
-			try{
-				oldValue = cacheMap.get(key).get();	
-			}catch(Exception e){
+			SoftReference<UserActiveDetail> sr = cacheMap.get(key);
+			if(sr != null){
+				oldValue =  sr.get();
 			}
 						
 			if(oldValue != null){	

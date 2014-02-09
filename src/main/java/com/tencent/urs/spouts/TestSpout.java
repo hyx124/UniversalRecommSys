@@ -53,7 +53,7 @@ public class TestSpout extends TdbankSpout {
 		String itemId = String.valueOf(now%30+1);
 		String actType = String.valueOf(now%10);
 		//output=[1, UserAction, 20806747, 160821738, 4001, 1, 1389582548, 700919, , , , ]
-		String[] dealMsg ={"1","user_action","0","17139104","1","1",String.valueOf(now),itemId,"","","",""}; 
+		String[] dealMsg ={"1","user_action","0","17139104","1",actType,String.valueOf(now),itemId,"","","",""}; 
 		if(count %1000 == 0){
 			dealMsgByConfig("1","user_action",dealMsg);
 			count = 0;
