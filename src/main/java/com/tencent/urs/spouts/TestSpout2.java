@@ -1,4 +1,4 @@
-package com.tencent.urs.test;
+package com.tencent.urs.spouts;
 
 import java.text.SimpleDateFormat;
 import java.util.ArrayList;
@@ -12,6 +12,7 @@ import java.util.concurrent.LinkedBlockingQueue;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
+import com.google.common.collect.ImmutableList;
 import com.google.protobuf.InvalidProtocolBufferException;
 import com.taobao.metamorphosis.Message;
 import com.taobao.metamorphosis.client.MessageSessionFactory;
@@ -24,6 +25,8 @@ import com.taobao.metamorphosis.exception.MetaClientException;
 import com.taobao.metamorphosis.utils.ZkUtils.ZKConfig;
 
 import com.tencent.monitor.MonitorTools;
+import com.tencent.streaming.commons.spouts.tdbank.Output;
+import com.tencent.urs.protobuf.Recommend;
 import com.tencent.urs.utils.Constants;
 
 import backtype.storm.spout.SpoutOutputCollector;
@@ -41,12 +44,15 @@ import backtype.storm.utils.Time;
  */
 
 @SuppressWarnings("serial")
-public class TestSpout implements IRichSpout {
+public class TestSpout2 implements IRichSpout {
 	private static Logger logger = LoggerFactory
-			.getLogger(TestSpout.class);
+			.getLogger(TestSpout2.class);
 
 	protected SpoutOutputCollector collector;
 
+	public TestSpout2(String config, ImmutableList<Output> outputField) {
+	}
+	
 	/*
 	 * (non-Javadoc)
 	 * 
@@ -70,11 +76,20 @@ public class TestSpout implements IRichSpout {
 	 */
 	public void nextTuple() {
 		Long now = System.currentTimeMillis()/1000L;
-		String itemId = String.valueOf(now.intValue());
-		String actType = String.valueOf(now%10);
-		//output=[1, UserAction, 20806747, 160821738, 4001, 1, 1389582548, 700919, , , , ]
-		String[] dealMsg ={"1","user_action","0","17139104","1",actType,String.valueOf(now),itemId,"","","",""}; 
+		String itemId = String.valueOf(now.intValue()%30);
+		String actType = String.valueOf(now%10+1);
+		//<fields>bid,topic,qq,uid,adpos,action_type,action_time,item_id,action_result,imei,platform,lbs_info</fields>
+		String action_result = itemId+"0";
+		for(int i=0; i<10; i++){
+			action_result = action_result +";"+ itemId+i;
+		}
+		
+		String[] dealMsg ={"1","user_action","0","17139104","1",actType,String.valueOf(now),itemId,action_result,"","",""}; 
+		String[] dealMsg2 ={"1","user_action","0","17139104","1","1",String.valueOf(now),itemId,action_result,"","",""}; 
+		String[] dealMsg3 ={"1","user_action","0","17139104","1","2",String.valueOf(now),itemId,action_result,"","",""}; 
 		dealMsgByConfig("1","user_action",dealMsg);
+		dealMsgByConfig("1","user_action",dealMsg2);
+		dealMsgByConfig("1","user_action",dealMsg3);
 		try {
 			Time.sleep(1000L);
 		} catch (InterruptedException e) {

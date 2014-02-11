@@ -81,6 +81,22 @@ public class ItemCountBolt extends AbstractConfigUpdateBolt{
 		debug = config.getBoolean("debug",false);
 	}
 	
+	private void weightInit(){
+		actWeightMap.put(Recommend.ActiveType.Impress, 0.5F);
+		actWeightMap.put(Recommend.ActiveType.Click, 1F);
+		actWeightMap.put(Recommend.ActiveType.PageView, 1F);
+		actWeightMap.put(Recommend.ActiveType.Read, 1.5F);
+		actWeightMap.put(Recommend.ActiveType.Save, 2F);
+		actWeightMap.put(Recommend.ActiveType.BuyCart, 2F);
+		actWeightMap.put(Recommend.ActiveType.Deal, 2F);
+		actWeightMap.put(Recommend.ActiveType.Score, 3F);
+		actWeightMap.put(Recommend.ActiveType.Comments, 3F);
+		actWeightMap.put(Recommend.ActiveType.Reply, 3F);
+		actWeightMap.put(Recommend.ActiveType.Ups, 3F);
+		actWeightMap.put(Recommend.ActiveType.Praise, 4F);
+		actWeightMap.put(Recommend.ActiveType.Share, 4F);
+	}
+	
 	@Override
 	public void prepare(Map conf, TopologyContext context, OutputCollector collector){
 		super.prepare(conf, context, collector);
@@ -151,27 +167,29 @@ public class ItemCountBolt extends AbstractConfigUpdateBolt{
 		}).start();
 	}
 	
-	private void combinerKeys(UpdateKey key,GroupActionCombinerValue value) {
+	private void combinerKeys(UpdateKey key,GroupActionCombinerValue value) {		
 		synchronized(combinerMap){
 			if(combinerMap.containsKey(key)){
 				GroupActionCombinerValue oldValue = combinerMap.get(key);
 				oldValue.incrument(value);
-				combinerMap.put(key, oldValue);
+				combinerMap.put(key, oldValue);				
 			}else{
-				combinerMap.put(key, value);
+				combinerMap.put(key, value);			
 			}
-			
 		}
 	}	
 	
 	private Float getWeightByType(Recommend.ActiveType actionType){
 		
-		Long now = System.currentTimeMillis()/1000L;
-		if(lastUpdateTime > (now - 3600*24)  ){
+		/*Long now = System.currentTimeMillis()/1000L;
+		if(lastUpdateTime == 0){
+			weightInit();
+			lastUpdateTime = now;
+		}else if(lastUpdateTime < (now - 3600*24)  ){
 			actWeightMap.clear();
 			lastUpdateTime = now;
-		}
-		
+		}*/
+		weightInit();
 		if(actWeightMap.containsKey(actionType)){
 			return actWeightMap.get(actionType);
 		}else{
@@ -233,7 +251,7 @@ public class ItemCountBolt extends AbstractConfigUpdateBolt{
 				groupCountCache.set(key, new SoftReference<Float>(value), cacheExpireTime);
 			}
 			
-			logger.info("key="+key+",value="+value);
+			logger.info("step3 save pair count,key="+key+",value="+value);
 			Future<Result<Void>> future = null;
 			for(ClientAttr clientEntry:mtClientList ){
 				TairOption putopt = new TairOption(clientEntry.getTimeout(),(short)0, dataExpireTime);
@@ -334,7 +352,7 @@ public class ItemCountBolt extends AbstractConfigUpdateBolt{
 				userCountCache.set(userCountKey, new SoftReference<Float>(count), cacheExpireTime);
 			}
 			
-			logger.info("key="+userCountKey+",value="+count);
+			logger.info("step2,save usercount,key="+userCountKey+",value="+count);
 			for(ClientAttr clientEntry:mtClientList ){
 				TairOption putopt = new TairOption(clientEntry.getTimeout(),(short)0, dataExpireTime);
 				try {
@@ -396,7 +414,7 @@ public class ItemCountBolt extends AbstractConfigUpdateBolt{
 		public void excute() {
 			try {
 				if(debug){
-					logger.info("step1,get from cache");
+					logger.info("step1,get from tde");
 				}
 				ClientAttr clientEntry = mtClientList.get(0);		
 				TairOption opt = new TairOption(clientEntry.getTimeout());
@@ -412,7 +430,7 @@ public class ItemCountBolt extends AbstractConfigUpdateBolt{
 		}
 			
 		private Float getWeight(Recommend.UserActiveDetail oldValueHeap){						
-			Float newWeight = 0.0F;					
+			Float newWeight = getWeightByType(this.values.getType());					
 			for(TimeSegment ts:oldValueHeap.getTsegsList()){
 				if(ts.getTimeId() < getWinIdByTime(values.getTime() - dataExpireTime)){
 					continue;
@@ -424,11 +442,13 @@ public class ItemCountBolt extends AbstractConfigUpdateBolt{
 							if(act.getLastUpdateTime() > (values.getTime() - dataExpireTime)){
 								Float actWeight = getWeightByType(act.getActType());
 								newWeight =  Math.max(newWeight,actWeight);
+								logger.info("timeId="+ts.getTimeId()+",type="+act.getActType()+",weight="+newWeight);
 							}
 						}	
 					}					
 				}
 			}
+			logger.info("item="+key.getItemId()+",final weight="+newWeight);
 			return newWeight;
 		}
 		

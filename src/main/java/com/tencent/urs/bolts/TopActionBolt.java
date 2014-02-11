@@ -123,7 +123,7 @@ public class TopActionBolt extends AbstractConfigUpdateBolt {
 					while (true) {
 						Thread.sleep(second * 1000);
 						Set<String> keySet = combinerMap.keySet();
-						logger.info("deal with="+ keySet.size()+",left size="+combinerMap.size());
+						//logger.info("deal with="+ keySet.size()+",left size="+combinerMap.size());
 						for (String key : keySet) {
 							ActionCombinerValue expireValue  = combinerMap.remove(key);
 							try{
@@ -172,12 +172,12 @@ public class TopActionBolt extends AbstractConfigUpdateBolt {
 			    }
 			    
 				if( oldValueHeap != null){
-					logger.info(key+" get in cache");
+					logger.info(key+", get in cache");
 					UserActiveHistory.Builder mergeValueBuilder = Recommend.UserActiveHistory.newBuilder();
 					mergeToHeap(values,oldValueHeap,mergeValueBuilder);
 					Save(mergeValueBuilder);
 				}else{
-					logger.info(key+" get in tde");
+					logger.info(key+", get in tde");
 					ClientAttr clientEntry = mtClientList.get(0);		
 					TairOption opt = new TairOption(clientEntry.getTimeout());
 					Future<Result<byte[]>> future = clientEntry.getClient().getAsync((short)nsTableId,key.getBytes(),opt);
@@ -194,7 +194,12 @@ public class TopActionBolt extends AbstractConfigUpdateBolt {
 				UserActiveHistory.Builder updatedBuilder){	
 			HashSet<String> alreadyIn = new HashSet<String>();
 
-			logger.info("new item size="+newValList.getActRecodeMap().size()+",old item size="+oldVal.getActRecordsCount());
+			if(oldVal != null){
+				logger.info("new item size="+newValList.getActRecodeMap().size()+",old item size="+oldVal.getActRecordsCount());
+			}else{
+				logger.info("new item size="+newValList.getActRecodeMap().size()+",old item size=0");
+			}
+			
 			List<Map.Entry<String, UserActiveHistory.ActiveRecord>> sortList =
 				    new ArrayList<Map.Entry<String, UserActiveHistory.ActiveRecord>>(newValList.getActRecodeMap().entrySet());
 			

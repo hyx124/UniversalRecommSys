@@ -81,11 +81,13 @@ public class AddItemInfoBolt extends AbstractConfigUpdateBolt {
 	public class GetItemInfoCallBack implements MutiClientCallBack{
 		private String key;
 		private String itemId;
+		private String bid;
 		private double weight;
 		private String algName;
 		private String cacheKey;
 		
 		public GetItemInfoCallBack(String bid,String key,String itemId, double weight, String algName){
+			this.bid = bid;
 			this.key = key;
 			this.itemId = itemId;
 			this.weight = weight;
@@ -112,7 +114,7 @@ public class AddItemInfoBolt extends AbstractConfigUpdateBolt {
 		}
 
 		private void emitData(ItemDetailInfo itemInfo){
-			Values value = new Values(key,itemId,weight,algName);
+			Values value = new Values(bid,key,itemId,weight,algName);
 			if(itemInfo != null){
 				value.add(itemInfo.getBigType());
 				value.add(itemInfo.getMiddleType());
@@ -128,7 +130,7 @@ public class AddItemInfoBolt extends AbstractConfigUpdateBolt {
 				value.add(ChargeType.NormalFee);
 				value.add(0L);		
 			}
-			
+			//bid,key,item_id,weight,alg_name,big_type,mid_type,small_type,free,price
 			collector.emit("computer_result",value);			
 		}
 		
@@ -143,7 +145,6 @@ public class AddItemInfoBolt extends AbstractConfigUpdateBolt {
 				emitData(itemInfo);
 			}else{
 				try{
-					logger.info("start item-info by async-get, uid="+itemInfo);
 					ClientAttr clientEntry = mtClientList.get(0);		
 					TairOption opt = new TairOption(clientEntry.getTimeout());
 					Future<Result<byte[]>> future = clientEntry.getClient().getAsync((short)nsTableId,cacheKey.getBytes(),opt);

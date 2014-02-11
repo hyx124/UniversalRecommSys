@@ -99,9 +99,12 @@ public class CtrBolt extends AbstractConfigUpdateBolt{
 			return getKey.toString();
 		}
 
-		public Object getResultItem() {
-			// TODO Auto-generated method stub
-			return null;
+		public String getBid() {
+			return bid;
+		}
+		
+		public String getResultItem() {
+			return resultItem;
 		}
 
 
@@ -116,10 +119,11 @@ public class CtrBolt extends AbstractConfigUpdateBolt{
 						Thread.sleep(second * 1000);
 						Set<CtrCombinerKey> keySet = combinerMap.keySet();
 						for (CtrCombinerKey key : keySet) {
-							  Long value = combinerMap.remove(key);
+							Long value = combinerMap.remove(key);
 							try{
 								new CtrUpdateCallBack(key,value).excute();
 							}catch(Exception e){
+								logger.error(e.toString());
 								//mt.addCountEntry(systemID, interfaceID, item, count)
 							}
 						}
@@ -149,13 +153,13 @@ public class CtrBolt extends AbstractConfigUpdateBolt{
 		
 		this.putCallBack = new UpdateCallBack(mt, Constants.systemID, Constants.tde_interfaceID, this.getClass().getName());
 		
-		int expireTime = Utils.getInt(conf, "expireTime",5*3600);
-		setCombinerTime(expireTime);
+		int combinerExpireTime = Utils.getInt(conf, "combiner.expireTime",5);
+		setCombinerTime(combinerExpireTime);
 	}
 	
 	@Override
 	public void updateConfig(XMLConfiguration config) {
-		nsTableId = config.getInt("storage_table",306);
+		nsTableId = config.getInt("storage_table",307);
 		dataExpireTime = config.getInt("data_expiretime",1*24*3600);
 		cacheExpireTime = config.getInt("cache_expiretime",3600);
 	}
@@ -179,8 +183,7 @@ public class CtrBolt extends AbstractConfigUpdateBolt{
 		if(actType == ActiveType.Click || actType == ActiveType.Impress){
 			String pageId = tuple.getStringByField("item_id");
 			String actionResult = tuple.getStringByField("action_result");
-			String[] items = actionResult.split(",",-1);
-			
+			String[] items = actionResult.split(";",-1);
 			if(Utils.isItemIdValid(pageId)){
 				for(String resultItem: items){
 					if(Utils.isItemIdValid(resultItem)){
@@ -196,7 +199,6 @@ public class CtrBolt extends AbstractConfigUpdateBolt{
 	private class CtrUpdateCallBack implements MutiClientCallBack{
 		private final CtrCombinerKey key;
 		private final Long value;
-		private String checkKey;
 
 		public CtrUpdateCallBack(CtrCombinerKey key, Long value) {
 			this.key = key ; 
@@ -204,7 +206,7 @@ public class CtrBolt extends AbstractConfigUpdateBolt{
 		}
 	
 		public void excute() {
-			try {			
+			try {		
 				String getKey = key.getCtrCheckKey();
 				ClientAttr clientEntry = mtClientList.get(0);		
 				TairOption opt = new TairOption(clientEntry.getTimeout());
@@ -229,16 +231,24 @@ public class CtrBolt extends AbstractConfigUpdateBolt{
 		public void handle(Future<?> future, Object context) {			
 			@SuppressWarnings("unchecked")
 			Future<Result<byte[]>> afuture = (Future<Result<byte[]>>) future;
-			byte[] oldVal = null;
+			double weight = 0;		
 			try {
-				oldVal = afuture.get().getResult();
-				CtrInfo oldCtr = Recommend.CtrInfo.parseFrom(oldVal);
-				double weight = computerWeight(oldCtr);
-				collector.emit("computer_result",new Values(key.getAlgKey(),key.getResultItem(),weight,"CTR"));
+				Result<byte[]> res = afuture.get();
+				if(res.isSuccess() && res.getResult() != null){
+					logger.info("get success");
+					CtrInfo oldCtr = Recommend.CtrInfo.parseFrom(res.getResult());	
+					logger.info("parse success");
+					weight = computerWeight(oldCtr);
+					logger.info("emit weight="+weight);
+					
+					//bid,key,item_id,weight,alg_name
+					collector.emit("computer_result",new Values(key.getBid(),key.getAlgKey(),key.getResultItem(),weight,"CTR"));
+				}else{
+					logger.info("get failed£¬not found this key");
+				}
 			} catch (Exception e) {
-				
+				logger.error(e.toString());
 			}
-			
 		}
 
 		private double computerWeight(CtrInfo oldCtr) {	
@@ -248,7 +258,7 @@ public class CtrBolt extends AbstractConfigUpdateBolt{
 				if(ts.getTimeId() <= getWinIdByTime(value)
 						&& ts.getTimeId() >= getWinIdByTime(value - dataExpireTime)){
 					click_sum = click_sum + ts.getClick();
-					impress_sum= impress_sum + ts.getImpress();
+					impress_sum = impress_sum + ts.getImpress();
 				}else{
 					continue;
 				}

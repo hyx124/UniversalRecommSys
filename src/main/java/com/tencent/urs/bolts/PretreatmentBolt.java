@@ -138,13 +138,13 @@ public class PretreatmentBolt extends AbstractConfigUpdateBolt {
 				Result<byte[]> res = afuture.get();
 				if(res.isSuccess() && res.getResult() != null){
 					this.qq =  new String(res.getResult());
-					logger.info("get qq success, uin="+qq);
+					//logger.info("get qq success, uin="+qq);
 					outputValues.add(qq);
 					qqCache.set(uid, new SoftReference<String>(qq),cacheExpireTime);
 					
 					new GetGroupIdUpdateCallBack(qq,outputStream,outputValues).excute();
 				}else{
-					logger.error("get qq from tde failed!");
+					//logger.error("get qq from tde failed!");
 				}
 			} catch (Exception e) {
 				logger.error(e.toString());

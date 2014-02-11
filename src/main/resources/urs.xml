@@ -219,7 +219,7 @@
 			</grouping>
 		
 			<debug>true</debug>
-			<dependent_table>306</dependent_table>
+			<storage_table>307</storage_table>
 			<data_expiretime>259200</data_expiretime>
 			<cache_expiretime>3600</cache_expiretime>
 			

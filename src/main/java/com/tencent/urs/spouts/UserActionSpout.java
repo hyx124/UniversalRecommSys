@@ -55,7 +55,7 @@ public class UserActionSpout extends TdbankSpout {
 
 		int bodyIndex = searchIndex(message, SPEARATOR);
 		if (bodyIndex == -1 || bodyIndex == length - 1) {
-			logger.error("check data failed,not found attr,message ="+ message.toString());
+			logger.error("check data failed,not found attr");
 			return;
 		}
 

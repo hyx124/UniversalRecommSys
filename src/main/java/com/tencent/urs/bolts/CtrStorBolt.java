@@ -47,7 +47,6 @@ import backtype.storm.tuple.Tuple;
 public class CtrStorBolt extends AbstractConfigUpdateBolt{
 
 	private List<ClientAttr> mtClientList;	
-	private ClientAttr mainClient;
 	private MonitorTools mt;
 	private UpdateCallBack putCallBack;
 	private ConcurrentHashMap<String, CtrCombinerValue> combinerMap;
@@ -56,8 +55,7 @@ public class CtrStorBolt extends AbstractConfigUpdateBolt{
 	private int nsTableId;
 	private int dataExpireTime;
 	private int cacheExpireTime;
-	
-	
+		
 	class CtrCombinerValue{
 		private Long click;
 		private Long impress;
@@ -102,7 +100,7 @@ public class CtrStorBolt extends AbstractConfigUpdateBolt{
 
 	@Override
 	public void updateConfig(XMLConfiguration config) {
-		nsTableId = config.getInt("storage_table",306);
+		nsTableId = config.getInt("storage_table",307);
 		dataExpireTime = config.getInt("data_expiretime",1*24*3600);
 		cacheExpireTime = config.getInt("cache_expiretime",3600);
 		//topNum = config.getInt("topNum",30);
@@ -123,7 +121,6 @@ public class CtrStorBolt extends AbstractConfigUpdateBolt{
 		setCombinerTime(combinerExpireTime);
 	}	
 
-
 	@Override
 	public void processEvent(String sid, Tuple tuple) {
 		String bid = tuple.getStringByField("bid");
@@ -143,20 +140,20 @@ public class CtrStorBolt extends AbstractConfigUpdateBolt{
 		if(actType == ActiveType.Click || actType == ActiveType.Impress){
 			String pageId = tuple.getStringByField("item_id");
 			String actionResult = tuple.getStringByField("action_result");
-			String[] items = actionResult.split(",",-1);
+			String[] items = actionResult.split(";",-1);
 			
 			if(Utils.isItemIdValid(pageId)){
 				for(String eachItem: items){
-					if(Utils.isItemIdValid(eachItem)){
-						String key =  bid+"#"+adpos+"#"+pageId+"#"+eachItem;
+					if(Utils.isItemIdValid(eachItem)){						
+						StringBuffer getKey = new StringBuffer(bid);		
+						getKey.append("#").append(adpos).append("#").append(pageId).append("#").append(eachItem);	
 						
 						CtrCombinerValue vlaue = new CtrCombinerValue(actType,1L, Long.valueOf(actionTime));
-						combinerKeys(key,vlaue);
+						combinerKeys(getKey.toString(),vlaue);
 					}
 				}
 			}
 		}
-
 	}
 
 	private void setCombinerTime(final int second) {
@@ -194,6 +191,7 @@ public class CtrStorBolt extends AbstractConfigUpdateBolt{
 			}
 			
 		}
+		//logger.info("map size="+combinerMap.size());
 	}	
 
 	private class CtrUpdateCallBack implements MutiClientCallBack{
@@ -213,7 +211,7 @@ public class CtrStorBolt extends AbstractConfigUpdateBolt{
 					oldCtr = sr.get();
 				}
 				
-				if(oldCtr != null){		
+				if(oldCtr != null){	
 					mergeHeap(oldCtr);
 				}else{
 					ClientAttr clientEntry = mtClientList.get(0);		
@@ -230,8 +228,7 @@ public class CtrStorBolt extends AbstractConfigUpdateBolt{
 				//log.error(e.toString());
 			}
 		}
-			
-		
+					
 		private Long getWinIdByTime(Long time){	
 			String expireId = new SimpleDateFormat("yyyyMMdd").format(time*1000L);
 			return Long.valueOf(expireId);
@@ -241,15 +238,16 @@ public class CtrStorBolt extends AbstractConfigUpdateBolt{
 		public void handle(Future<?> future, Object context) {			
 			@SuppressWarnings("unchecked")
 			Future<Result<byte[]>> afuture = (Future<Result<byte[]>>) future;
-			byte[] oldVal = null;
+			CtrInfo oldCtr = Recommend.CtrInfo.newBuilder().build();
 			try {
-				oldVal = afuture.get().getResult();
-				CtrInfo oldCtr = Recommend.CtrInfo.parseFrom(oldVal);
-				mergeHeap(oldCtr);
+				Result<byte[]> res = afuture.get();
+				if(res.isSuccess() && res.getResult() !=null){
+					oldCtr = Recommend.CtrInfo.parseFrom(res.getResult());		
+				}
 			} catch (Exception e) {
 				
-			}
-			
+			}	
+			mergeHeap(oldCtr);
 		}
 
 		private void mergeHeap(CtrInfo oldCtr) {
@@ -284,13 +282,18 @@ public class CtrStorBolt extends AbstractConfigUpdateBolt{
 				ctrCache.set(key, new SoftReference<Recommend.CtrInfo>(value), cacheExpireTime);
 			}
 			
+			for(com.tencent.urs.protobuf.Recommend.CtrInfo.TimeSegment ts: value.getTsegsList()){
+				logger.info("result,key="+key+",time="+ts.getTimeId()+",click="+ts.getClick()+",impress="+ts.getImpress()+",tableId="+nsTableId);
+			}
+				
+			
 			Future<Result<Void>> future = null;
 			for(ClientAttr clientEntry:mtClientList ){
 				TairOption putopt = new TairOption(clientEntry.getTimeout(),(short)0, dataExpireTime);
 				try {
 					future = clientEntry.getClient().putAsync((short)nsTableId, key.getBytes(),value.toByteArray(), putopt);
 					clientEntry.getClient().notifyFuture(future, putCallBack, 
-							new UpdateCallBackContext(clientEntry,key,String.valueOf(value).getBytes(),putopt));
+							new UpdateCallBackContext(clientEntry,key,value.toByteArray(),putopt));
 					
 					/*
 					if(mt!=null){

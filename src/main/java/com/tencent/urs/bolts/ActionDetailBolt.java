@@ -59,7 +59,6 @@ public class ActionDetailBolt extends AbstractConfigUpdateBolt{
 	private int topNum;
 	private boolean debug;
 	
-	
 	private static Logger logger = LoggerFactory
 			.getLogger(ActionDetailBolt.class);
 	
@@ -72,7 +71,7 @@ public class ActionDetailBolt extends AbstractConfigUpdateBolt{
 		nsTableId = config.getInt("storage_table",302);
 		dataExpireTime = config.getInt("data_expiretime",1*24*3600);
 		cacheExpireTime = config.getInt("cache_expiretime",3600);
-		topNum = config.getInt("topNum",30);
+		topNum = config.getInt("topNum",100);
 		debug = config.getBoolean("debug",false);
 	}
 	
@@ -155,7 +154,6 @@ public class ActionDetailBolt extends AbstractConfigUpdateBolt{
 			}else{
 				combinerMap.put(key, value);
 			}
-			
 		}
 	}	
 	
@@ -230,8 +228,8 @@ public class ActionDetailBolt extends AbstractConfigUpdateBolt{
 					
 					for(UserActiveDetail.TimeSegment.ItemInfo.ActType act: item.getActsList()){
 						Long count = act.getCount();
-						if(actMap.containsKey(act)){
-							count = count + actMap.get(act).getCount() ;
+						if(actMap.containsKey(act.getActType())){
+							count = count + actMap.get(act.getActType()).getCount() ;
 						}	
 						ActType newActInfo = ActType.newBuilder()
 								.setActType(act.getActType())

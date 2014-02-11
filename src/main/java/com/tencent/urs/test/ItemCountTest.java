@@ -2,6 +2,8 @@ package com.tencent.urs.test;
 
 import java.text.SimpleDateFormat;
 
+
+
 import com.tencent.urs.combine.GroupActionCombinerValue;
 import com.tencent.urs.combine.UpdateKey;
 import com.tencent.urs.protobuf.Recommend.ActiveType;
@@ -80,5 +82,6 @@ public class ItemCountTest{
 			ItemCountTest test = new ItemCountTest();
 			UserActiveDetail ud = test.genDetailData();
 			System.out.println(test.getWeight(ud));
+
 		}
 	}
