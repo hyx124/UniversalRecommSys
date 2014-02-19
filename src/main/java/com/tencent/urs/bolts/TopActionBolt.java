@@ -104,6 +104,11 @@ public class TopActionBolt extends AbstractConfigUpdateBolt {
 		String platform = tuple.getStringByField("platform");
 		ActiveType actType = Utils.getActionTypeByString(actionType);
 		
+		if(actType == Recommend.ActiveType.Impress 
+				|| actType ==  Recommend.ActiveType.Click){
+			return;
+		}
+		
 		Recommend.UserActiveHistory.ActiveRecord.Builder actBuilder =
 				Recommend.UserActiveHistory.ActiveRecord.newBuilder();
 		actBuilder.setItem(itemId).setActTime(Long.valueOf(actionTime)).setActType(actType)
@@ -136,7 +141,7 @@ public class TopActionBolt extends AbstractConfigUpdateBolt {
 						
 					}
 				} catch (Exception e) {
-					logger.error("Schedule thread error:" + e, e);
+					logger.error(e.getMessage(), e);
 				}
 			}
 		}).start();
@@ -172,12 +177,10 @@ public class TopActionBolt extends AbstractConfigUpdateBolt {
 			    }
 			    
 				if( oldValueHeap != null){
-					logger.info(key+", get in cache");
 					UserActiveHistory.Builder mergeValueBuilder = Recommend.UserActiveHistory.newBuilder();
 					mergeToHeap(values,oldValueHeap,mergeValueBuilder);
 					Save(mergeValueBuilder);
 				}else{
-					logger.info(key+", get in tde");
 					ClientAttr clientEntry = mtClientList.get(0);		
 					TairOption opt = new TairOption(clientEntry.getTimeout());
 					Future<Result<byte[]>> future = clientEntry.getClient().getAsync((short)nsTableId,key.getBytes(),opt);
@@ -266,7 +269,7 @@ public class TopActionBolt extends AbstractConfigUpdateBolt {
 						mt.addCountEntry(Constants.systemID, Constants.tde_put_interfaceID, mEntryPut, 1);
 					}*/
 				} catch (Exception e){
-					logger.error(e.toString());
+					logger.error(e.getMessage(), e);
 				}
 			}
 		}
@@ -278,10 +281,13 @@ public class TopActionBolt extends AbstractConfigUpdateBolt {
 			UserActiveHistory.Builder mergeValueBuilder = Recommend.UserActiveHistory.newBuilder();
 			UserActiveHistory oldValueHeap = null;
 			try {
-				byte[] oldVal = afuture.get().getResult();
-				oldValueHeap =	Recommend.UserActiveHistory.parseFrom(oldVal);				
+				Result<byte[]> res = afuture.get();
+				if(res.isSuccess() && res.getResult() != null)
+				{
+					oldValueHeap =	Recommend.UserActiveHistory.parseFrom(res.getResult());						
+				}							
 			} catch (Exception e) {
-				//logger.info(key+" not found in tde");
+				logger.error(e.getMessage(), e);
 			}
 			
 			mergeToHeap(this.values,oldValueHeap,mergeValueBuilder);

@@ -107,9 +107,8 @@ public class AddItemInfoBolt extends AbstractConfigUpdateBolt {
 					itemCache.set(cacheKey, new SoftReference<ItemDetailInfo>(itemInfo),cacheExpireTime);
 				}
 			} catch (Exception e) {
+				logger.error(e.getMessage(), e);
 			}
-			
-			
 			emitData(itemInfo);
 		}
 
@@ -131,7 +130,9 @@ public class AddItemInfoBolt extends AbstractConfigUpdateBolt {
 				value.add(0L);		
 			}
 			//bid,key,item_id,weight,alg_name,big_type,mid_type,small_type,free,price
-			collector.emit("computer_result",value);			
+			synchronized(collector){
+				collector.emit("computer_result",value);	
+			}		
 		}
 		
 		public void excute() {
@@ -150,7 +151,7 @@ public class AddItemInfoBolt extends AbstractConfigUpdateBolt {
 					Future<Result<byte[]>> future = clientEntry.getClient().getAsync((short)nsTableId,cacheKey.getBytes(),opt);
 					clientEntry.getClient().notifyFuture(future, this,clientEntry);	
 				}catch(Exception e){
-					logger.error(e.toString());
+					logger.error(e.getMessage(), e);
 				}
 			}
 

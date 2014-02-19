@@ -84,41 +84,28 @@ public class ARCFBolt extends AbstractConfigUpdateBolt{
 
 	@Override
 	public void processEvent(String sid, Tuple tuple) {
-		String bid = tuple.getStringByField("bid");
-		String qq = tuple.getStringByField("qq");
-		String groupId = tuple.getStringByField("group_id");
-		String itemId = tuple.getStringByField("item_id");
-		String adpos = tuple.getStringByField("adpos");
-		
-		//String actionType = tuple.getStringByField("action_type");
-		String actionTime = tuple.getStringByField("action_time");
-		
-		//ActiveType actType = Utils.getActionTypeByString(actionType);
-		
-		if(!Utils.isBidValid(bid) || !Utils.isQNumValid(qq) || !Utils.isGroupIdVaild(groupId) || !Utils.isItemIdValid(itemId)){
-			return;
+		try{
+			String bid = tuple.getStringByField("bid");
+			String qq = tuple.getStringByField("qq");
+			String groupId = tuple.getStringByField("group_id");
+			String itemId = tuple.getStringByField("item_id");
+			String adpos = tuple.getStringByField("adpos");
+			
+			String actionType = tuple.getStringByField("action_type");
+			String actionTime = tuple.getStringByField("action_time");
+			
+			ActiveType actType = Utils.getActionTypeByString(actionType);
+			
+			if(!Utils.isBidValid(bid) || !Utils.isQNumValid(qq) || !Utils.isGroupIdVaild(groupId) || !Utils.isItemIdValid(itemId)){
+				return;
+			}
+			
+			GroupActionCombinerValue value = new GroupActionCombinerValue(actType,Long.valueOf(actionTime));
+			UpdateKey key = new UpdateKey(bid,Long.valueOf(qq),Integer.valueOf(groupId),adpos,itemId);
+			combinerKeys(key,value);	
+		}catch(Exception e){
+			logger.error(e.getMessage(), e);
 		}
-		
-		//GroupActionCombinerValue value = new GroupActionCombinerValue(actType,Long.valueOf(actionTime));
-		UpdateKey key = new UpdateKey(bid,Long.valueOf(qq),Integer.valueOf(groupId),adpos,itemId);
-		//combinerKeys(key,value);	
-		
-		Double weight = (double) (1000-Long.valueOf(actionTime)%100);
-		doEmit("C1001",bid,itemId,groupId,actionTime,weight);
-		
-		doEmit("A1001",bid,itemId,"0",actionTime,weight);
-		doEmit("B1001",bid,itemId,"0",actionTime,weight);
-		
-	}
-	
-	private void  doEmit(String bid,String algName, String itemId, String groupId,String actionTime,double weight){
-		String testKey_c = "1#"+itemId+"#1#"+algName+"#"+groupId;
-		
-		Long now = System.currentTimeMillis()/1000L;
-		String otheritemId = String.valueOf(now%30+1);
-		Values values_c = new Values(bid,testKey_c,otheritemId,weight,algName);
-		this.collector.emit("computer_result",values_c);
-
 	}
 
 	private void setCombinerTime(final int second) {
@@ -134,11 +121,12 @@ public class ARCFBolt extends AbstractConfigUpdateBolt{
 							try{
 								new GetPairsListCallBack(key,value).excute();
 							}catch(Exception e){
+								logger.error(e.getMessage(), e);
 							}
 						}
 					}
 				} catch (Exception e) {
-					logger.error("Schedule thread error:" + e, e);
+					logger.error(e.getMessage(), e);
 				}
 			}
 		}).start();
@@ -150,12 +138,12 @@ public class ARCFBolt extends AbstractConfigUpdateBolt{
 	
 	private class GetPairsCountCallBack implements MutiClientCallBack{
 		private final UpdateKey key;
-		private final Integer itemCount1;
-		private final Integer itemCount2;
+		private Float itemCount1;
+		private Float itemCount2;
 		private final String otherItem;
 		private String getKey;
 		
-		public GetPairsCountCallBack(UpdateKey key,String otherItem,Integer itemCount1,Integer itemCount2) {
+		public GetPairsCountCallBack(UpdateKey key,String otherItem,Float itemCount1,Float itemCount2) {
 			this.key = key ; 
 			this.otherItem = otherItem;
 			this.itemCount1 = itemCount1;
@@ -169,23 +157,19 @@ public class ARCFBolt extends AbstractConfigUpdateBolt{
 				TairOption opt = new TairOption(clientEntry.getTimeout());
 				Future<Result<byte[]>> future = clientEntry.getClient().getAsync((short)nsGroupPairTableId,getKey.toString().getBytes(),opt);
 				clientEntry.getClient().notifyFuture(future, this,clientEntry);			
-			} catch (TairQueueOverflow e) {
-				logger.error(e.toString());
-			} catch (TairRpcError e) {
-				logger.error(e.toString());
-			} catch (TairFlowLimit e) {
-				logger.error(e.toString());
+			} catch (Exception e){
+				logger.error(e.getMessage(), e);
 			}
 		}
 
-		public Double computeARWeight(Integer itemCount1, Integer itemCount2,
-				Integer pairCount) {	
+		public Double computeARWeight(Float itemCount1, Float itemCount2,
+				Float pairCount) {	
 			Double simAR = (double) (pairCount/itemCount1);
 			return simAR;
 		}
 		
-		public Double computeCFWeight(Integer itemCount1, Integer itemCount2,
-				Integer pairCount) {	
+		public Double computeCFWeight(Float itemCount1, Float itemCount2,
+				Float pairCount) {	
 			//CF
 			Double simCF = (double) (pairCount/(Math.sqrt(itemCount1) * Math.sqrt(itemCount2)));
 			return simCF;
@@ -195,43 +179,43 @@ public class ARCFBolt extends AbstractConfigUpdateBolt{
 		public void handle(Future<?> future, Object context) {			
 			@SuppressWarnings("unchecked")
 			Future<Result<byte[]>> afuture = (Future<Result<byte[]>>) future;
-			Integer pairCount = 0;
+			Float pairCount = 0F;
+			logger.info("enter step3");
 			try {
 				Result<byte[]> result = afuture.get();	
 				if(result.isSuccess() && result.getResult()!=null){
-					pairCount = Integer.valueOf(new String(result.getResult()));
+					pairCount = Float.parseFloat(new String(result.getResult()));
 				}
-			} catch (Exception e) {
-				
+			} catch (Exception e){
+				logger.error(e.getMessage(), e);
 			}
 			
-			Double arWeight = computeARWeight(itemCount1,itemCount2,pairCount);
-			Double cfWeight = computeCFWeight(itemCount1,itemCount2,pairCount);
-			doEmit(key.getBid(),key.getItemId(),key.getAdpos(),otherItem,Constants.alg_cf,String.valueOf(key.getGroupId()),cfWeight);
-			doEmit(key.getBid(),key.getItemId(),key.getAdpos(),otherItem,Constants.alg_ar,String.valueOf(key.getGroupId()),arWeight);	
+			//logger.info("item1="+key.getItemId()+",item2="+otherItem+"itemcount1="+itemCount1+",itemcount2="+itemCount2+",paircount="+pairCount);
+			
+			Double cf12Weight = computeCFWeight(itemCount1,itemCount2,pairCount);
+			Double cf21Weight = computeCFWeight(itemCount2,itemCount1,pairCount);
+			Double ar12Weight = computeARWeight(itemCount1,itemCount2,pairCount);
+			Double ar21Weight = computeARWeight(itemCount2,itemCount1,pairCount);
+			
+			doEmit(key.getBid(),key.getItemId(),key.getAdpos(),otherItem,Constants.cf_alg_name,String.valueOf(key.getGroupId()),cf12Weight);
+			doEmit(key.getBid(),otherItem,key.getAdpos(),key.getItemId(),Constants.cf_alg_name,String.valueOf(key.getGroupId()),cf21Weight);
+			doEmit(key.getBid(),key.getItemId(),key.getAdpos(),otherItem,Constants.cf_alg_name,String.valueOf(key.getGroupId()),ar12Weight);
+			doEmit(key.getBid(),otherItem,key.getAdpos(),key.getItemId(),Constants.ar_alg_name,String.valueOf(key.getGroupId()),ar21Weight);	
 		}
 		
 		private void doEmit(String bid,String itemId,String adpos,String otherItem,  String algName, String groupId, double weight){
 			String resultKey = Utils.getAlgKey(bid,itemId, adpos, algName, groupId);		
-			Values values = new Values(resultKey,adpos,otherItem,weight,algName);
-			
-			
-			String resultKey2 = Utils.getAlgKey(bid,otherItem, adpos, algName, groupId);		
-			Values values2 = new Values(resultKey2,adpos,itemId,weight,algName);
-			
-			collector.emit("computer_result",values);
-			collector.emit("computer_result",values2);
+			Values values = new Values(bid,resultKey,otherItem,weight,algName);
+			synchronized(collector){
+				collector.emit("computer_result",values);	
+			}
 			
 			if(!groupId.equals("0")){
-				
-				String resultKey3 = Utils.getAlgKey(bid,itemId, adpos, algName, "0");		
-				Values values3 = new Values(resultKey3,adpos,otherItem,weight,algName);
-				
-				
-				String resultKey4 = Utils.getAlgKey(bid,otherItem, adpos, algName, "0");		
-				Values values4 = new Values(resultKey4,adpos,itemId,weight,algName);
-				collector.emit("computer_result",values3);
-				collector.emit("computer_result",values4);
+				String resultKey2 = Utils.getAlgKey(bid,itemId, adpos, algName, "0");		
+				Values values2 = new Values(resultKey2,adpos,otherItem,weight,algName);
+				synchronized(collector){
+					collector.emit("computer_result",values2);	
+				}
 			}
 			
 		}
@@ -240,10 +224,10 @@ public class ARCFBolt extends AbstractConfigUpdateBolt{
 	private class GetItemCountCallBack implements MutiClientCallBack{
 		private final UpdateKey key;
 		private String otherItem;
-		private Integer itemCount;
+		private Float itemCount;
 		private Integer step;
 
-		public GetItemCountCallBack(UpdateKey key,String otherItem,Integer itemCount,Integer step) {
+		public GetItemCountCallBack(UpdateKey key,String otherItem,Float itemCount,Integer step) {
 			this.key = key ; 
 			this.otherItem = otherItem;
 			this.itemCount = itemCount;
@@ -260,18 +244,13 @@ public class ARCFBolt extends AbstractConfigUpdateBolt{
 				}else{
 					return;
 				}
-								
-				
+		
 				ClientAttr clientEntry = mtClientList.get(0);		
 				TairOption opt = new TairOption(clientEntry.getTimeout());
 				Future<Result<byte[]>> future = clientEntry.getClient().getAsync((short)nsGroupCountTableId,getKey.getBytes(),opt);
 				clientEntry.getClient().notifyFuture(future, this,clientEntry);		
-			} catch (TairQueueOverflow e) {
-				//log.error(e.toString());
-			} catch (TairRpcError e) {
-				//log.error(e.toString());
-			} catch (TairFlowLimit e) {
-				//log.error(e.toString());
+			} catch (Exception e){
+				logger.error(e.getMessage(), e);
 			}
 		}
 
@@ -279,19 +258,22 @@ public class ARCFBolt extends AbstractConfigUpdateBolt{
 		public void handle(Future<?> future, Object context) {			
 			@SuppressWarnings("unchecked")
 			Future<Result<byte[]>> afuture = (Future<Result<byte[]>>) future;
-			String count = "0";
+			Float count = 0F;
 			try {
-				if(afuture.get().isSuccess() && afuture.get().getResult()!=null){
-					count = new String(afuture.get().getResult());
+				Result<byte[]> res = afuture.get();
+				if(res.isSuccess() && res.getResult()!=null){
+					count = Float.parseFloat(new String(res.getResult()));
 				}
 			} catch (Exception e) {
-				
+				logger.error(e.getMessage(), e);
 			}
 			
 			if(step == 1){
-				new GetItemCountCallBack(key,otherItem,Integer.valueOf(count),2).excute();
+				new GetItemCountCallBack(key,otherItem,count,2).excute();
+				//logger.info("step2,item1="+key.getItemId()+", count="+count);
 			}else if(step == 2){
-				new GetPairsCountCallBack(key,otherItem,itemCount,Integer.valueOf(count)).excute();
+				new GetPairsCountCallBack(key,otherItem,itemCount,count).excute();
+				//logger.info("step2,itesm2"+otherItem+", count="+count);
 			}
 			
 			
@@ -316,12 +298,8 @@ public class ARCFBolt extends AbstractConfigUpdateBolt{
 				Future<Result<byte[]>> future = clientEntry.getClient().getAsync((short)nsDetailTableId,checkKey.getBytes(),opt);
 				clientEntry.getClient().notifyFuture(future, this,clientEntry);	
 
-			} catch (TairQueueOverflow e) {
-				//log.error(e.toString());
-			} catch (TairRpcError e) {
-				//log.error(e.toString());
-			} catch (TairFlowLimit e) {
-				//log.error(e.toString());
+			} catch (Exception e) {
+				logger.error(e.getMessage(), e);
 			}
 		}
 		
@@ -355,11 +333,12 @@ public class ARCFBolt extends AbstractConfigUpdateBolt{
 					UserActiveDetail oldValueHeap = Recommend.UserActiveDetail.parseFrom(result.getResult());
 					HashSet<String> itemSet = getPairItems(oldValueHeap,key.getItemId());
 					for(String otherItem:itemSet){
-						new GetItemCountCallBack(key,otherItem, 0,1).excute();
+						new GetItemCountCallBack(key,otherItem, 0F,1).excute();
+						//logger.info("step1,emit to step2 "+key.getItemId()+" with item ="+otherItem);
 					}					
 				}
 			} catch (Exception e) {
-				
+				logger.error(e.getMessage(), e);
 			}
 			
 		}

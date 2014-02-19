@@ -1,7 +1,5 @@
 package com.tencent.urs.spouts;
 
-import java.util.Arrays;
-import java.util.HashMap;
 import java.util.Map;
 
 import com.tencent.streaming.commons.spouts.tdbank.Output;

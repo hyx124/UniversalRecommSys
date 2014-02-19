@@ -65,11 +65,10 @@ public class BaseInfoBolt extends AbstractConfigUpdateBolt{
 					Future<Result<Void>> future = clientEntry.getClient().putAsync(tablId, 
 										key.getBytes(), values, putopt);
 					
-					//logger.info("save in tde ,table ="+tablId+",key="+key);
 					clientEntry.getClient().notifyFuture(future, putCallBack, 
 							new UpdateCallBackContext(clientEntry,key,values,putopt));
 				} catch (Exception e){
-					logger.error(e.toString());
+					logger.error(e.getMessage(), e);
 				}	
 			}
 		}

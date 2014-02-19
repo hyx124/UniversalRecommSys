@@ -64,21 +64,26 @@ public class ResultStorageBolt extends AbstractConfigUpdateBolt {
 
 	@Override
 	public void processEvent(String sid, Tuple tuple) {		
+		//bid,key,item_id,weight,alg_name,big_type,mid_type,small_type,free,price
 		String algName = tuple.getStringByField("alg_name");
 		String key = tuple.getStringByField("key");
 		String itemId = tuple.getStringByField("item_id");
 		Double weight = tuple.getDoubleByField("weight");
 	
-		Integer bigType = (Integer) tuple.getValueByField("big_type");
-		Integer midType = (Integer) tuple.getValueByField("mid_type");
-		Integer smallType = (Integer) tuple.getValueByField("small_type");
+		Long bigType = tuple.getLongByField("big_type");
+		Long midType = tuple.getLongByField("mid_type");
+		Long smallType = tuple.getLongByField("small_type");
 		
-		Recommend.ChargeType charType = (Recommend.ChargeType) tuple.getValueByField("free_flag");
+		Recommend.ChargeType charType = (Recommend.ChargeType) tuple.getValueByField("free");
 		Long price = tuple.getLongByField("price");
 		
+		logger.info("enter ,key="+key);
 		Recommend.RecommendResult.Result.Builder value =
 				Recommend.RecommendResult.Result.newBuilder();
-		value.setBigType(bigType).setMiddleType(midType).setSmallType(smallType).setPrice(Long.valueOf(price))
+		value.setBigType(bigType.intValue())
+			.setMiddleType(midType.intValue())
+			.setSmallType(smallType.intValue())
+			.setPrice(price)
 			.setItem(itemId).setWeight(weight).setFreeFlag(charType)
 			.setUpdateTime(System.currentTimeMillis()/1000L);
 		new putToTDEUpdateCallBack(key,value.build(),algName).excute();
@@ -118,14 +123,11 @@ public class ResultStorageBolt extends AbstractConfigUpdateBolt {
 			RecommendResult oldValue = null;
 			try {
 				Result<byte[]> res = afuture.get();
-				if(res.getCode().equals(ResultCode.OK) && res.getResult() != null){
-					logger.info("get from tde success");
+				if(res.isSuccess() && res.getResult() != null){
 					oldValue = Recommend.RecommendResult.parseFrom(res.getResult());
-				}else{
-					logger.info("get from tde falied,result_code="+res.getCode());
 				}
 			} catch (Exception e) {
-				logger.error(e.toString());
+				logger.error(e.getMessage(), e);
 			}
 			sortValues(oldValue);
 		}
@@ -138,21 +140,17 @@ public class ResultStorageBolt extends AbstractConfigUpdateBolt {
 		    }
 				
 			if(oldValue != null){
-				logger.info("get in cache");
 				sortValues(oldValue);
 			}else{
 				try{
-					logger.info("get in tde");
 					ClientAttr clientEntry = mtClientList.get(0);		
 					TairOption opt = new TairOption(clientEntry.getTimeout());
 					Future<Result<byte[]>> future = clientEntry.getClient().getAsync((short)nsTableId,key.getBytes(),opt);
 					clientEntry.getClient().notifyFuture(future, this,clientEntry);	
 				}catch(Exception e){
-					logger.error(e.toString());
+					logger.error(e.getMessage(), e);
 				}
-				//
 			}
-
 		}
 
 		private void sortValues(RecommendResult oldValue) {
@@ -176,8 +174,6 @@ public class ResultStorageBolt extends AbstractConfigUpdateBolt {
 						alreadyIn.add(eachItem.getItem());
 					}
 				}
-			}else{
-				logger.info("merge oldvalue is null");
 			}
 			
 			if(!alreadyIn.contains(value.getItem())  
@@ -185,8 +181,7 @@ public class ResultStorageBolt extends AbstractConfigUpdateBolt {
 				mergeValueBuilder.addResults(value);
 				alreadyIn.add(value.getItem());
 			}	
-			logger.info("merge success ,count="+mergeValueBuilder.getResultsCount());
-			
+			logger.info("merge success ,count="+mergeValueBuilder.getResultsCount());		
 			SaveValues(key,mergeValueBuilder);
 		}
 
@@ -200,7 +195,7 @@ public class ResultStorageBolt extends AbstractConfigUpdateBolt {
 				logger.info(res.getItem()+",weight="+res.getWeight());
 			}*/
 			
-			logger.info("key ="+key+",count="+mergeValueBuilder.getResultsCount());
+			//logger.info("key ="+key+",count="+mergeValueBuilder.getResultsCount());
 			Future<Result<Void>> future = null;
 			for(ClientAttr clientEntry:mtClientList ){
 				TairOption putopt = new TairOption(clientEntry.getTimeout(),(short)0, dataExpireTime);
@@ -212,14 +207,14 @@ public class ResultStorageBolt extends AbstractConfigUpdateBolt {
 							new UpdateCallBackContext(clientEntry,key,putValue.toByteArray(),putopt));
 					
 					
-					if(mt!=null){
+					/*if(mt!=null){
 						MonitorEntry mEntryPut = new MonitorEntry(Constants.SUCCESSCODE,Constants.SUCCESSCODE);
 						mEntryPut.addExtField("TDW_IDC", clientEntry.getGroupname());
 						mEntryPut.addExtField("tbl_name", algName);
 						mt.addCountEntry(Constants.systemID, Constants.tde_put_interfaceID, mEntryPut, 1);
-					}
+					}*/
 				} catch (Exception e){
-					logger.error(e.toString());
+					logger.error(e.getMessage(), e);
 				}
 			}
 			

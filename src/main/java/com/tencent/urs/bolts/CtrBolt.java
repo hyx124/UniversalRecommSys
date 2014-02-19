@@ -95,7 +95,10 @@ public class CtrBolt extends AbstractConfigUpdateBolt{
 
 		public String getAlgKey() {
 			StringBuffer getKey = new StringBuffer(bid);		
-			getKey.append("#").append(pageId).append("#").append(adpos).append("#").append("CTR").append("#0");	
+			getKey.append("#").append(pageId).append("#")
+					.append(adpos).append("#")
+					.append(Constants.ctr_alg_name)
+					.append("#0");	
 			return getKey.toString();
 		}
 
@@ -123,13 +126,13 @@ public class CtrBolt extends AbstractConfigUpdateBolt{
 							try{
 								new CtrUpdateCallBack(key,value).excute();
 							}catch(Exception e){
-								logger.error(e.toString());
+								logger.error(e.getMessage(), e);
 								//mt.addCountEntry(systemID, interfaceID, item, count)
 							}
 						}
 					}
 				} catch (Exception e) {
-					logger.error("Schedule thread error:" + e, e);
+					logger.error(e.getMessage(), e);
 				}
 			}
 		}).start();
@@ -212,12 +215,8 @@ public class CtrBolt extends AbstractConfigUpdateBolt{
 				TairOption opt = new TairOption(clientEntry.getTimeout());
 				Future<Result<byte[]>> future = clientEntry.getClient().getAsync((short)nsTableId,getKey.getBytes(),opt);
 				clientEntry.getClient().notifyFuture(future, this,clientEntry);	
-			} catch (TairQueueOverflow e) {
-				//log.error(e.toString());
-			} catch (TairRpcError e) {
-				//log.error(e.toString());
-			} catch (TairFlowLimit e) {
-				//log.error(e.toString());
+			} catch (Exception e) {
+				logger.error(e.getMessage(), e);
 			}
 		}
 			
@@ -235,19 +234,16 @@ public class CtrBolt extends AbstractConfigUpdateBolt{
 			try {
 				Result<byte[]> res = afuture.get();
 				if(res.isSuccess() && res.getResult() != null){
-					logger.info("get success");
 					CtrInfo oldCtr = Recommend.CtrInfo.parseFrom(res.getResult());	
-					logger.info("parse success");
 					weight = computerWeight(oldCtr);
-					logger.info("emit weight="+weight);
 					
 					//bid,key,item_id,weight,alg_name
-					collector.emit("computer_result",new Values(key.getBid(),key.getAlgKey(),key.getResultItem(),weight,"CTR"));
-				}else{
-					logger.info("get failed£¬not found this key");
+					synchronized(collector){
+						collector.emit("computer_result",new Values(key.getBid(),key.getAlgKey(),key.getResultItem(),weight,Constants.ctr_alg_name));
+					}
 				}
 			} catch (Exception e) {
-				logger.error(e.toString());
+				logger.error(e.getMessage(), e);
 			}
 		}
 

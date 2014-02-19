@@ -22,9 +22,6 @@ import com.tencent.streaming.commons.bolts.config.AbstractConfigUpdateBolt;
 import com.tencent.streaming.commons.spouts.tdbank.Output;
 import com.tencent.tde.client.Result;
 import com.tencent.tde.client.TairClient.TairOption;
-import com.tencent.tde.client.error.TairFlowLimit;
-import com.tencent.tde.client.error.TairQueueOverflow;
-import com.tencent.tde.client.error.TairRpcError;
 import com.tencent.tde.client.impl.MutiThreadCallbackClient.MutiClientCallBack;
 import com.tencent.urs.combine.GroupActionCombinerValue;
 import com.tencent.urs.combine.UpdateKey;
@@ -114,7 +111,7 @@ public class HotTopBolt extends AbstractConfigUpdateBolt{
 						}
 					}
 				} catch (Exception e) {
-					logger.error("Schedule thread error:" + e, e);
+					logger.error(e.getMessage(), e);
 				}
 			}
 		}).start();
@@ -148,12 +145,8 @@ public class HotTopBolt extends AbstractConfigUpdateBolt{
 				TairOption opt = new TairOption(clientEntry.getTimeout());
 				Future<Result<byte[]>> future = clientEntry.getClient().getAsync((short)nsGroupCountTableId,getKey.getBytes(),opt);
 				clientEntry.getClient().notifyFuture(future, this,clientEntry);		
-			} catch (TairQueueOverflow e) {
-				//log.error(e.toString());
-			} catch (TairRpcError e) {
-				//log.error(e.toString());
-			} catch (TairFlowLimit e) {
-				//log.error(e.toString());
+			} catch (Exception e) {
+				logger.error(e.getMessage(), e);
 			}
 		}
 
@@ -162,23 +155,32 @@ public class HotTopBolt extends AbstractConfigUpdateBolt{
 			@SuppressWarnings("unchecked")
 			Future<Result<byte[]>> afuture = (Future<Result<byte[]>>) future;
 			try {
-				if(afuture.get().isSuccess() && afuture.get().getResult()!=null){
-					String count = new String(afuture.get().getResult());
+				Result<byte[]> result = afuture.get();	
+				if(result.isSuccess() && result.getResult()!=null){
+					Double count = Double.parseDouble(new String(result.getResult()));
+					//bid,key,item_id,weight,alg_name
 					
-					String algKey1 = "0#"+key.getAdpos()+"#GBT#"+key.getGroupId();
-					String algKey2 = "Type#"+key.getAdpos()+"#GBT#"+key.getGroupId();
-					collector.emit("computer_result",new Values(algKey1,key.getItemId(),Double.valueOf(count),"GHT1"));
-					collector.emit("computer_result",new Values(algKey2,key.getItemId(),Double.valueOf(count),"GHT2"));
+					String algKey1 = key.getBid()+"#0#"+key.getAdpos()+"#"+Constants.ht_alg_name+"#"+key.getGroupId();
+					String algKey2 = key.getBid()+"#0#"+key.getAdpos()+"#"+Constants.cate_alg_name+"#"+key.getGroupId();
+					synchronized(collector){
+						collector.emit("computer_result",new Values(key.getBid(),algKey1,key.getItemId(),count,Constants.ht_alg_name));
+						collector.emit("computer_result",new Values(key.getBid(),algKey2,key.getItemId(),count,Constants.cate_alg_name));
+					}
+					if(!key.getGroupId().equals("0")){
+						String algKey3 =  key.getBid()+"#0#"+key.getAdpos()+"#"+Constants.ht_alg_name+"#0";
+						String algKey4 =  key.getBid()+"#0#"+key.getAdpos()+"#"+Constants.cate_alg_name+"#0";
+						synchronized(collector){
+							collector.emit("computer_result",new Values(key.getBid(),algKey3,key.getItemId(),count,Constants.ht_alg_name));
+							collector.emit("computer_result",new Values(key.getBid(),algKey4,key.getItemId(),count,Constants.cate_alg_name));
+						}
+					}
 					
-					String algKey3 = "0#"+key.getAdpos()+"#GBT#0";
-					String algKey4 = "Type#"+key.getAdpos()+"#GBT#0";
-					collector.emit("computer_result",new Values(algKey3,key.getItemId(),Double.valueOf(count),"GHT1"));
-					collector.emit("computer_result",new Values(algKey4,key.getItemId(),Double.valueOf(count),"GHT2"));
+				}else{
+					logger.info("parse failed");
 				}
 			} catch (Exception e) {
-				
+				logger.error(e.getMessage(), e);
 			}
-			
 		}
 	}
 	

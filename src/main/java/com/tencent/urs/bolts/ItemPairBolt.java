@@ -151,7 +151,7 @@ public class ItemPairBolt  extends AbstractConfigUpdateBolt{
 						}
 					}
 				} catch (Exception e) {
-					logger.error("Schedule thread error:" + e, e);
+					logger.error(e.getMessage(), e);
 				}
 			}
 		}).start();
@@ -214,7 +214,7 @@ public class ItemPairBolt  extends AbstractConfigUpdateBolt{
 					}
 				}					
 			}catch(Exception e){
-				logger.error(e.toString());
+				logger.error(e.getMessage(), e);
 			}
 		}
 		return 0F;
@@ -248,12 +248,8 @@ public class ItemPairBolt  extends AbstractConfigUpdateBolt{
 					clientEntry.getClient().notifyFuture(future, this,clientEntry);	
 				}			
 				
-			} catch (TairQueueOverflow e) {
-				//log.error(e.toString());
-			} catch (TairRpcError e) {
-				//log.error(e.toString());
-			} catch (TairFlowLimit e) {
-				//log.error(e.toString());
+			} catch (Exception e) {
+				logger.error(e.getMessage(), e);
 			}
 		}
 
@@ -280,7 +276,7 @@ public class ItemPairBolt  extends AbstractConfigUpdateBolt{
 						mt.addCountEntry(Constants.systemID, Constants.tde_put_interfaceID, mEntryPut, 1);
 					}*/
 				} catch (Exception e){
-					logger.error(e.toString());
+					logger.error(e.getMessage(), e);
 				}
 			}
 		}
@@ -291,13 +287,21 @@ public class ItemPairBolt  extends AbstractConfigUpdateBolt{
 			@SuppressWarnings("unchecked")
 			Future<Result<byte[]>> afuture = (Future<Result<byte[]>>) future;
 			try {
-				String oldVal = new String(afuture.get().getResult());
-				Float oldValue = Float.valueOf(oldVal);
-				Float newValue = oldValue + this.changeWeight;
-				Save(putKey,newValue);
+				Result<byte[]> res = afuture.get();
+				if(res.isSuccess() && res.getResult() != null){
+					String oldVal = new String(afuture.get().getResult());
+					Float oldValue = Float.valueOf(oldVal);
+					Float newValue = oldValue + this.changeWeight;
+					Save(putKey,newValue);
+					return;
+				}else{
+					Save(putKey,this.changeWeight);
+				}
 			} catch (Exception e) {
+				logger.error(e.getMessage(), e);
 				Save(putKey,this.changeWeight);
 			}
+			
 		}
 		
 	}
@@ -334,12 +338,8 @@ public class ItemPairBolt  extends AbstractConfigUpdateBolt{
 					clientEntry.getClient().notifyFuture(future, this,clientEntry);	
 				}			
 				
-			} catch (TairQueueOverflow e) {
-				//log.error(e.toString());
-			} catch (TairRpcError e) {
-				//log.error(e.toString());
-			} catch (TairFlowLimit e) {
-				//log.error(e.toString());
+			} catch (Exception e) {
+				logger.error(e.getMessage(), e);
 			}
 		}
 		
@@ -385,7 +385,7 @@ public class ItemPairBolt  extends AbstractConfigUpdateBolt{
 						mt.addCountEntry(Constants.systemID, Constants.tde_put_interfaceID, mEntryPut, 1);
 					}*/
 				} catch (Exception e){
-					logger.error(e.toString());
+					logger.error(e.getMessage(), e);
 				}
 			}
 		}
@@ -397,10 +397,13 @@ public class ItemPairBolt  extends AbstractConfigUpdateBolt{
 			Future<Result<byte[]>> afuture = (Future<Result<byte[]>>) future;
 			Float oldCount = 0F;
 			try {
-				byte[] oldVal = afuture.get().getResult();
-				oldCount = Float.valueOf(new String(oldVal));
+				Result<byte[]> res = afuture.get();
+				if(res.isSuccess() && res.getResult()!=null){
+					byte[] oldVal = afuture.get().getResult();
+					oldCount = Float.valueOf(new String(oldVal));
+				}	
 			} catch (Exception e) {
-				
+				logger.error(e.getMessage(), e);
 			}
 			next(oldCount);	
 		}
@@ -419,7 +422,6 @@ public class ItemPairBolt  extends AbstractConfigUpdateBolt{
 		}
 
 		private void next(String item, HashMap<String,Float> itemMap){
-
 			for(String itemId:itemMap.keySet()){
 				new UserPairUpdateCallBack(key, itemId, itemMap.get(itemId)).excute();
 			}
@@ -431,12 +433,8 @@ public class ItemPairBolt  extends AbstractConfigUpdateBolt{
 				TairOption opt = new TairOption(clientEntry.getTimeout());
 				Future<Result<byte[]>> future = clientEntry.getClient().getAsync((short)nsDetailTableId,checkKey.getBytes(),opt);
 				clientEntry.getClient().notifyFuture(future, this,clientEntry);	
-			} catch (TairQueueOverflow e) {
-				//log.error(e.toString());
-			} catch (TairRpcError e) {
-				//log.error(e.toString());
-			} catch (TairFlowLimit e) {
-				//log.error(e.toString());
+			} catch (Exception e) {
+				logger.error(e.getMessage(), e);
 			}
 		}
 
@@ -451,9 +449,8 @@ public class ItemPairBolt  extends AbstractConfigUpdateBolt{
 				HashMap<String,Float> weightMap = getPairItems(oldValueHeap , values);
 				next(key.getItemId(),weightMap);
 			} catch (Exception e) {
-				
-			}
-			
+				logger.error(e.getMessage(), e);
+			}	
 		}
 		
 		private Long getWinIdByTime(Long time){	

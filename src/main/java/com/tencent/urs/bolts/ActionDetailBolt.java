@@ -31,9 +31,6 @@ import com.tencent.streaming.commons.bolts.config.AbstractConfigUpdateBolt;
 import com.tencent.streaming.commons.spouts.tdbank.Output;
 import com.tencent.tde.client.Result;
 import com.tencent.tde.client.TairClient.TairOption;
-import com.tencent.tde.client.error.TairFlowLimit;
-import com.tencent.tde.client.error.TairQueueOverflow;
-import com.tencent.tde.client.error.TairRpcError;
 import com.tencent.tde.client.impl.MutiThreadCallbackClient.MutiClientCallBack;
 import com.tencent.urs.asyncupdate.UpdateCallBack;
 import com.tencent.urs.asyncupdate.UpdateCallBackContext;
@@ -134,6 +131,7 @@ public class ActionDetailBolt extends AbstractConfigUpdateBolt{
 							try{
 								new ActionDetailUpdateAysncCallback(key,expireTimeValue).excute();
 							}catch(Exception e){
+								logger.error(e.getMessage(), e);
 								//mt.addCountEntry(systemID, interfaceID, item, count)
 							}
 						}
@@ -191,7 +189,7 @@ public class ActionDetailBolt extends AbstractConfigUpdateBolt{
 					future = clientEntry.getClient().getAsync((short)nsTableId,key.getBytes(),opt);
 					clientEntry.getClient().notifyFuture(future, this,clientEntry);	
 				} catch(Exception e){
-					logger.error(e.toString());
+					logger.error(e.getMessage(), e);
 				}
 			
 			}			
@@ -350,9 +348,7 @@ public class ActionDetailBolt extends AbstractConfigUpdateBolt{
 			if(debug){
 				printOut(mergeValueBuilder.build());
 			}
-			
-			
-			
+
 			Future<Result<Void>> future = null;
 			UserActiveDetail pbValue = mergeValueBuilder.build();
 			synchronized(cacheMap){
@@ -374,7 +370,7 @@ public class ActionDetailBolt extends AbstractConfigUpdateBolt{
 						mt.addCountEntry(Constants.systemID, Constants.tde_put_interfaceID, mEntryPut, 1);
 					}*/
 				} catch (Exception e){
-					logger.error(e.toString());
+					logger.error(e.getMessage(), e);
 				}
 			}
 		}
@@ -387,9 +383,12 @@ public class ActionDetailBolt extends AbstractConfigUpdateBolt{
 
 			UserActiveDetail oldValueHeap = null;
 			try {
-				byte[] oldVal = afuture.get().getResult();
-				oldValueHeap = Recommend.UserActiveDetail.parseFrom(oldVal);
+				Result<byte[]> res = afuture.get();
+				if(res.isSuccess() && res.getResult() != null){
+					oldValueHeap = Recommend.UserActiveDetail.parseFrom(res.getResult());
+				}				
 			} catch (Exception e) {	
+				logger.error(e.getMessage(), e);
 			}
 			
 			if(debug){

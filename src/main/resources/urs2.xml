@@ -1,7 +1,7 @@
 <?xml version="1.0" encoding="UTF-8" ?>
 <topology name="urs-topology" works="20" ackers="0" debug="false">	
 	<spouts>
-		<spout name="BaseInfoSpout" class="com.tencent.urs.spouts.BaseInfoSpout" parallelism="1">
+		<spout name="PaiPaiSpout" class="com.tencent.urs.spouts.PaiPaiSpout" parallelism="1">
 			<tdbank_zookeeper_address>sk-zk-td1:2181,sk-zk-td2:2181,sk-zk-td3:2181,sk-zk-td4:2181,sk-zk-td5:2181</tdbank_zookeeper_address>
 			<tdbank_zookeeper_timeout>10000</tdbank_zookeeper_timeout>
 			<tdbank_zookeeper_connecttimeout>30000</tdbank_zookeeper_connecttimeout>
@@ -13,63 +13,14 @@
 			<tdbank_maxoffset>true</tdbank_maxoffset>
 			
 			<output_fields>
-				<stream_id>item_detail_info</stream_id>
-				<fields>hash_key,topic,bid,imp_date,item_id,cate_id1,cate_id2,cate_id3,cate_name1,cate_name2,cate_name3,free,publish,price,text,item_time,expire_time,plat_form,score</fields>
-			</output_fields>
-			
-			<output_fields>
-				<stream_id>user_detail_info</stream_id>
-				<fields>hash_key,topic,bid,imp_date,qq,imei,uid,level,reg_date, reg_time</fields>
-			</output_fields>
-			
-			<output_fields>
-				<stream_id>action_weight_info</stream_id>
-				<fields>hash_key,topic,bid,imp_date,type_id,weight</fields>
-			</output_fields>
-			
-			<output_fields>
-				<stream_id>category_level_info</stream_id>
-				<fields>hash_key,topic,bid,imp_date,cate_id,cate_name,level,father_id</fields>
+				<stream_id>user_action</stream_id>
+				<fields>hashkey,bid,topic,qq,uid,adpos,action_type,action_time,item_id,action_result,imei,platform,lbs_info</fields>
 			</output_fields>
 		</spout>
 	</spouts>
 	
 	<bolts>
-		<bolt name="BaseInfo" class="com.tencent.urs.bolts.PretreatmentBolt" parallelsim="1">
-			<grouping type="field">
-				<fields>hash_key</fields>
-				<component>BaseInfoSpout</component>
-				<streaming_ids>item_detail_info</streaming_ids>
-			</grouping>
-			
-			<grouping type="field">
-				<fields>hash_key</fields>
-				<component>BaseInfoSpout</component>
-				<streaming_ids>user_detail_info</streaming_ids>
-			</grouping>
-			
-			<grouping type="field">
-				<fields>hash_key</fields>
-				<component>BaseInfoSpout</component>
-				<streaming_ids>action_weight_info</streaming_ids>
-			</grouping>
-			
-			<grouping type="field">
-				<fields>hash_key</fields>
-				<component>BaseInfoSpout</component>
-				<streaming_ids>category_level_info</streaming_ids>
-			</grouping>
-			
-			<debug>true</debug>
-			<item_detail_table>311</item_detail_table>
-			<user_detail_table>312</user_detail_table>
-			<action_weight_table>313</action_weight_table>
-			<category_level_table>314</category_level_table>
-			
-			<data_expiretime>259200</data_expiretime>
-			<cache_expiretime>3600</cache_expiretime>
-		
-		</bolt>
+
 		
 	</bolts>
 	

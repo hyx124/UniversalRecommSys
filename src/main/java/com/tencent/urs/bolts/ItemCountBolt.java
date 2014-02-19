@@ -242,7 +242,7 @@ public class ItemCountBolt extends AbstractConfigUpdateBolt{
 				}			
 				
 			} catch (Exception e){
-				logger.error(e.toString());
+				logger.error(e.getMessage(), e);
 			}
 		}
 
@@ -268,7 +268,7 @@ public class ItemCountBolt extends AbstractConfigUpdateBolt{
 						mt.addCountEntry(Constants.systemID, Constants.tde_put_interfaceID, mEntryPut, 1);
 					}*/
 				} catch (Exception e){
-					logger.error(e.toString());
+					logger.error(e.getMessage(), e);
 				}
 			}
 		}
@@ -280,15 +280,17 @@ public class ItemCountBolt extends AbstractConfigUpdateBolt{
 			Future<Result<byte[]>> afuture = (Future<Result<byte[]>>) future;
 			Float newValue = 0F;
 			try {
-				String oldValue = new String(afuture.get().getResult());
-				newValue = this.value + Float.parseFloat(oldValue);
-				logger.info("get step3 key="+putKey+",group old count="+oldValue+",new count="+this.value+",merge count="+newValue);
-
-				Save(putKey,newValue);
+				Result<byte[]> res = afuture.get();
+				if(res.isSuccess() && res.getResult() != null){
+					String oldValue = new String(res.getResult());
+					newValue = this.value + Float.parseFloat(oldValue);
+					Save(putKey,newValue);
+					return;
+				}
 			} catch (Exception e) {
-				Save(putKey,this.value);
+				logger.error(e.getMessage(), e);
 			}
-			
+			Save(putKey,this.value);
 		}
 		
 	}
@@ -298,12 +300,10 @@ public class ItemCountBolt extends AbstractConfigUpdateBolt{
 		private UpdateKey key;
 		private Float count;
 		private String userCountKey;
-		private Long time;
 
 		public UserCountUpdateCallBack(UpdateKey key, Float count) {
 			this.key = key ; 
 			this.count = count;	
-			//this.time = time;
 			this.userCountKey = key.getUserCountKey();
 		}
 		
@@ -324,12 +324,8 @@ public class ItemCountBolt extends AbstractConfigUpdateBolt{
 					clientEntry.getClient().notifyFuture(future, this,clientEntry);	
 				}			
 				
-			} catch (TairQueueOverflow e) {
-				//log.error(e.toString());
-			} catch (TairRpcError e) {
-				//log.error(e.toString());
-			} catch (TairFlowLimit e) {
-				//log.error(e.toString());
+			} catch (Exception e) {
+				logger.error(e.getMessage(), e);
 			}
 		}
 		
@@ -368,7 +364,7 @@ public class ItemCountBolt extends AbstractConfigUpdateBolt{
 						mt.addCountEntry(Constants.systemID, Constants.tde_put_interfaceID, mEntryPut, 1);
 					}*/
 				} catch (Exception e){
-					logger.error(e.toString());
+					logger.error(e.getMessage(), e);
 				}
 			}
 		}
@@ -380,10 +376,12 @@ public class ItemCountBolt extends AbstractConfigUpdateBolt{
 			Future<Result<byte[]>> afuture = (Future<Result<byte[]>>) future;
 			Float oldCount = 0F;
 			try {
-				byte[] oldVal = afuture.get().getResult();
-				oldCount = Float.parseFloat(new String(oldVal));
+				Result<byte[]> res = afuture.get();
+				if(res.isSuccess() && res.getResult() != null){
+					oldCount = Float.parseFloat(new String(res.getResult()));
+				}				
 			} catch (Exception e) {
-				
+				logger.error(e.getMessage(), e);
 			}
 			next(oldCount);	
 		}
@@ -413,19 +411,12 @@ public class ItemCountBolt extends AbstractConfigUpdateBolt{
 		
 		public void excute() {
 			try {
-				if(debug){
-					logger.info("step1,get from tde");
-				}
 				ClientAttr clientEntry = mtClientList.get(0);		
 				TairOption opt = new TairOption(clientEntry.getTimeout());
 				Future<Result<byte[]>> future = clientEntry.getClient().getAsync((short)nsDetailTableId,userCheckKey.getBytes(),opt);
 				clientEntry.getClient().notifyFuture(future, this,clientEntry);	
-			} catch (TairQueueOverflow e) {
-				//log.error(e.toString());
-			} catch (TairRpcError e) {
-				//log.error(e.toString());
-			} catch (TairFlowLimit e) {
-				//log.error(e.toString());
+			} catch (Exception e) {
+				logger.error(e.getMessage(), e);
 			}
 		}
 			
@@ -466,15 +457,9 @@ public class ItemCountBolt extends AbstractConfigUpdateBolt{
 				if(res.isSuccess() && res.getResult() !=null){
 					Recommend.UserActiveDetail oldValueHeap = Recommend.UserActiveDetail.parseFrom(res.getResult());
 					next(getWeight(oldValueHeap));
-				}else{
-					if(debug){
-						logger.info("step1, not found this key="+userCheckKey);
-					}
 				}
 			} catch (Exception e) {
-				if(debug){
-					logger.info("step1, parse key failed,key="+userCheckKey+",error="+e.toString());
-				}
+				logger.error(e.getMessage(), e);
 			}	
 		}
 	}

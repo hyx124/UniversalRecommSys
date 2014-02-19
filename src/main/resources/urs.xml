@@ -1,7 +1,7 @@
 <?xml version="1.0" encoding="UTF-8" ?>
 <topology name="urs-topology" works="20" ackers="0" debug="false">	
 	<spouts>
-		<spout name="UserActionSpout" class="com.tencent.urs.spouts.TestSpout" parallelism="1">
+		<spout name="UserActionSpout" class="com.tencent.urs.spouts.TestSpout2" parallelism="1">
 			<tdbank_zookeeper_address>sk-zk-td1:2181,sk-zk-td2:2181,sk-zk-td3:2181,sk-zk-td4:2181,sk-zk-td5:2181</tdbank_zookeeper_address>
 			<tdbank_zookeeper_timeout>10000</tdbank_zookeeper_timeout>
 			<tdbank_zookeeper_connecttimeout>30000</tdbank_zookeeper_connecttimeout>
@@ -14,11 +14,11 @@
 			
 			<output_fields>
 				<stream_id>user_action</stream_id>
-				<fields>bid,topic,qq,uid,adpos,action_type,action_time,item_id,action_result,imei,platform,lbs_info</fields>
+				<fields>hashkey,bid,topic,qq,uid,adpos,action_type,action_time,item_id,action_result,imei,platform,lbs_info</fields>
 			</output_fields>
 			
 		</spout>
-		<!--
+
 		<spout name="BaseInfoSpout" class="com.tencent.urs.spouts.BaseInfoSpout" parallelism="1">
 			<tdbank_zookeeper_address>sk-zk-td1:2181,sk-zk-td2:2181,sk-zk-td3:2181,sk-zk-td4:2181,sk-zk-td5:2181</tdbank_zookeeper_address>
 			<tdbank_zookeeper_timeout>10000</tdbank_zookeeper_timeout>
@@ -54,7 +54,6 @@
 	</spouts>
 	
 	<bolts>
-		<!-- 
 		<bolt name="BaseInfo" class="com.tencent.urs.bolts.PretreatmentBolt" parallelsim="1">
 			<grouping type="field">
 				<fields>hash_key</fields>
@@ -89,18 +88,17 @@
 			<data_expiretime>259200</data_expiretime>
 			<cache_expiretime>3600</cache_expiretime>		
 		</bolt>
-	 	-->
 	 	
 		<bolt name="PretreatmentBolt" class="com.tencent.urs.bolts.PretreatmentBolt" parallelsim="1">
 			<grouping type="field">
-				<fields>qq</fields>
+				<fields>hashKey</fields>
 				<component>UserActionSpout</component>
 				<streaming_ids>user_action</streaming_ids>
 			</grouping>
 			
 			<output_fields>
 				<stream_id>user_action</stream_id>
-				<fields>bid,topic,old_qq,uid,adpos,action_type,action_time,item_id,action_result,imei,platform,lbs_info,qq,group_id</fields>
+				<fields>bid,topic,adpos,action_type,action_time,item_id,action_result,imei,platform,lbs_info,qq,group_id</fields>
 			</output_fields>	
 		</bolt>
 
@@ -112,6 +110,7 @@
 			</grouping>
 			
 			<debug>true</debug>
+			<topNum>30</topNum>>
 			<storage_table>301</storage_table>
 			<data_expiretime>259200</data_expiretime>
 			<cache_expiretime>3600</cache_expiretime>

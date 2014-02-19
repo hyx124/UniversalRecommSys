@@ -1,32 +1,12 @@
 package com.tencent.urs.spouts;
 
-import java.text.SimpleDateFormat;
-import java.util.ArrayList;
-import java.util.Arrays;
-import java.util.Iterator;
 import java.util.Map;
-import java.util.concurrent.BlockingQueue;
-import java.util.concurrent.Executor;
-import java.util.concurrent.LinkedBlockingQueue;
-
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
 import com.google.common.collect.ImmutableList;
-import com.google.protobuf.InvalidProtocolBufferException;
-import com.taobao.metamorphosis.Message;
-import com.taobao.metamorphosis.client.MessageSessionFactory;
-import com.taobao.metamorphosis.client.MetaClientConfig;
-import com.taobao.metamorphosis.client.MetaMessageSessionFactory;
-import com.taobao.metamorphosis.client.consumer.ConsumerConfig;
-import com.taobao.metamorphosis.client.consumer.MessageConsumer;
-import com.taobao.metamorphosis.client.consumer.MessageListener;
-import com.taobao.metamorphosis.exception.MetaClientException;
-import com.taobao.metamorphosis.utils.ZkUtils.ZKConfig;
 
-import com.tencent.monitor.MonitorTools;
 import com.tencent.streaming.commons.spouts.tdbank.Output;
-import com.tencent.urs.protobuf.Recommend;
 import com.tencent.urs.utils.Constants;
 
 import backtype.storm.spout.SpoutOutputCollector;
@@ -76,7 +56,7 @@ public class TestSpout2 implements IRichSpout {
 	 */
 	public void nextTuple() {
 		Long now = System.currentTimeMillis()/1000L;
-		String itemId = String.valueOf(now.intValue()%30);
+		String itemId = String.valueOf(now.intValue()%50);
 		String actType = String.valueOf(now%10+1);
 		//<fields>bid,topic,qq,uid,adpos,action_type,action_time,item_id,action_result,imei,platform,lbs_info</fields>
 		String action_result = itemId+"0";
@@ -84,9 +64,9 @@ public class TestSpout2 implements IRichSpout {
 			action_result = action_result +";"+ itemId+i;
 		}
 		
-		String[] dealMsg ={"1","user_action","0","17139104","1",actType,String.valueOf(now),itemId,action_result,"","",""}; 
-		String[] dealMsg2 ={"1","user_action","0","17139104","1","1",String.valueOf(now),itemId,action_result,"","",""}; 
-		String[] dealMsg3 ={"1","user_action","0","17139104","1","2",String.valueOf(now),itemId,action_result,"","",""}; 
+		String[] dealMsg ={"17139104","1","user_action","0","17139104","1",actType,String.valueOf(now),itemId,action_result,"","",""}; 
+		String[] dealMsg2 ={"17139104","1","user_action","0","17139104","1","1",String.valueOf(now),itemId,action_result,"","",""}; 
+		String[] dealMsg3 ={"17139104","1","user_action","0","17139104","1","2",String.valueOf(now),itemId,action_result,"","",""}; 
 		dealMsgByConfig("1","user_action",dealMsg);
 		dealMsgByConfig("1","user_action",dealMsg2);
 		dealMsgByConfig("1","user_action",dealMsg3);
@@ -149,7 +129,8 @@ public class TestSpout2 implements IRichSpout {
 	public void declareOutputFields(OutputFieldsDeclarer declarer) {
 		//bid,topic,qq,uid,adpos,action_type,action_time,item_id,action_result,imei,platform,lbs_info
 		declarer.declareStream(Constants.actions_stream, 
-					new Fields("bid","topic","qq","uid","adpos","action_type","action_time","item_id","action_result","imei","platform","lbs_info"));
+					new Fields("hash_key","bid","topic","qq","uid","adpos","action_type","action_time","item_id","action_result","imei","platform","lbs_info"));
+
 	}
 
 	/**

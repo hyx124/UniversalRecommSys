@@ -24,15 +24,10 @@ import com.tencent.tde.client.error.TairRpcError;
 import com.tencent.tde.client.impl.MutiThreadCallbackClient.MutiClientCallBack;
 import com.tencent.urs.asyncupdate.UpdateCallBack;
 import com.tencent.urs.asyncupdate.UpdateCallBackContext;
-import com.tencent.urs.combine.GroupActionCombinerValue;
-import com.tencent.urs.combine.UpdateKey;
 
 import com.tencent.urs.protobuf.Recommend;
 import com.tencent.urs.protobuf.Recommend.ActiveType;
 import com.tencent.urs.protobuf.Recommend.CtrInfo;
-import com.tencent.urs.protobuf.Recommend.UserActiveDetail.TimeSegment;
-import com.tencent.urs.protobuf.Recommend.UserActiveDetail.TimeSegment.ItemInfo;
-import com.tencent.urs.protobuf.Recommend.UserActiveDetail.TimeSegment.ItemInfo.ActType;
 import com.tencent.urs.tdengine.TDEngineClientFactory;
 import com.tencent.urs.tdengine.TDEngineClientFactory.ClientAttr;
 import com.tencent.urs.utils.Constants;
@@ -46,6 +41,7 @@ import backtype.storm.tuple.Tuple;
 
 public class CtrStorBolt extends AbstractConfigUpdateBolt{
 
+	private static final long serialVersionUID = 1L;
 	private List<ClientAttr> mtClientList;	
 	private MonitorTools mt;
 	private UpdateCallBack putCallBack;
@@ -88,7 +84,6 @@ public class CtrStorBolt extends AbstractConfigUpdateBolt{
 			this.click = click + newValue.getClick();
 			this.impress = impress + newValue.getImpress();
 			this.lastUpdateTime = newValue.getTime();
-			
 		}
 	}
 	
@@ -174,7 +169,7 @@ public class CtrStorBolt extends AbstractConfigUpdateBolt{
 						}
 					}
 				} catch (Exception e) {
-					logger.error("Schedule thread error:" + e, e);
+					logger.error(e.getMessage(), e);
 				}
 			}
 		}).start();
@@ -188,10 +183,8 @@ public class CtrStorBolt extends AbstractConfigUpdateBolt{
 				combinerMap.put(key, oldValue);
 			}else{
 				combinerMap.put(key, value);
-			}
-			
+			}	
 		}
-		//logger.info("map size="+combinerMap.size());
 	}	
 
 	private class CtrUpdateCallBack implements MutiClientCallBack{
@@ -220,12 +213,8 @@ public class CtrStorBolt extends AbstractConfigUpdateBolt{
 					clientEntry.getClient().notifyFuture(future, this,clientEntry);	
 				}			
 				
-			} catch (TairQueueOverflow e) {
-				//log.error(e.toString());
-			} catch (TairRpcError e) {
-				//log.error(e.toString());
-			} catch (TairFlowLimit e) {
-				//log.error(e.toString());
+			} catch (Exception e) {
+				logger.error(e.getMessage(), e);
 			}
 		}
 					
@@ -245,7 +234,7 @@ public class CtrStorBolt extends AbstractConfigUpdateBolt{
 					oldCtr = Recommend.CtrInfo.parseFrom(res.getResult());		
 				}
 			} catch (Exception e) {
-				
+				logger.error(e.getMessage(), e);
 			}	
 			mergeHeap(oldCtr);
 		}
@@ -303,7 +292,7 @@ public class CtrStorBolt extends AbstractConfigUpdateBolt{
 						mt.addCountEntry(Constants.systemID, Constants.tde_put_interfaceID, mEntryPut, 1);
 					}*/
 				} catch (Exception e){
-					logger.error(e.toString());
+					logger.error(e.getMessage(), e);
 				}
 			}
 		}

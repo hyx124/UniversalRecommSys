@@ -80,7 +80,7 @@ public class PretreatmentBolt extends AbstractConfigUpdateBolt {
 			clientEntry.getClient().put((short) nsTableGroup, "389687043".getBytes(), "1,51|2,52|3,53".getBytes(), opt);
 			logger.info("init tde ");
 		} catch (Exception e){
-			logger.error(e.toString());
+			logger.error(e.getMessage(), e);
 		}
 	} 
 	
@@ -93,20 +93,30 @@ public class PretreatmentBolt extends AbstractConfigUpdateBolt {
 
 	@Override
 	public void processEvent(String sid, Tuple tuple) {
+		//hashkey,bid,topic,qq,uid,adpos,action_type,action_time,item_id,
+		//action_result,imei,platform,lbs_info</fields>
+		String bid = tuple.getStringByField("bid");	
 		String topic = tuple.getStringByField("topic");	
 		String qq = tuple.getStringByField("qq");
 		String uid = tuple.getStringByField("uid");	
 		
+		
 		Values outputValues = new Values();
-
-		for(String field:tuple.getFields()){
-			outputValues.add(tuple.getStringByField(field));
-		}
-
+		outputValues.add(bid);
+		outputValues.add(topic);
+		outputValues.add(tuple.getStringByField("adpos"));
+		outputValues.add(tuple.getStringByField("action_type"));
+		outputValues.add(tuple.getStringByField("action_time"));
+		outputValues.add(tuple.getStringByField("item_id"));
+		outputValues.add(tuple.getStringByField("action_result"));	
+		outputValues.add(tuple.getStringByField("imei"));	
+		outputValues.add(tuple.getStringByField("platform"));	
+		outputValues.add(tuple.getStringByField("lbs_info"));	
+		
 		if(topic.equals(Constants.actions_stream)){
 			if(!Utils.isQNumValid(qq)){
 				if(!uid.equals("0") && uid.matches("[0-9]+")){
-					new GetQQUpdateCallBack(uid,topic,outputValues).excute();
+					new GetQQUpdateCallBack(uid,topic,outputValues).excute();				
 				}else{
 					return;
 				}
@@ -137,44 +147,41 @@ public class PretreatmentBolt extends AbstractConfigUpdateBolt {
 			try {
 				Result<byte[]> res = afuture.get();
 				if(res.isSuccess() && res.getResult() != null){
-					this.qq =  new String(res.getResult());
-					//logger.info("get qq success, uin="+qq);
-					outputValues.add(qq);
-					qqCache.set(uid, new SoftReference<String>(qq),cacheExpireTime);
-					
-					new GetGroupIdUpdateCallBack(qq,outputStream,outputValues).excute();
-				}else{
-					//logger.error("get qq from tde failed!");
+					this.qq =  new String(res.getResult());					
+					if(Utils.isQNumValid(qq)){
+						outputValues.add(qq);
+						qqCache.set(uid, new SoftReference<String>(qq),cacheExpireTime);
+						
+						new GetGroupIdUpdateCallBack(qq,outputStream,outputValues).excute();
+					}
 				}
 			} catch (Exception e) {
-				logger.error(e.toString());
+				logger.error(e.getMessage(), e);
 			}
 			
 			
 		}
 
 		public void excute() {
-			
-			String qq = null;
-			SoftReference<String> sr = qqCache.get(uid);
-			if(sr != null){
-				qq = sr.get();
-			}
-			
-			if(qq != null){
-				outputValues.add(qq);
-				new GetGroupIdUpdateCallBack(qq, outputStream, outputValues).excute();
-			}else{
-				try{
-					logger.info("start qq by async-get, uid="+uid);
-					ClientAttr clientEntry = mtClientList.get(0);		
-					TairOption opt = new TairOption(clientEntry.getTimeout());
-					Future<Result<byte[]>> future = clientEntry.getClient().getAsync((short)nsTableUin,uid.getBytes(),opt);
-					clientEntry.getClient().notifyFuture(future, this,clientEntry);	
-				}catch(Exception e){
-					logger.error(e.toString());
+				String qq = null;
+				SoftReference<String> sr = qqCache.get(uid);
+				if(sr != null){
+					qq = sr.get();
 				}
-			}
+				
+				if(qq != null && Utils.isQNumValid(qq)){
+					outputValues.add(qq);
+					new GetGroupIdUpdateCallBack(qq, outputStream, outputValues).excute();
+				}else{
+					try{
+						ClientAttr clientEntry = mtClientList.get(0);		
+						TairOption opt = new TairOption(clientEntry.getTimeout());
+						Future<Result<byte[]>> future = clientEntry.getClient().getAsync((short)nsTableUin,uid.getBytes(),opt);
+						clientEntry.getClient().notifyFuture(future, this,clientEntry);	
+					}catch(Exception e){
+						logger.error(e.getMessage(), e);
+					}
+				}
 
 		}
 	}
@@ -201,19 +208,14 @@ public class PretreatmentBolt extends AbstractConfigUpdateBolt {
 					String[] grouplist = (tde_gid).split(",|\\|");
 					if(grouplist.length>=2){
 						groupId = grouplist[1];
-						logger.info("get groupid success, uin="+groupId);
-					}else{
-						logger.error("gid format is bad"+tde_gid);
-					}							
-				}else{
-					logger.error("get groupId from tde failed! error="+res.getCode());
+					}				
 				}
 			} catch (Exception e) {
-				logger.error(e.toString());
+				logger.error(e.getMessage(), e);
 			}
 			
 			outputValues.add(groupId);
-			//groupIdCache.set(qq.toString(), new SoftReference<String>(groupId),cacheExpireTime);
+			groupIdCache.set(qq.toString(), new SoftReference<String>(groupId),cacheExpireTime);
 			emitData(outputStream,outputValues);
 		}
 		
@@ -225,26 +227,25 @@ public class PretreatmentBolt extends AbstractConfigUpdateBolt {
 			}
 			
 			if(groupId != null){
-				logger.info("get groupid in cache, groupid="+groupId);
 				outputValues.add(groupId);
 				emitData(outputStream, outputValues);
 			}else{
 				try{
-					logger.info("start group, uin="+qq);
 					ClientAttr clientEntry = mtClientList.get(0);		
 					TairOption opt = new TairOption(clientEntry.getTimeout());
 					Future<Result<byte[]>> future = clientEntry.getClient().getAsync((short)nsTableGroup,qq.getBytes(),opt);
 					clientEntry.getClient().notifyFuture(future, this,clientEntry);	
 				}catch(Exception e){
-					logger.error(e.toString());
+					logger.error(e.getMessage(), e);
 				}
 			}
 		}
 	}
 	
 	private void emitData(String outputStream, Values outputValues) {
-		logger.info("output="+outputValues.toString());
-		this.collector.emit(outputStream,outputValues);
+		synchronized(collector){
+			this.collector.emit(outputStream,outputValues);
+		}
 	}
 	
 }

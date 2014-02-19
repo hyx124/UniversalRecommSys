@@ -11,12 +11,12 @@ public class Constants {
 	public static String config_stream = "config";
 	
 	
-	
-	public static String alg_ar = "A1001";
-	public static String alg_cf = "A1002";
-	public static String alg_ctr = "B1001";
-	public static String alg_ht_group = "C1001";
-	public static String alg_ht_category = "C1002";
+	public static String topN_alg_name = "D1";
+	public static String ctr_alg_name = "B1001";
+	public static String cf_alg_name = "C1001";
+	public static String ar_alg_name = "C2001";
+	public static String ht_alg_name = "C3001";
+	public static String cate_alg_name = "B2001";
 	
 	
 	public static final	String systemID = "0";
