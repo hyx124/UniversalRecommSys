@@ -29,6 +29,7 @@ import com.tencent.urs.combine.UpdateKey;
 import com.tencent.urs.conf.DataFilterConf;
 import com.tencent.urs.protobuf.Recommend;
 import com.tencent.urs.protobuf.Recommend.ActionWeightInfo;
+import com.tencent.urs.protobuf.Recommend.ActiveType;
 import com.tencent.urs.tdengine.TDEngineClientFactory;
 import com.tencent.urs.tdengine.TDEngineClientFactory.ClientAttr;
 import com.tencent.urs.utils.Constants;
@@ -53,6 +54,7 @@ public class PretreatmentBolt extends AbstractConfigUpdateBolt {
 	private int cacheExpireTime;
 	private int nsTableGroup;
 	private int nsTableUin;
+	private Recommend.ActiveType actType;
 	
 	private static Logger logger = LoggerFactory
 			.getLogger(PretreatmentBolt.class);
@@ -71,7 +73,6 @@ public class PretreatmentBolt extends AbstractConfigUpdateBolt {
 		this.groupIdCache = new DataCache<String>(conf);
 		this.collector = collector;
 
-		
 		this.mtClientList = TDEngineClientFactory.createMTClientList(conf);
 		ClientAttr clientEntry = mtClientList.get(0);		
 		TairOption opt = new TairOption(clientEntry.getTimeout(),(short)0, 24*3600);
@@ -100,12 +101,17 @@ public class PretreatmentBolt extends AbstractConfigUpdateBolt {
 		String qq = tuple.getStringByField("qq");
 		String uid = tuple.getStringByField("uid");	
 		
+		String actTypeStr = tuple.getStringByField("action_type");
+		this.actType = Utils.getActionTypeByString(actTypeStr);
+		if(!topic.equals(Constants.actions_stream) || actType == Recommend.ActiveType.Unknown){
+			return ;
+		}
 		
-		Values outputValues = new Values();
+		Values outputValues = new Values();		
 		outputValues.add(bid);
 		outputValues.add(topic);
 		outputValues.add(tuple.getStringByField("adpos"));
-		outputValues.add(tuple.getStringByField("action_type"));
+		outputValues.add(actTypeStr);
 		outputValues.add(tuple.getStringByField("action_time"));
 		outputValues.add(tuple.getStringByField("item_id"));
 		outputValues.add(tuple.getStringByField("action_result"));	
@@ -113,31 +119,26 @@ public class PretreatmentBolt extends AbstractConfigUpdateBolt {
 		outputValues.add(tuple.getStringByField("platform"));	
 		outputValues.add(tuple.getStringByField("lbs_info"));	
 		
-		if(topic.equals(Constants.actions_stream)){
-			if(!Utils.isQNumValid(qq)){
-				if(!uid.equals("0") && uid.matches("[0-9]+")){
-					new GetQQUpdateCallBack(uid,topic,outputValues).excute();				
-				}else{
-					return;
-				}
+		if(!Utils.isQNumValid(qq)){
+			if(!uid.equals("0") && uid.matches("[0-9]+")){
+				new GetQQUpdateCallBack(uid,actType,outputValues).excute();				
 			}else{
-				outputValues.add(qq);
-				new GetGroupIdUpdateCallBack(qq,topic,outputValues).excute();
-			}						
+				return;
+			}
 		}else{
-			return;
-		}
+			outputValues.add(qq);
+			new GetGroupIdUpdateCallBack(qq,actType,outputValues).excute();
+		}						
 	}
 	
 	public class GetQQUpdateCallBack implements MutiClientCallBack{
-		private String qq;
 		private String uid;
-		private String outputStream;
 		private Values outputValues;
+		private ActiveType actType;
 		
-		public GetQQUpdateCallBack(String uid, String outputStream, Values outputValues){
+		public GetQQUpdateCallBack(String uid,ActiveType actType, Values outputValues){
 			this.uid = uid;
-			this.outputStream = outputStream;
+			this.actType = actType;
 			this.outputValues = outputValues;
 		}
 		
@@ -147,12 +148,11 @@ public class PretreatmentBolt extends AbstractConfigUpdateBolt {
 			try {
 				Result<byte[]> res = afuture.get();
 				if(res.isSuccess() && res.getResult() != null){
-					this.qq =  new String(res.getResult());					
+					String qq =  new String(res.getResult());					
 					if(Utils.isQNumValid(qq)){
 						outputValues.add(qq);
-						qqCache.set(uid, new SoftReference<String>(qq),cacheExpireTime);
-						
-						new GetGroupIdUpdateCallBack(qq,outputStream,outputValues).excute();
+						qqCache.set(uid, new SoftReference<String>(qq),cacheExpireTime);		
+						new GetGroupIdUpdateCallBack(qq,actType,outputValues).excute();
 					}
 				}
 			} catch (Exception e) {
@@ -171,7 +171,7 @@ public class PretreatmentBolt extends AbstractConfigUpdateBolt {
 				
 				if(qq != null && Utils.isQNumValid(qq)){
 					outputValues.add(qq);
-					new GetGroupIdUpdateCallBack(qq, outputStream, outputValues).excute();
+					new GetGroupIdUpdateCallBack(qq,actType,outputValues).excute();
 				}else{
 					try{
 						ClientAttr clientEntry = mtClientList.get(0);		
@@ -188,13 +188,13 @@ public class PretreatmentBolt extends AbstractConfigUpdateBolt {
 	
 	public class GetGroupIdUpdateCallBack implements MutiClientCallBack{
 		private String qq;
-		private String outputStream;
 		private Values outputValues;
+		private ActiveType actType;
 		
-		public GetGroupIdUpdateCallBack(String qq,String outputStream, Values outputValues) {
+		public GetGroupIdUpdateCallBack(String qq,ActiveType actType,Values outputValues) {
 			this.qq = qq;
-			this.outputStream = outputStream;
 			this.outputValues = outputValues;
+			this.actType = actType;
 		}
 
 		@Override
@@ -206,17 +206,16 @@ public class PretreatmentBolt extends AbstractConfigUpdateBolt {
 				if(res.isSuccess() && res.getResult() != null){
 					String tde_gid = new String(res.getResult());
 					String[] grouplist = (tde_gid).split(",|\\|");
-					if(grouplist.length>=2){
+					if(grouplist.length >= 2){
 						groupId = grouplist[1];
 					}				
 				}
 			} catch (Exception e) {
 				logger.error(e.getMessage(), e);
 			}
-			
 			outputValues.add(groupId);
 			groupIdCache.set(qq.toString(), new SoftReference<String>(groupId),cacheExpireTime);
-			emitData(outputStream,outputValues);
+			emitData(actType,outputValues);
 		}
 		
 		public void excute(){	
@@ -228,7 +227,7 @@ public class PretreatmentBolt extends AbstractConfigUpdateBolt {
 			
 			if(groupId != null){
 				outputValues.add(groupId);
-				emitData(outputStream, outputValues);
+				emitData(actType,outputValues);
 			}else{
 				try{
 					ClientAttr clientEntry = mtClientList.get(0);		
@@ -242,9 +241,14 @@ public class PretreatmentBolt extends AbstractConfigUpdateBolt {
 		}
 	}
 	
-	private void emitData(String outputStream, Values outputValues) {
+	private void emitData(ActiveType actType,Values outputValues) {
 		synchronized(collector){
-			this.collector.emit(outputStream,outputValues);
+			if( actType == Recommend.ActiveType.Impress || actType == Recommend.ActiveType.Click ){
+				this.collector.emit(Constants.recommend_action_stream,outputValues);
+			}else{
+				this.collector.emit(Constants.actions_stream,outputValues);
+			}
+			
 		}
 	}
 	

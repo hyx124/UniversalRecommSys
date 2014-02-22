@@ -43,7 +43,7 @@ import backtype.storm.task.OutputCollector;
 import backtype.storm.task.TopologyContext;
 import backtype.storm.tuple.Tuple;
 
-public class TopActionBolt extends AbstractConfigUpdateBolt {
+public class FilterBolt extends AbstractConfigUpdateBolt {
 	private static final long serialVersionUID = -1351459986701457961L;
 	private List<ClientAttr> mtClientList;	
 	private MonitorTools mt;
@@ -57,9 +57,9 @@ public class TopActionBolt extends AbstractConfigUpdateBolt {
 	private int topNum;
 
 	private static Logger logger = LoggerFactory
-			.getLogger(TopActionBolt.class);
+			.getLogger(FilterBolt.class);
 	
-	public TopActionBolt(String config, ImmutableList<Output> outputField) {
+	public FilterBolt(String config, ImmutableList<Output> outputField) {
 		super(config, outputField,Constants.config_stream);
 	}
 	
@@ -81,10 +81,10 @@ public class TopActionBolt extends AbstractConfigUpdateBolt {
 	
 	@Override
 	public void updateConfig(XMLConfiguration config) {	
-		nsTableId = config.getInt("storage_table",301);
-		dataExpireTime = config.getInt("data_expiretime",1*24*3600);
+		nsTableId = config.getInt("storage_table",309);
+		dataExpireTime = config.getInt("data_expiretime",180*24*3600);
 		cacheExpireTime = config.getInt("cache_expiretime",3600);
-		topNum = config.getInt("topNum",30);
+		topNum = config.getInt("topNum",100);
 	}
 
 	@Override
@@ -104,6 +104,10 @@ public class TopActionBolt extends AbstractConfigUpdateBolt {
 		String platform = tuple.getStringByField("platform");
 		ActiveType actType = Utils.getActionTypeByString(actionType);
 		
+		if(actType != Recommend.ActiveType.BuyCart){
+			return;
+		}
+		
 		Recommend.UserActiveHistory.ActiveRecord.Builder actBuilder =
 				Recommend.UserActiveHistory.ActiveRecord.newBuilder();
 		actBuilder.setItem(itemId).setActTime(Long.valueOf(actionTime)).setActType(actType)
@@ -111,7 +115,7 @@ public class TopActionBolt extends AbstractConfigUpdateBolt {
 
 		ActionCombinerValue value = new ActionCombinerValue();
 		value.init(itemId,actBuilder.build());
-		String key = bid+"#"+qq+"#D1";
+		String key = bid+"#"+qq+"#F1";
 		combinerKeys(key, value);	
 	}
 	
@@ -247,7 +251,7 @@ public class TopActionBolt extends AbstractConfigUpdateBolt {
 			}
 			
 			for(ClientAttr clientEntry:mtClientList ){
-				logger.info("start in save,client="+clientEntry.getGroupname());
+				logger.info("start in save,client="+clientEntry.getGroupname()+",key="+key);
 				TairOption putopt = new TairOption(clientEntry.getTimeout(),(short)0, dataExpireTime);
 				try {
 					Future<Result<Void>> future = 

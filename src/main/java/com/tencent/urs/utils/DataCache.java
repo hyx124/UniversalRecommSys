@@ -9,6 +9,8 @@ import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.atomic.AtomicInteger;
 import org.apache.log4j.Logger;
 
+import com.tencent.urs.protobuf.Recommend.UserPairInfo;
+
 public class DataCache<T> {
 	private final AtomicInteger persistCount = new AtomicInteger(0);
 	private boolean selfClean = true;

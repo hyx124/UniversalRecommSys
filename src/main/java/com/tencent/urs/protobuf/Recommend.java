@@ -9038,6 +9038,2926 @@ public final class Recommend {
     // @@protoc_insertion_point(class_scope:com.tencent.urs.protobuf.CtrInfo)
   }
   
+  public interface UserCountInfoOrBuilder
+      extends com.google.protobuf.MessageLiteOrBuilder {
+    
+    // repeated .com.tencent.urs.protobuf.UserCountInfo.TimeSegment tsegs = 1;
+    java.util.List<com.tencent.urs.protobuf.Recommend.UserCountInfo.TimeSegment> 
+        getTsegsList();
+    com.tencent.urs.protobuf.Recommend.UserCountInfo.TimeSegment getTsegs(int index);
+    int getTsegsCount();
+  }
+  public static final class UserCountInfo extends
+      com.google.protobuf.GeneratedMessageLite
+      implements UserCountInfoOrBuilder {
+    // Use UserCountInfo.newBuilder() to construct.
+    private UserCountInfo(Builder builder) {
+      super(builder);
+    }
+    private UserCountInfo(boolean noInit) {}
+    
+    private static final UserCountInfo defaultInstance;
+    public static UserCountInfo getDefaultInstance() {
+      return defaultInstance;
+    }
+    
+    public UserCountInfo getDefaultInstanceForType() {
+      return defaultInstance;
+    }
+    
+    public interface TimeSegmentOrBuilder
+        extends com.google.protobuf.MessageLiteOrBuilder {
+      
+      // required uint64 timeId = 1;
+      boolean hasTimeId();
+      long getTimeId();
+      
+      // optional float count = 2;
+      boolean hasCount();
+      float getCount();
+    }
+    public static final class TimeSegment extends
+        com.google.protobuf.GeneratedMessageLite
+        implements TimeSegmentOrBuilder {
+      // Use TimeSegment.newBuilder() to construct.
+      private TimeSegment(Builder builder) {
+        super(builder);
+      }
+      private TimeSegment(boolean noInit) {}
+      
+      private static final TimeSegment defaultInstance;
+      public static TimeSegment getDefaultInstance() {
+        return defaultInstance;
+      }
+      
+      public TimeSegment getDefaultInstanceForType() {
+        return defaultInstance;
+      }
+      
+      private int bitField0_;
+      // required uint64 timeId = 1;
+      public static final int TIMEID_FIELD_NUMBER = 1;
+      private long timeId_;
+      public boolean hasTimeId() {
+        return ((bitField0_ & 0x00000001) == 0x00000001);
+      }
+      public long getTimeId() {
+        return timeId_;
+      }
+      
+      // optional float count = 2;
+      public static final int COUNT_FIELD_NUMBER = 2;
+      private float count_;
+      public boolean hasCount() {
+        return ((bitField0_ & 0x00000002) == 0x00000002);
+      }
+      public float getCount() {
+        return count_;
+      }
+      
+      private void initFields() {
+        timeId_ = 0L;
+        count_ = 0F;
+      }
+      private byte memoizedIsInitialized = -1;
+      public final boolean isInitialized() {
+        byte isInitialized = memoizedIsInitialized;
+        if (isInitialized != -1) return isInitialized == 1;
+        
+        if (!hasTimeId()) {
+          memoizedIsInitialized = 0;
+          return false;
+        }
+        memoizedIsInitialized = 1;
+        return true;
+      }
+      
+      public void writeTo(com.google.protobuf.CodedOutputStream output)
+                          throws java.io.IOException {
+        getSerializedSize();
+        if (((bitField0_ & 0x00000001) == 0x00000001)) {
+          output.writeUInt64(1, timeId_);
+        }
+        if (((bitField0_ & 0x00000002) == 0x00000002)) {
+          output.writeFloat(2, count_);
+        }
+      }
+      
+      private int memoizedSerializedSize = -1;
+      public int getSerializedSize() {
+        int size = memoizedSerializedSize;
+        if (size != -1) return size;
+      
+        size = 0;
+        if (((bitField0_ & 0x00000001) == 0x00000001)) {
+          size += com.google.protobuf.CodedOutputStream
+            .computeUInt64Size(1, timeId_);
+        }
+        if (((bitField0_ & 0x00000002) == 0x00000002)) {
+          size += com.google.protobuf.CodedOutputStream
+            .computeFloatSize(2, count_);
+        }
+        memoizedSerializedSize = size;
+        return size;
+      }
+      
+      private static final long serialVersionUID = 0L;
+      @java.lang.Override
+      protected java.lang.Object writeReplace()
+          throws java.io.ObjectStreamException {
+        return super.writeReplace();
+      }
+      
+      public static com.tencent.urs.protobuf.Recommend.UserCountInfo.TimeSegment parseFrom(
+          com.google.protobuf.ByteString data)
+          throws com.google.protobuf.InvalidProtocolBufferException {
+        return newBuilder().mergeFrom(data).buildParsed();
+      }
+      public static com.tencent.urs.protobuf.Recommend.UserCountInfo.TimeSegment parseFrom(
+          com.google.protobuf.ByteString data,
+          com.google.protobuf.ExtensionRegistryLite extensionRegistry)
+          throws com.google.protobuf.InvalidProtocolBufferException {
+        return newBuilder().mergeFrom(data, extensionRegistry)
+                 .buildParsed();
+      }
+      public static com.tencent.urs.protobuf.Recommend.UserCountInfo.TimeSegment parseFrom(byte[] data)
+          throws com.google.protobuf.InvalidProtocolBufferException {
+        return newBuilder().mergeFrom(data).buildParsed();
+      }
+      public static com.tencent.urs.protobuf.Recommend.UserCountInfo.TimeSegment parseFrom(
+          byte[] data,
+          com.google.protobuf.ExtensionRegistryLite extensionRegistry)
+          throws com.google.protobuf.InvalidProtocolBufferException {
+        return newBuilder().mergeFrom(data, extensionRegistry)
+                 .buildParsed();
+      }
+      public static com.tencent.urs.protobuf.Recommend.UserCountInfo.TimeSegment parseFrom(java.io.InputStream input)
+          throws java.io.IOException {
+        return newBuilder().mergeFrom(input).buildParsed();
+      }
+      public static com.tencent.urs.protobuf.Recommend.UserCountInfo.TimeSegment parseFrom(
+          java.io.InputStream input,
+          com.google.protobuf.ExtensionRegistryLite extensionRegistry)
+          throws java.io.IOException {
+        return newBuilder().mergeFrom(input, extensionRegistry)
+                 .buildParsed();
+      }
+      public static com.tencent.urs.protobuf.Recommend.UserCountInfo.TimeSegment parseDelimitedFrom(java.io.InputStream input)
+          throws java.io.IOException {
+        Builder builder = newBuilder();
+        if (builder.mergeDelimitedFrom(input)) {
+          return builder.buildParsed();
+        } else {
+          return null;
+        }
+      }
+      public static com.tencent.urs.protobuf.Recommend.UserCountInfo.TimeSegment parseDelimitedFrom(
+          java.io.InputStream input,
+          com.google.protobuf.ExtensionRegistryLite extensionRegistry)
+          throws java.io.IOException {
+        Builder builder = newBuilder();
+        if (builder.mergeDelimitedFrom(input, extensionRegistry)) {
+          return builder.buildParsed();
+        } else {
+          return null;
+        }
+      }
+      public static com.tencent.urs.protobuf.Recommend.UserCountInfo.TimeSegment parseFrom(
+          com.google.protobuf.CodedInputStream input)
+          throws java.io.IOException {
+        return newBuilder().mergeFrom(input).buildParsed();
+      }
+      public static com.tencent.urs.protobuf.Recommend.UserCountInfo.TimeSegment parseFrom(
+          com.google.protobuf.CodedInputStream input,
+          com.google.protobuf.ExtensionRegistryLite extensionRegistry)
+          throws java.io.IOException {
+        return newBuilder().mergeFrom(input, extensionRegistry)
+                 .buildParsed();
+      }
+      
+      public static Builder newBuilder() { return Builder.create(); }
+      public Builder newBuilderForType() { return newBuilder(); }
+      public static Builder newBuilder(com.tencent.urs.protobuf.Recommend.UserCountInfo.TimeSegment prototype) {
+        return newBuilder().mergeFrom(prototype);
+      }
+      public Builder toBuilder() { return newBuilder(this); }
+      
+      public static final class Builder extends
+          com.google.protobuf.GeneratedMessageLite.Builder<
+            com.tencent.urs.protobuf.Recommend.UserCountInfo.TimeSegment, Builder>
+          implements com.tencent.urs.protobuf.Recommend.UserCountInfo.TimeSegmentOrBuilder {
+        // Construct using com.tencent.urs.protobuf.Recommend.UserCountInfo.TimeSegment.newBuilder()
+        private Builder() {
+          maybeForceBuilderInitialization();
+        }
+        
+        private void maybeForceBuilderInitialization() {
+        }
+        private static Builder create() {
+          return new Builder();
+        }
+        
+        public Builder clear() {
+          super.clear();
+          timeId_ = 0L;
+          bitField0_ = (bitField0_ & ~0x00000001);
+          count_ = 0F;
+          bitField0_ = (bitField0_ & ~0x00000002);
+          return this;
+        }
+        
+        public Builder clone() {
+          return create().mergeFrom(buildPartial());
+        }
+        
+        public com.tencent.urs.protobuf.Recommend.UserCountInfo.TimeSegment getDefaultInstanceForType() {
+          return com.tencent.urs.protobuf.Recommend.UserCountInfo.TimeSegment.getDefaultInstance();
+        }
+        
+        public com.tencent.urs.protobuf.Recommend.UserCountInfo.TimeSegment build() {
+          com.tencent.urs.protobuf.Recommend.UserCountInfo.TimeSegment result = buildPartial();
+          if (!result.isInitialized()) {
+            throw newUninitializedMessageException(result);
+          }
+          return result;
+        }
+        
+        private com.tencent.urs.protobuf.Recommend.UserCountInfo.TimeSegment buildParsed()
+            throws com.google.protobuf.InvalidProtocolBufferException {
+          com.tencent.urs.protobuf.Recommend.UserCountInfo.TimeSegment result = buildPartial();
+          if (!result.isInitialized()) {
+            throw newUninitializedMessageException(
+              result).asInvalidProtocolBufferException();
+          }
+          return result;
+        }
+        
+        public com.tencent.urs.protobuf.Recommend.UserCountInfo.TimeSegment buildPartial() {
+          com.tencent.urs.protobuf.Recommend.UserCountInfo.TimeSegment result = new com.tencent.urs.protobuf.Recommend.UserCountInfo.TimeSegment(this);
+          int from_bitField0_ = bitField0_;
+          int to_bitField0_ = 0;
+          if (((from_bitField0_ & 0x00000001) == 0x00000001)) {
+            to_bitField0_ |= 0x00000001;
+          }
+          result.timeId_ = timeId_;
+          if (((from_bitField0_ & 0x00000002) == 0x00000002)) {
+            to_bitField0_ |= 0x00000002;
+          }
+          result.count_ = count_;
+          result.bitField0_ = to_bitField0_;
+          return result;
+        }
+        
+        public Builder mergeFrom(com.tencent.urs.protobuf.Recommend.UserCountInfo.TimeSegment other) {
+          if (other == com.tencent.urs.protobuf.Recommend.UserCountInfo.TimeSegment.getDefaultInstance()) return this;
+          if (other.hasTimeId()) {
+            setTimeId(other.getTimeId());
+          }
+          if (other.hasCount()) {
+            setCount(other.getCount());
+          }
+          return this;
+        }
+        
+        public final boolean isInitialized() {
+          if (!hasTimeId()) {
+            
+            return false;
+          }
+          return true;
+        }
+        
+        public Builder mergeFrom(
+            com.google.protobuf.CodedInputStream input,
+            com.google.protobuf.ExtensionRegistryLite extensionRegistry)
+            throws java.io.IOException {
+          while (true) {
+            int tag = input.readTag();
+            switch (tag) {
+              case 0:
+                
+                return this;
+              default: {
+                if (!parseUnknownField(input, extensionRegistry, tag)) {
+                  
+                  return this;
+                }
+                break;
+              }
+              case 8: {
+                bitField0_ |= 0x00000001;
+                timeId_ = input.readUInt64();
+                break;
+              }
+              case 21: {
+                bitField0_ |= 0x00000002;
+                count_ = input.readFloat();
+                break;
+              }
+            }
+          }
+        }
+        
+        private int bitField0_;
+        
+        // required uint64 timeId = 1;
+        private long timeId_ ;
+        public boolean hasTimeId() {
+          return ((bitField0_ & 0x00000001) == 0x00000001);
+        }
+        public long getTimeId() {
+          return timeId_;
+        }
+        public Builder setTimeId(long value) {
+          bitField0_ |= 0x00000001;
+          timeId_ = value;
+          
+          return this;
+        }
+        public Builder clearTimeId() {
+          bitField0_ = (bitField0_ & ~0x00000001);
+          timeId_ = 0L;
+          
+          return this;
+        }
+        
+        // optional float count = 2;
+        private float count_ ;
+        public boolean hasCount() {
+          return ((bitField0_ & 0x00000002) == 0x00000002);
+        }
+        public float getCount() {
+          return count_;
+        }
+        public Builder setCount(float value) {
+          bitField0_ |= 0x00000002;
+          count_ = value;
+          
+          return this;
+        }
+        public Builder clearCount() {
+          bitField0_ = (bitField0_ & ~0x00000002);
+          count_ = 0F;
+          
+          return this;
+        }
+        
+        // @@protoc_insertion_point(builder_scope:com.tencent.urs.protobuf.UserCountInfo.TimeSegment)
+      }
+      
+      static {
+        defaultInstance = new TimeSegment(true);
+        defaultInstance.initFields();
+      }
+      
+      // @@protoc_insertion_point(class_scope:com.tencent.urs.protobuf.UserCountInfo.TimeSegment)
+    }
+    
+    // repeated .com.tencent.urs.protobuf.UserCountInfo.TimeSegment tsegs = 1;
+    public static final int TSEGS_FIELD_NUMBER = 1;
+    private java.util.List<com.tencent.urs.protobuf.Recommend.UserCountInfo.TimeSegment> tsegs_;
+    public java.util.List<com.tencent.urs.protobuf.Recommend.UserCountInfo.TimeSegment> getTsegsList() {
+      return tsegs_;
+    }
+    public java.util.List<? extends com.tencent.urs.protobuf.Recommend.UserCountInfo.TimeSegmentOrBuilder> 
+        getTsegsOrBuilderList() {
+      return tsegs_;
+    }
+    public int getTsegsCount() {
+      return tsegs_.size();
+    }
+    public com.tencent.urs.protobuf.Recommend.UserCountInfo.TimeSegment getTsegs(int index) {
+      return tsegs_.get(index);
+    }
+    public com.tencent.urs.protobuf.Recommend.UserCountInfo.TimeSegmentOrBuilder getTsegsOrBuilder(
+        int index) {
+      return tsegs_.get(index);
+    }
+    
+    private void initFields() {
+      tsegs_ = java.util.Collections.emptyList();
+    }
+    private byte memoizedIsInitialized = -1;
+    public final boolean isInitialized() {
+      byte isInitialized = memoizedIsInitialized;
+      if (isInitialized != -1) return isInitialized == 1;
+      
+      for (int i = 0; i < getTsegsCount(); i++) {
+        if (!getTsegs(i).isInitialized()) {
+          memoizedIsInitialized = 0;
+          return false;
+        }
+      }
+      memoizedIsInitialized = 1;
+      return true;
+    }
+    
+    public void writeTo(com.google.protobuf.CodedOutputStream output)
+                        throws java.io.IOException {
+      getSerializedSize();
+      for (int i = 0; i < tsegs_.size(); i++) {
+        output.writeMessage(1, tsegs_.get(i));
+      }
+    }
+    
+    private int memoizedSerializedSize = -1;
+    public int getSerializedSize() {
+      int size = memoizedSerializedSize;
+      if (size != -1) return size;
+    
+      size = 0;
+      for (int i = 0; i < tsegs_.size(); i++) {
+        size += com.google.protobuf.CodedOutputStream
+          .computeMessageSize(1, tsegs_.get(i));
+      }
+      memoizedSerializedSize = size;
+      return size;
+    }
+    
+    private static final long serialVersionUID = 0L;
+    @java.lang.Override
+    protected java.lang.Object writeReplace()
+        throws java.io.ObjectStreamException {
+      return super.writeReplace();
+    }
+    
+    public static com.tencent.urs.protobuf.Recommend.UserCountInfo parseFrom(
+        com.google.protobuf.ByteString data)
+        throws com.google.protobuf.InvalidProtocolBufferException {
+      return newBuilder().mergeFrom(data).buildParsed();
+    }
+    public static com.tencent.urs.protobuf.Recommend.UserCountInfo parseFrom(
+        com.google.protobuf.ByteString data,
+        com.google.protobuf.ExtensionRegistryLite extensionRegistry)
+        throws com.google.protobuf.InvalidProtocolBufferException {
+      return newBuilder().mergeFrom(data, extensionRegistry)
+               .buildParsed();
+    }
+    public static com.tencent.urs.protobuf.Recommend.UserCountInfo parseFrom(byte[] data)
+        throws com.google.protobuf.InvalidProtocolBufferException {
+      return newBuilder().mergeFrom(data).buildParsed();
+    }
+    public static com.tencent.urs.protobuf.Recommend.UserCountInfo parseFrom(
+        byte[] data,
+        com.google.protobuf.ExtensionRegistryLite extensionRegistry)
+        throws com.google.protobuf.InvalidProtocolBufferException {
+      return newBuilder().mergeFrom(data, extensionRegistry)
+               .buildParsed();
+    }
+    public static com.tencent.urs.protobuf.Recommend.UserCountInfo parseFrom(java.io.InputStream input)
+        throws java.io.IOException {
+      return newBuilder().mergeFrom(input).buildParsed();
+    }
+    public static com.tencent.urs.protobuf.Recommend.UserCountInfo parseFrom(
+        java.io.InputStream input,
+        com.google.protobuf.ExtensionRegistryLite extensionRegistry)
+        throws java.io.IOException {
+      return newBuilder().mergeFrom(input, extensionRegistry)
+               .buildParsed();
+    }
+    public static com.tencent.urs.protobuf.Recommend.UserCountInfo parseDelimitedFrom(java.io.InputStream input)
+        throws java.io.IOException {
+      Builder builder = newBuilder();
+      if (builder.mergeDelimitedFrom(input)) {
+        return builder.buildParsed();
+      } else {
+        return null;
+      }
+    }
+    public static com.tencent.urs.protobuf.Recommend.UserCountInfo parseDelimitedFrom(
+        java.io.InputStream input,
+        com.google.protobuf.ExtensionRegistryLite extensionRegistry)
+        throws java.io.IOException {
+      Builder builder = newBuilder();
+      if (builder.mergeDelimitedFrom(input, extensionRegistry)) {
+        return builder.buildParsed();
+      } else {
+        return null;
+      }
+    }
+    public static com.tencent.urs.protobuf.Recommend.UserCountInfo parseFrom(
+        com.google.protobuf.CodedInputStream input)
+        throws java.io.IOException {
+      return newBuilder().mergeFrom(input).buildParsed();
+    }
+    public static com.tencent.urs.protobuf.Recommend.UserCountInfo parseFrom(
+        com.google.protobuf.CodedInputStream input,
+        com.google.protobuf.ExtensionRegistryLite extensionRegistry)
+        throws java.io.IOException {
+      return newBuilder().mergeFrom(input, extensionRegistry)
+               .buildParsed();
+    }
+    
+    public static Builder newBuilder() { return Builder.create(); }
+    public Builder newBuilderForType() { return newBuilder(); }
+    public static Builder newBuilder(com.tencent.urs.protobuf.Recommend.UserCountInfo prototype) {
+      return newBuilder().mergeFrom(prototype);
+    }
+    public Builder toBuilder() { return newBuilder(this); }
+    
+    public static final class Builder extends
+        com.google.protobuf.GeneratedMessageLite.Builder<
+          com.tencent.urs.protobuf.Recommend.UserCountInfo, Builder>
+        implements com.tencent.urs.protobuf.Recommend.UserCountInfoOrBuilder {
+      // Construct using com.tencent.urs.protobuf.Recommend.UserCountInfo.newBuilder()
+      private Builder() {
+        maybeForceBuilderInitialization();
+      }
+      
+      private void maybeForceBuilderInitialization() {
+      }
+      private static Builder create() {
+        return new Builder();
+      }
+      
+      public Builder clear() {
+        super.clear();
+        tsegs_ = java.util.Collections.emptyList();
+        bitField0_ = (bitField0_ & ~0x00000001);
+        return this;
+      }
+      
+      public Builder clone() {
+        return create().mergeFrom(buildPartial());
+      }
+      
+      public com.tencent.urs.protobuf.Recommend.UserCountInfo getDefaultInstanceForType() {
+        return com.tencent.urs.protobuf.Recommend.UserCountInfo.getDefaultInstance();
+      }
+      
+      public com.tencent.urs.protobuf.Recommend.UserCountInfo build() {
+        com.tencent.urs.protobuf.Recommend.UserCountInfo result = buildPartial();
+        if (!result.isInitialized()) {
+          throw newUninitializedMessageException(result);
+        }
+        return result;
+      }
+      
+      private com.tencent.urs.protobuf.Recommend.UserCountInfo buildParsed()
+          throws com.google.protobuf.InvalidProtocolBufferException {
+        com.tencent.urs.protobuf.Recommend.UserCountInfo result = buildPartial();
+        if (!result.isInitialized()) {
+          throw newUninitializedMessageException(
+            result).asInvalidProtocolBufferException();
+        }
+        return result;
+      }
+      
+      public com.tencent.urs.protobuf.Recommend.UserCountInfo buildPartial() {
+        com.tencent.urs.protobuf.Recommend.UserCountInfo result = new com.tencent.urs.protobuf.Recommend.UserCountInfo(this);
+        int from_bitField0_ = bitField0_;
+        if (((bitField0_ & 0x00000001) == 0x00000001)) {
+          tsegs_ = java.util.Collections.unmodifiableList(tsegs_);
+          bitField0_ = (bitField0_ & ~0x00000001);
+        }
+        result.tsegs_ = tsegs_;
+        return result;
+      }
+      
+      public Builder mergeFrom(com.tencent.urs.protobuf.Recommend.UserCountInfo other) {
+        if (other == com.tencent.urs.protobuf.Recommend.UserCountInfo.getDefaultInstance()) return this;
+        if (!other.tsegs_.isEmpty()) {
+          if (tsegs_.isEmpty()) {
+            tsegs_ = other.tsegs_;
+            bitField0_ = (bitField0_ & ~0x00000001);
+          } else {
+            ensureTsegsIsMutable();
+            tsegs_.addAll(other.tsegs_);
+          }
+          
+        }
+        return this;
+      }
+      
+      public final boolean isInitialized() {
+        for (int i = 0; i < getTsegsCount(); i++) {
+          if (!getTsegs(i).isInitialized()) {
+            
+            return false;
+          }
+        }
+        return true;
+      }
+      
+      public Builder mergeFrom(
+          com.google.protobuf.CodedInputStream input,
+          com.google.protobuf.ExtensionRegistryLite extensionRegistry)
+          throws java.io.IOException {
+        while (true) {
+          int tag = input.readTag();
+          switch (tag) {
+            case 0:
+              
+              return this;
+            default: {
+              if (!parseUnknownField(input, extensionRegistry, tag)) {
+                
+                return this;
+              }
+              break;
+            }
+            case 10: {
+              com.tencent.urs.protobuf.Recommend.UserCountInfo.TimeSegment.Builder subBuilder = com.tencent.urs.protobuf.Recommend.UserCountInfo.TimeSegment.newBuilder();
+              input.readMessage(subBuilder, extensionRegistry);
+              addTsegs(subBuilder.buildPartial());
+              break;
+            }
+          }
+        }
+      }
+      
+      private int bitField0_;
+      
+      // repeated .com.tencent.urs.protobuf.UserCountInfo.TimeSegment tsegs = 1;
+      private java.util.List<com.tencent.urs.protobuf.Recommend.UserCountInfo.TimeSegment> tsegs_ =
+        java.util.Collections.emptyList();
+      private void ensureTsegsIsMutable() {
+        if (!((bitField0_ & 0x00000001) == 0x00000001)) {
+          tsegs_ = new java.util.ArrayList<com.tencent.urs.protobuf.Recommend.UserCountInfo.TimeSegment>(tsegs_);
+          bitField0_ |= 0x00000001;
+         }
+      }
+      
+      public java.util.List<com.tencent.urs.protobuf.Recommend.UserCountInfo.TimeSegment> getTsegsList() {
+        return java.util.Collections.unmodifiableList(tsegs_);
+      }
+      public int getTsegsCount() {
+        return tsegs_.size();
+      }
+      public com.tencent.urs.protobuf.Recommend.UserCountInfo.TimeSegment getTsegs(int index) {
+        return tsegs_.get(index);
+      }
+      public Builder setTsegs(
+          int index, com.tencent.urs.protobuf.Recommend.UserCountInfo.TimeSegment value) {
+        if (value == null) {
+          throw new NullPointerException();
+        }
+        ensureTsegsIsMutable();
+        tsegs_.set(index, value);
+        
+        return this;
+      }
+      public Builder setTsegs(
+          int index, com.tencent.urs.protobuf.Recommend.UserCountInfo.TimeSegment.Builder builderForValue) {
+        ensureTsegsIsMutable();
+        tsegs_.set(index, builderForValue.build());
+        
+        return this;
+      }
+      public Builder addTsegs(com.tencent.urs.protobuf.Recommend.UserCountInfo.TimeSegment value) {
+        if (value == null) {
+          throw new NullPointerException();
+        }
+        ensureTsegsIsMutable();
+        tsegs_.add(value);
+        
+        return this;
+      }
+      public Builder addTsegs(
+          int index, com.tencent.urs.protobuf.Recommend.UserCountInfo.TimeSegment value) {
+        if (value == null) {
+          throw new NullPointerException();
+        }
+        ensureTsegsIsMutable();
+        tsegs_.add(index, value);
+        
+        return this;
+      }
+      public Builder addTsegs(
+          com.tencent.urs.protobuf.Recommend.UserCountInfo.TimeSegment.Builder builderForValue) {
+        ensureTsegsIsMutable();
+        tsegs_.add(builderForValue.build());
+        
+        return this;
+      }
+      public Builder addTsegs(
+          int index, com.tencent.urs.protobuf.Recommend.UserCountInfo.TimeSegment.Builder builderForValue) {
+        ensureTsegsIsMutable();
+        tsegs_.add(index, builderForValue.build());
+        
+        return this;
+      }
+      public Builder addAllTsegs(
+          java.lang.Iterable<? extends com.tencent.urs.protobuf.Recommend.UserCountInfo.TimeSegment> values) {
+        ensureTsegsIsMutable();
+        super.addAll(values, tsegs_);
+        
+        return this;
+      }
+      public Builder clearTsegs() {
+        tsegs_ = java.util.Collections.emptyList();
+        bitField0_ = (bitField0_ & ~0x00000001);
+        
+        return this;
+      }
+      public Builder removeTsegs(int index) {
+        ensureTsegsIsMutable();
+        tsegs_.remove(index);
+        
+        return this;
+      }
+      
+      // @@protoc_insertion_point(builder_scope:com.tencent.urs.protobuf.UserCountInfo)
+    }
+    
+    static {
+      defaultInstance = new UserCountInfo(true);
+      defaultInstance.initFields();
+    }
+    
+    // @@protoc_insertion_point(class_scope:com.tencent.urs.protobuf.UserCountInfo)
+  }
+  
+  public interface GroupCountInfoOrBuilder
+      extends com.google.protobuf.MessageLiteOrBuilder {
+    
+    // repeated .com.tencent.urs.protobuf.GroupCountInfo.TimeSegment tsegs = 1;
+    java.util.List<com.tencent.urs.protobuf.Recommend.GroupCountInfo.TimeSegment> 
+        getTsegsList();
+    com.tencent.urs.protobuf.Recommend.GroupCountInfo.TimeSegment getTsegs(int index);
+    int getTsegsCount();
+  }
+  public static final class GroupCountInfo extends
+      com.google.protobuf.GeneratedMessageLite
+      implements GroupCountInfoOrBuilder {
+    // Use GroupCountInfo.newBuilder() to construct.
+    private GroupCountInfo(Builder builder) {
+      super(builder);
+    }
+    private GroupCountInfo(boolean noInit) {}
+    
+    private static final GroupCountInfo defaultInstance;
+    public static GroupCountInfo getDefaultInstance() {
+      return defaultInstance;
+    }
+    
+    public GroupCountInfo getDefaultInstanceForType() {
+      return defaultInstance;
+    }
+    
+    public interface TimeSegmentOrBuilder
+        extends com.google.protobuf.MessageLiteOrBuilder {
+      
+      // required uint64 timeId = 1;
+      boolean hasTimeId();
+      long getTimeId();
+      
+      // optional float count = 2;
+      boolean hasCount();
+      float getCount();
+    }
+    public static final class TimeSegment extends
+        com.google.protobuf.GeneratedMessageLite
+        implements TimeSegmentOrBuilder {
+      // Use TimeSegment.newBuilder() to construct.
+      private TimeSegment(Builder builder) {
+        super(builder);
+      }
+      private TimeSegment(boolean noInit) {}
+      
+      private static final TimeSegment defaultInstance;
+      public static TimeSegment getDefaultInstance() {
+        return defaultInstance;
+      }
+      
+      public TimeSegment getDefaultInstanceForType() {
+        return defaultInstance;
+      }
+      
+      private int bitField0_;
+      // required uint64 timeId = 1;
+      public static final int TIMEID_FIELD_NUMBER = 1;
+      private long timeId_;
+      public boolean hasTimeId() {
+        return ((bitField0_ & 0x00000001) == 0x00000001);
+      }
+      public long getTimeId() {
+        return timeId_;
+      }
+      
+      // optional float count = 2;
+      public static final int COUNT_FIELD_NUMBER = 2;
+      private float count_;
+      public boolean hasCount() {
+        return ((bitField0_ & 0x00000002) == 0x00000002);
+      }
+      public float getCount() {
+        return count_;
+      }
+      
+      private void initFields() {
+        timeId_ = 0L;
+        count_ = 0F;
+      }
+      private byte memoizedIsInitialized = -1;
+      public final boolean isInitialized() {
+        byte isInitialized = memoizedIsInitialized;
+        if (isInitialized != -1) return isInitialized == 1;
+        
+        if (!hasTimeId()) {
+          memoizedIsInitialized = 0;
+          return false;
+        }
+        memoizedIsInitialized = 1;
+        return true;
+      }
+      
+      public void writeTo(com.google.protobuf.CodedOutputStream output)
+                          throws java.io.IOException {
+        getSerializedSize();
+        if (((bitField0_ & 0x00000001) == 0x00000001)) {
+          output.writeUInt64(1, timeId_);
+        }
+        if (((bitField0_ & 0x00000002) == 0x00000002)) {
+          output.writeFloat(2, count_);
+        }
+      }
+      
+      private int memoizedSerializedSize = -1;
+      public int getSerializedSize() {
+        int size = memoizedSerializedSize;
+        if (size != -1) return size;
+      
+        size = 0;
+        if (((bitField0_ & 0x00000001) == 0x00000001)) {
+          size += com.google.protobuf.CodedOutputStream
+            .computeUInt64Size(1, timeId_);
+        }
+        if (((bitField0_ & 0x00000002) == 0x00000002)) {
+          size += com.google.protobuf.CodedOutputStream
+            .computeFloatSize(2, count_);
+        }
+        memoizedSerializedSize = size;
+        return size;
+      }
+      
+      private static final long serialVersionUID = 0L;
+      @java.lang.Override
+      protected java.lang.Object writeReplace()
+          throws java.io.ObjectStreamException {
+        return super.writeReplace();
+      }
+      
+      public static com.tencent.urs.protobuf.Recommend.GroupCountInfo.TimeSegment parseFrom(
+          com.google.protobuf.ByteString data)
+          throws com.google.protobuf.InvalidProtocolBufferException {
+        return newBuilder().mergeFrom(data).buildParsed();
+      }
+      public static com.tencent.urs.protobuf.Recommend.GroupCountInfo.TimeSegment parseFrom(
+          com.google.protobuf.ByteString data,
+          com.google.protobuf.ExtensionRegistryLite extensionRegistry)
+          throws com.google.protobuf.InvalidProtocolBufferException {
+        return newBuilder().mergeFrom(data, extensionRegistry)
+                 .buildParsed();
+      }
+      public static com.tencent.urs.protobuf.Recommend.GroupCountInfo.TimeSegment parseFrom(byte[] data)
+          throws com.google.protobuf.InvalidProtocolBufferException {
+        return newBuilder().mergeFrom(data).buildParsed();
+      }
+      public static com.tencent.urs.protobuf.Recommend.GroupCountInfo.TimeSegment parseFrom(
+          byte[] data,
+          com.google.protobuf.ExtensionRegistryLite extensionRegistry)
+          throws com.google.protobuf.InvalidProtocolBufferException {
+        return newBuilder().mergeFrom(data, extensionRegistry)
+                 .buildParsed();
+      }
+      public static com.tencent.urs.protobuf.Recommend.GroupCountInfo.TimeSegment parseFrom(java.io.InputStream input)
+          throws java.io.IOException {
+        return newBuilder().mergeFrom(input).buildParsed();
+      }
+      public static com.tencent.urs.protobuf.Recommend.GroupCountInfo.TimeSegment parseFrom(
+          java.io.InputStream input,
+          com.google.protobuf.ExtensionRegistryLite extensionRegistry)
+          throws java.io.IOException {
+        return newBuilder().mergeFrom(input, extensionRegistry)
+                 .buildParsed();
+      }
+      public static com.tencent.urs.protobuf.Recommend.GroupCountInfo.TimeSegment parseDelimitedFrom(java.io.InputStream input)
+          throws java.io.IOException {
+        Builder builder = newBuilder();
+        if (builder.mergeDelimitedFrom(input)) {
+          return builder.buildParsed();
+        } else {
+          return null;
+        }
+      }
+      public static com.tencent.urs.protobuf.Recommend.GroupCountInfo.TimeSegment parseDelimitedFrom(
+          java.io.InputStream input,
+          com.google.protobuf.ExtensionRegistryLite extensionRegistry)
+          throws java.io.IOException {
+        Builder builder = newBuilder();
+        if (builder.mergeDelimitedFrom(input, extensionRegistry)) {
+          return builder.buildParsed();
+        } else {
+          return null;
+        }
+      }
+      public static com.tencent.urs.protobuf.Recommend.GroupCountInfo.TimeSegment parseFrom(
+          com.google.protobuf.CodedInputStream input)
+          throws java.io.IOException {
+        return newBuilder().mergeFrom(input).buildParsed();
+      }
+      public static com.tencent.urs.protobuf.Recommend.GroupCountInfo.TimeSegment parseFrom(
+          com.google.protobuf.CodedInputStream input,
+          com.google.protobuf.ExtensionRegistryLite extensionRegistry)
+          throws java.io.IOException {
+        return newBuilder().mergeFrom(input, extensionRegistry)
+                 .buildParsed();
+      }
+      
+      public static Builder newBuilder() { return Builder.create(); }
+      public Builder newBuilderForType() { return newBuilder(); }
+      public static Builder newBuilder(com.tencent.urs.protobuf.Recommend.GroupCountInfo.TimeSegment prototype) {
+        return newBuilder().mergeFrom(prototype);
+      }
+      public Builder toBuilder() { return newBuilder(this); }
+      
+      public static final class Builder extends
+          com.google.protobuf.GeneratedMessageLite.Builder<
+            com.tencent.urs.protobuf.Recommend.GroupCountInfo.TimeSegment, Builder>
+          implements com.tencent.urs.protobuf.Recommend.GroupCountInfo.TimeSegmentOrBuilder {
+        // Construct using com.tencent.urs.protobuf.Recommend.GroupCountInfo.TimeSegment.newBuilder()
+        private Builder() {
+          maybeForceBuilderInitialization();
+        }
+        
+        private void maybeForceBuilderInitialization() {
+        }
+        private static Builder create() {
+          return new Builder();
+        }
+        
+        public Builder clear() {
+          super.clear();
+          timeId_ = 0L;
+          bitField0_ = (bitField0_ & ~0x00000001);
+          count_ = 0F;
+          bitField0_ = (bitField0_ & ~0x00000002);
+          return this;
+        }
+        
+        public Builder clone() {
+          return create().mergeFrom(buildPartial());
+        }
+        
+        public com.tencent.urs.protobuf.Recommend.GroupCountInfo.TimeSegment getDefaultInstanceForType() {
+          return com.tencent.urs.protobuf.Recommend.GroupCountInfo.TimeSegment.getDefaultInstance();
+        }
+        
+        public com.tencent.urs.protobuf.Recommend.GroupCountInfo.TimeSegment build() {
+          com.tencent.urs.protobuf.Recommend.GroupCountInfo.TimeSegment result = buildPartial();
+          if (!result.isInitialized()) {
+            throw newUninitializedMessageException(result);
+          }
+          return result;
+        }
+        
+        private com.tencent.urs.protobuf.Recommend.GroupCountInfo.TimeSegment buildParsed()
+            throws com.google.protobuf.InvalidProtocolBufferException {
+          com.tencent.urs.protobuf.Recommend.GroupCountInfo.TimeSegment result = buildPartial();
+          if (!result.isInitialized()) {
+            throw newUninitializedMessageException(
+              result).asInvalidProtocolBufferException();
+          }
+          return result;
+        }
+        
+        public com.tencent.urs.protobuf.Recommend.GroupCountInfo.TimeSegment buildPartial() {
+          com.tencent.urs.protobuf.Recommend.GroupCountInfo.TimeSegment result = new com.tencent.urs.protobuf.Recommend.GroupCountInfo.TimeSegment(this);
+          int from_bitField0_ = bitField0_;
+          int to_bitField0_ = 0;
+          if (((from_bitField0_ & 0x00000001) == 0x00000001)) {
+            to_bitField0_ |= 0x00000001;
+          }
+          result.timeId_ = timeId_;
+          if (((from_bitField0_ & 0x00000002) == 0x00000002)) {
+            to_bitField0_ |= 0x00000002;
+          }
+          result.count_ = count_;
+          result.bitField0_ = to_bitField0_;
+          return result;
+        }
+        
+        public Builder mergeFrom(com.tencent.urs.protobuf.Recommend.GroupCountInfo.TimeSegment other) {
+          if (other == com.tencent.urs.protobuf.Recommend.GroupCountInfo.TimeSegment.getDefaultInstance()) return this;
+          if (other.hasTimeId()) {
+            setTimeId(other.getTimeId());
+          }
+          if (other.hasCount()) {
+            setCount(other.getCount());
+          }
+          return this;
+        }
+        
+        public final boolean isInitialized() {
+          if (!hasTimeId()) {
+            
+            return false;
+          }
+          return true;
+        }
+        
+        public Builder mergeFrom(
+            com.google.protobuf.CodedInputStream input,
+            com.google.protobuf.ExtensionRegistryLite extensionRegistry)
+            throws java.io.IOException {
+          while (true) {
+            int tag = input.readTag();
+            switch (tag) {
+              case 0:
+                
+                return this;
+              default: {
+                if (!parseUnknownField(input, extensionRegistry, tag)) {
+                  
+                  return this;
+                }
+                break;
+              }
+              case 8: {
+                bitField0_ |= 0x00000001;
+                timeId_ = input.readUInt64();
+                break;
+              }
+              case 21: {
+                bitField0_ |= 0x00000002;
+                count_ = input.readFloat();
+                break;
+              }
+            }
+          }
+        }
+        
+        private int bitField0_;
+        
+        // required uint64 timeId = 1;
+        private long timeId_ ;
+        public boolean hasTimeId() {
+          return ((bitField0_ & 0x00000001) == 0x00000001);
+        }
+        public long getTimeId() {
+          return timeId_;
+        }
+        public Builder setTimeId(long value) {
+          bitField0_ |= 0x00000001;
+          timeId_ = value;
+          
+          return this;
+        }
+        public Builder clearTimeId() {
+          bitField0_ = (bitField0_ & ~0x00000001);
+          timeId_ = 0L;
+          
+          return this;
+        }
+        
+        // optional float count = 2;
+        private float count_ ;
+        public boolean hasCount() {
+          return ((bitField0_ & 0x00000002) == 0x00000002);
+        }
+        public float getCount() {
+          return count_;
+        }
+        public Builder setCount(float value) {
+          bitField0_ |= 0x00000002;
+          count_ = value;
+          
+          return this;
+        }
+        public Builder clearCount() {
+          bitField0_ = (bitField0_ & ~0x00000002);
+          count_ = 0F;
+          
+          return this;
+        }
+        
+        // @@protoc_insertion_point(builder_scope:com.tencent.urs.protobuf.GroupCountInfo.TimeSegment)
+      }
+      
+      static {
+        defaultInstance = new TimeSegment(true);
+        defaultInstance.initFields();
+      }
+      
+      // @@protoc_insertion_point(class_scope:com.tencent.urs.protobuf.GroupCountInfo.TimeSegment)
+    }
+    
+    // repeated .com.tencent.urs.protobuf.GroupCountInfo.TimeSegment tsegs = 1;
+    public static final int TSEGS_FIELD_NUMBER = 1;
+    private java.util.List<com.tencent.urs.protobuf.Recommend.GroupCountInfo.TimeSegment> tsegs_;
+    public java.util.List<com.tencent.urs.protobuf.Recommend.GroupCountInfo.TimeSegment> getTsegsList() {
+      return tsegs_;
+    }
+    public java.util.List<? extends com.tencent.urs.protobuf.Recommend.GroupCountInfo.TimeSegmentOrBuilder> 
+        getTsegsOrBuilderList() {
+      return tsegs_;
+    }
+    public int getTsegsCount() {
+      return tsegs_.size();
+    }
+    public com.tencent.urs.protobuf.Recommend.GroupCountInfo.TimeSegment getTsegs(int index) {
+      return tsegs_.get(index);
+    }
+    public com.tencent.urs.protobuf.Recommend.GroupCountInfo.TimeSegmentOrBuilder getTsegsOrBuilder(
+        int index) {
+      return tsegs_.get(index);
+    }
+    
+    private void initFields() {
+      tsegs_ = java.util.Collections.emptyList();
+    }
+    private byte memoizedIsInitialized = -1;
+    public final boolean isInitialized() {
+      byte isInitialized = memoizedIsInitialized;
+      if (isInitialized != -1) return isInitialized == 1;
+      
+      for (int i = 0; i < getTsegsCount(); i++) {
+        if (!getTsegs(i).isInitialized()) {
+          memoizedIsInitialized = 0;
+          return false;
+        }
+      }
+      memoizedIsInitialized = 1;
+      return true;
+    }
+    
+    public void writeTo(com.google.protobuf.CodedOutputStream output)
+                        throws java.io.IOException {
+      getSerializedSize();
+      for (int i = 0; i < tsegs_.size(); i++) {
+        output.writeMessage(1, tsegs_.get(i));
+      }
+    }
+    
+    private int memoizedSerializedSize = -1;
+    public int getSerializedSize() {
+      int size = memoizedSerializedSize;
+      if (size != -1) return size;
+    
+      size = 0;
+      for (int i = 0; i < tsegs_.size(); i++) {
+        size += com.google.protobuf.CodedOutputStream
+          .computeMessageSize(1, tsegs_.get(i));
+      }
+      memoizedSerializedSize = size;
+      return size;
+    }
+    
+    private static final long serialVersionUID = 0L;
+    @java.lang.Override
+    protected java.lang.Object writeReplace()
+        throws java.io.ObjectStreamException {
+      return super.writeReplace();
+    }
+    
+    public static com.tencent.urs.protobuf.Recommend.GroupCountInfo parseFrom(
+        com.google.protobuf.ByteString data)
+        throws com.google.protobuf.InvalidProtocolBufferException {
+      return newBuilder().mergeFrom(data).buildParsed();
+    }
+    public static com.tencent.urs.protobuf.Recommend.GroupCountInfo parseFrom(
+        com.google.protobuf.ByteString data,
+        com.google.protobuf.ExtensionRegistryLite extensionRegistry)
+        throws com.google.protobuf.InvalidProtocolBufferException {
+      return newBuilder().mergeFrom(data, extensionRegistry)
+               .buildParsed();
+    }
+    public static com.tencent.urs.protobuf.Recommend.GroupCountInfo parseFrom(byte[] data)
+        throws com.google.protobuf.InvalidProtocolBufferException {
+      return newBuilder().mergeFrom(data).buildParsed();
+    }
+    public static com.tencent.urs.protobuf.Recommend.GroupCountInfo parseFrom(
+        byte[] data,
+        com.google.protobuf.ExtensionRegistryLite extensionRegistry)
+        throws com.google.protobuf.InvalidProtocolBufferException {
+      return newBuilder().mergeFrom(data, extensionRegistry)
+               .buildParsed();
+    }
+    public static com.tencent.urs.protobuf.Recommend.GroupCountInfo parseFrom(java.io.InputStream input)
+        throws java.io.IOException {
+      return newBuilder().mergeFrom(input).buildParsed();
+    }
+    public static com.tencent.urs.protobuf.Recommend.GroupCountInfo parseFrom(
+        java.io.InputStream input,
+        com.google.protobuf.ExtensionRegistryLite extensionRegistry)
+        throws java.io.IOException {
+      return newBuilder().mergeFrom(input, extensionRegistry)
+               .buildParsed();
+    }
+    public static com.tencent.urs.protobuf.Recommend.GroupCountInfo parseDelimitedFrom(java.io.InputStream input)
+        throws java.io.IOException {
+      Builder builder = newBuilder();
+      if (builder.mergeDelimitedFrom(input)) {
+        return builder.buildParsed();
+      } else {
+        return null;
+      }
+    }
+    public static com.tencent.urs.protobuf.Recommend.GroupCountInfo parseDelimitedFrom(
+        java.io.InputStream input,
+        com.google.protobuf.ExtensionRegistryLite extensionRegistry)
+        throws java.io.IOException {
+      Builder builder = newBuilder();
+      if (builder.mergeDelimitedFrom(input, extensionRegistry)) {
+        return builder.buildParsed();
+      } else {
+        return null;
+      }
+    }
+    public static com.tencent.urs.protobuf.Recommend.GroupCountInfo parseFrom(
+        com.google.protobuf.CodedInputStream input)
+        throws java.io.IOException {
+      return newBuilder().mergeFrom(input).buildParsed();
+    }
+    public static com.tencent.urs.protobuf.Recommend.GroupCountInfo parseFrom(
+        com.google.protobuf.CodedInputStream input,
+        com.google.protobuf.ExtensionRegistryLite extensionRegistry)
+        throws java.io.IOException {
+      return newBuilder().mergeFrom(input, extensionRegistry)
+               .buildParsed();
+    }
+    
+    public static Builder newBuilder() { return Builder.create(); }
+    public Builder newBuilderForType() { return newBuilder(); }
+    public static Builder newBuilder(com.tencent.urs.protobuf.Recommend.GroupCountInfo prototype) {
+      return newBuilder().mergeFrom(prototype);
+    }
+    public Builder toBuilder() { return newBuilder(this); }
+    
+    public static final class Builder extends
+        com.google.protobuf.GeneratedMessageLite.Builder<
+          com.tencent.urs.protobuf.Recommend.GroupCountInfo, Builder>
+        implements com.tencent.urs.protobuf.Recommend.GroupCountInfoOrBuilder {
+      // Construct using com.tencent.urs.protobuf.Recommend.GroupCountInfo.newBuilder()
+      private Builder() {
+        maybeForceBuilderInitialization();
+      }
+      
+      private void maybeForceBuilderInitialization() {
+      }
+      private static Builder create() {
+        return new Builder();
+      }
+      
+      public Builder clear() {
+        super.clear();
+        tsegs_ = java.util.Collections.emptyList();
+        bitField0_ = (bitField0_ & ~0x00000001);
+        return this;
+      }
+      
+      public Builder clone() {
+        return create().mergeFrom(buildPartial());
+      }
+      
+      public com.tencent.urs.protobuf.Recommend.GroupCountInfo getDefaultInstanceForType() {
+        return com.tencent.urs.protobuf.Recommend.GroupCountInfo.getDefaultInstance();
+      }
+      
+      public com.tencent.urs.protobuf.Recommend.GroupCountInfo build() {
+        com.tencent.urs.protobuf.Recommend.GroupCountInfo result = buildPartial();
+        if (!result.isInitialized()) {
+          throw newUninitializedMessageException(result);
+        }
+        return result;
+      }
+      
+      private com.tencent.urs.protobuf.Recommend.GroupCountInfo buildParsed()
+          throws com.google.protobuf.InvalidProtocolBufferException {
+        com.tencent.urs.protobuf.Recommend.GroupCountInfo result = buildPartial();
+        if (!result.isInitialized()) {
+          throw newUninitializedMessageException(
+            result).asInvalidProtocolBufferException();
+        }
+        return result;
+      }
+      
+      public com.tencent.urs.protobuf.Recommend.GroupCountInfo buildPartial() {
+        com.tencent.urs.protobuf.Recommend.GroupCountInfo result = new com.tencent.urs.protobuf.Recommend.GroupCountInfo(this);
+        int from_bitField0_ = bitField0_;
+        if (((bitField0_ & 0x00000001) == 0x00000001)) {
+          tsegs_ = java.util.Collections.unmodifiableList(tsegs_);
+          bitField0_ = (bitField0_ & ~0x00000001);
+        }
+        result.tsegs_ = tsegs_;
+        return result;
+      }
+      
+      public Builder mergeFrom(com.tencent.urs.protobuf.Recommend.GroupCountInfo other) {
+        if (other == com.tencent.urs.protobuf.Recommend.GroupCountInfo.getDefaultInstance()) return this;
+        if (!other.tsegs_.isEmpty()) {
+          if (tsegs_.isEmpty()) {
+            tsegs_ = other.tsegs_;
+            bitField0_ = (bitField0_ & ~0x00000001);
+          } else {
+            ensureTsegsIsMutable();
+            tsegs_.addAll(other.tsegs_);
+          }
+          
+        }
+        return this;
+      }
+      
+      public final boolean isInitialized() {
+        for (int i = 0; i < getTsegsCount(); i++) {
+          if (!getTsegs(i).isInitialized()) {
+            
+            return false;
+          }
+        }
+        return true;
+      }
+      
+      public Builder mergeFrom(
+          com.google.protobuf.CodedInputStream input,
+          com.google.protobuf.ExtensionRegistryLite extensionRegistry)
+          throws java.io.IOException {
+        while (true) {
+          int tag = input.readTag();
+          switch (tag) {
+            case 0:
+              
+              return this;
+            default: {
+              if (!parseUnknownField(input, extensionRegistry, tag)) {
+                
+                return this;
+              }
+              break;
+            }
+            case 10: {
+              com.tencent.urs.protobuf.Recommend.GroupCountInfo.TimeSegment.Builder subBuilder = com.tencent.urs.protobuf.Recommend.GroupCountInfo.TimeSegment.newBuilder();
+              input.readMessage(subBuilder, extensionRegistry);
+              addTsegs(subBuilder.buildPartial());
+              break;
+            }
+          }
+        }
+      }
+      
+      private int bitField0_;
+      
+      // repeated .com.tencent.urs.protobuf.GroupCountInfo.TimeSegment tsegs = 1;
+      private java.util.List<com.tencent.urs.protobuf.Recommend.GroupCountInfo.TimeSegment> tsegs_ =
+        java.util.Collections.emptyList();
+      private void ensureTsegsIsMutable() {
+        if (!((bitField0_ & 0x00000001) == 0x00000001)) {
+          tsegs_ = new java.util.ArrayList<com.tencent.urs.protobuf.Recommend.GroupCountInfo.TimeSegment>(tsegs_);
+          bitField0_ |= 0x00000001;
+         }
+      }
+      
+      public java.util.List<com.tencent.urs.protobuf.Recommend.GroupCountInfo.TimeSegment> getTsegsList() {
+        return java.util.Collections.unmodifiableList(tsegs_);
+      }
+      public int getTsegsCount() {
+        return tsegs_.size();
+      }
+      public com.tencent.urs.protobuf.Recommend.GroupCountInfo.TimeSegment getTsegs(int index) {
+        return tsegs_.get(index);
+      }
+      public Builder setTsegs(
+          int index, com.tencent.urs.protobuf.Recommend.GroupCountInfo.TimeSegment value) {
+        if (value == null) {
+          throw new NullPointerException();
+        }
+        ensureTsegsIsMutable();
+        tsegs_.set(index, value);
+        
+        return this;
+      }
+      public Builder setTsegs(
+          int index, com.tencent.urs.protobuf.Recommend.GroupCountInfo.TimeSegment.Builder builderForValue) {
+        ensureTsegsIsMutable();
+        tsegs_.set(index, builderForValue.build());
+        
+        return this;
+      }
+      public Builder addTsegs(com.tencent.urs.protobuf.Recommend.GroupCountInfo.TimeSegment value) {
+        if (value == null) {
+          throw new NullPointerException();
+        }
+        ensureTsegsIsMutable();
+        tsegs_.add(value);
+        
+        return this;
+      }
+      public Builder addTsegs(
+          int index, com.tencent.urs.protobuf.Recommend.GroupCountInfo.TimeSegment value) {
+        if (value == null) {
+          throw new NullPointerException();
+        }
+        ensureTsegsIsMutable();
+        tsegs_.add(index, value);
+        
+        return this;
+      }
+      public Builder addTsegs(
+          com.tencent.urs.protobuf.Recommend.GroupCountInfo.TimeSegment.Builder builderForValue) {
+        ensureTsegsIsMutable();
+        tsegs_.add(builderForValue.build());
+        
+        return this;
+      }
+      public Builder addTsegs(
+          int index, com.tencent.urs.protobuf.Recommend.GroupCountInfo.TimeSegment.Builder builderForValue) {
+        ensureTsegsIsMutable();
+        tsegs_.add(index, builderForValue.build());
+        
+        return this;
+      }
+      public Builder addAllTsegs(
+          java.lang.Iterable<? extends com.tencent.urs.protobuf.Recommend.GroupCountInfo.TimeSegment> values) {
+        ensureTsegsIsMutable();
+        super.addAll(values, tsegs_);
+        
+        return this;
+      }
+      public Builder clearTsegs() {
+        tsegs_ = java.util.Collections.emptyList();
+        bitField0_ = (bitField0_ & ~0x00000001);
+        
+        return this;
+      }
+      public Builder removeTsegs(int index) {
+        ensureTsegsIsMutable();
+        tsegs_.remove(index);
+        
+        return this;
+      }
+      
+      // @@protoc_insertion_point(builder_scope:com.tencent.urs.protobuf.GroupCountInfo)
+    }
+    
+    static {
+      defaultInstance = new GroupCountInfo(true);
+      defaultInstance.initFields();
+    }
+    
+    // @@protoc_insertion_point(class_scope:com.tencent.urs.protobuf.GroupCountInfo)
+  }
+  
+  public interface UserPairInfoOrBuilder
+      extends com.google.protobuf.MessageLiteOrBuilder {
+    
+    // repeated .com.tencent.urs.protobuf.UserPairInfo.TimeSegment tsegs = 1;
+    java.util.List<com.tencent.urs.protobuf.Recommend.UserPairInfo.TimeSegment> 
+        getTsegsList();
+    com.tencent.urs.protobuf.Recommend.UserPairInfo.TimeSegment getTsegs(int index);
+    int getTsegsCount();
+  }
+  public static final class UserPairInfo extends
+      com.google.protobuf.GeneratedMessageLite
+      implements UserPairInfoOrBuilder {
+    // Use UserPairInfo.newBuilder() to construct.
+    private UserPairInfo(Builder builder) {
+      super(builder);
+    }
+    private UserPairInfo(boolean noInit) {}
+    
+    private static final UserPairInfo defaultInstance;
+    public static UserPairInfo getDefaultInstance() {
+      return defaultInstance;
+    }
+    
+    public UserPairInfo getDefaultInstanceForType() {
+      return defaultInstance;
+    }
+    
+    public interface TimeSegmentOrBuilder
+        extends com.google.protobuf.MessageLiteOrBuilder {
+      
+      // required uint64 timeId = 1;
+      boolean hasTimeId();
+      long getTimeId();
+      
+      // optional float count = 2;
+      boolean hasCount();
+      float getCount();
+    }
+    public static final class TimeSegment extends
+        com.google.protobuf.GeneratedMessageLite
+        implements TimeSegmentOrBuilder {
+      // Use TimeSegment.newBuilder() to construct.
+      private TimeSegment(Builder builder) {
+        super(builder);
+      }
+      private TimeSegment(boolean noInit) {}
+      
+      private static final TimeSegment defaultInstance;
+      public static TimeSegment getDefaultInstance() {
+        return defaultInstance;
+      }
+      
+      public TimeSegment getDefaultInstanceForType() {
+        return defaultInstance;
+      }
+      
+      private int bitField0_;
+      // required uint64 timeId = 1;
+      public static final int TIMEID_FIELD_NUMBER = 1;
+      private long timeId_;
+      public boolean hasTimeId() {
+        return ((bitField0_ & 0x00000001) == 0x00000001);
+      }
+      public long getTimeId() {
+        return timeId_;
+      }
+      
+      // optional float count = 2;
+      public static final int COUNT_FIELD_NUMBER = 2;
+      private float count_;
+      public boolean hasCount() {
+        return ((bitField0_ & 0x00000002) == 0x00000002);
+      }
+      public float getCount() {
+        return count_;
+      }
+      
+      private void initFields() {
+        timeId_ = 0L;
+        count_ = 0F;
+      }
+      private byte memoizedIsInitialized = -1;
+      public final boolean isInitialized() {
+        byte isInitialized = memoizedIsInitialized;
+        if (isInitialized != -1) return isInitialized == 1;
+        
+        if (!hasTimeId()) {
+          memoizedIsInitialized = 0;
+          return false;
+        }
+        memoizedIsInitialized = 1;
+        return true;
+      }
+      
+      public void writeTo(com.google.protobuf.CodedOutputStream output)
+                          throws java.io.IOException {
+        getSerializedSize();
+        if (((bitField0_ & 0x00000001) == 0x00000001)) {
+          output.writeUInt64(1, timeId_);
+        }
+        if (((bitField0_ & 0x00000002) == 0x00000002)) {
+          output.writeFloat(2, count_);
+        }
+      }
+      
+      private int memoizedSerializedSize = -1;
+      public int getSerializedSize() {
+        int size = memoizedSerializedSize;
+        if (size != -1) return size;
+      
+        size = 0;
+        if (((bitField0_ & 0x00000001) == 0x00000001)) {
+          size += com.google.protobuf.CodedOutputStream
+            .computeUInt64Size(1, timeId_);
+        }
+        if (((bitField0_ & 0x00000002) == 0x00000002)) {
+          size += com.google.protobuf.CodedOutputStream
+            .computeFloatSize(2, count_);
+        }
+        memoizedSerializedSize = size;
+        return size;
+      }
+      
+      private static final long serialVersionUID = 0L;
+      @java.lang.Override
+      protected java.lang.Object writeReplace()
+          throws java.io.ObjectStreamException {
+        return super.writeReplace();
+      }
+      
+      public static com.tencent.urs.protobuf.Recommend.UserPairInfo.TimeSegment parseFrom(
+          com.google.protobuf.ByteString data)
+          throws com.google.protobuf.InvalidProtocolBufferException {
+        return newBuilder().mergeFrom(data).buildParsed();
+      }
+      public static com.tencent.urs.protobuf.Recommend.UserPairInfo.TimeSegment parseFrom(
+          com.google.protobuf.ByteString data,
+          com.google.protobuf.ExtensionRegistryLite extensionRegistry)
+          throws com.google.protobuf.InvalidProtocolBufferException {
+        return newBuilder().mergeFrom(data, extensionRegistry)
+                 .buildParsed();
+      }
+      public static com.tencent.urs.protobuf.Recommend.UserPairInfo.TimeSegment parseFrom(byte[] data)
+          throws com.google.protobuf.InvalidProtocolBufferException {
+        return newBuilder().mergeFrom(data).buildParsed();
+      }
+      public static com.tencent.urs.protobuf.Recommend.UserPairInfo.TimeSegment parseFrom(
+          byte[] data,
+          com.google.protobuf.ExtensionRegistryLite extensionRegistry)
+          throws com.google.protobuf.InvalidProtocolBufferException {
+        return newBuilder().mergeFrom(data, extensionRegistry)
+                 .buildParsed();
+      }
+      public static com.tencent.urs.protobuf.Recommend.UserPairInfo.TimeSegment parseFrom(java.io.InputStream input)
+          throws java.io.IOException {
+        return newBuilder().mergeFrom(input).buildParsed();
+      }
+      public static com.tencent.urs.protobuf.Recommend.UserPairInfo.TimeSegment parseFrom(
+          java.io.InputStream input,
+          com.google.protobuf.ExtensionRegistryLite extensionRegistry)
+          throws java.io.IOException {
+        return newBuilder().mergeFrom(input, extensionRegistry)
+                 .buildParsed();
+      }
+      public static com.tencent.urs.protobuf.Recommend.UserPairInfo.TimeSegment parseDelimitedFrom(java.io.InputStream input)
+          throws java.io.IOException {
+        Builder builder = newBuilder();
+        if (builder.mergeDelimitedFrom(input)) {
+          return builder.buildParsed();
+        } else {
+          return null;
+        }
+      }
+      public static com.tencent.urs.protobuf.Recommend.UserPairInfo.TimeSegment parseDelimitedFrom(
+          java.io.InputStream input,
+          com.google.protobuf.ExtensionRegistryLite extensionRegistry)
+          throws java.io.IOException {
+        Builder builder = newBuilder();
+        if (builder.mergeDelimitedFrom(input, extensionRegistry)) {
+          return builder.buildParsed();
+        } else {
+          return null;
+        }
+      }
+      public static com.tencent.urs.protobuf.Recommend.UserPairInfo.TimeSegment parseFrom(
+          com.google.protobuf.CodedInputStream input)
+          throws java.io.IOException {
+        return newBuilder().mergeFrom(input).buildParsed();
+      }
+      public static com.tencent.urs.protobuf.Recommend.UserPairInfo.TimeSegment parseFrom(
+          com.google.protobuf.CodedInputStream input,
+          com.google.protobuf.ExtensionRegistryLite extensionRegistry)
+          throws java.io.IOException {
+        return newBuilder().mergeFrom(input, extensionRegistry)
+                 .buildParsed();
+      }
+      
+      public static Builder newBuilder() { return Builder.create(); }
+      public Builder newBuilderForType() { return newBuilder(); }
+      public static Builder newBuilder(com.tencent.urs.protobuf.Recommend.UserPairInfo.TimeSegment prototype) {
+        return newBuilder().mergeFrom(prototype);
+      }
+      public Builder toBuilder() { return newBuilder(this); }
+      
+      public static final class Builder extends
+          com.google.protobuf.GeneratedMessageLite.Builder<
+            com.tencent.urs.protobuf.Recommend.UserPairInfo.TimeSegment, Builder>
+          implements com.tencent.urs.protobuf.Recommend.UserPairInfo.TimeSegmentOrBuilder {
+        // Construct using com.tencent.urs.protobuf.Recommend.UserPairInfo.TimeSegment.newBuilder()
+        private Builder() {
+          maybeForceBuilderInitialization();
+        }
+        
+        private void maybeForceBuilderInitialization() {
+        }
+        private static Builder create() {
+          return new Builder();
+        }
+        
+        public Builder clear() {
+          super.clear();
+          timeId_ = 0L;
+          bitField0_ = (bitField0_ & ~0x00000001);
+          count_ = 0F;
+          bitField0_ = (bitField0_ & ~0x00000002);
+          return this;
+        }
+        
+        public Builder clone() {
+          return create().mergeFrom(buildPartial());
+        }
+        
+        public com.tencent.urs.protobuf.Recommend.UserPairInfo.TimeSegment getDefaultInstanceForType() {
+          return com.tencent.urs.protobuf.Recommend.UserPairInfo.TimeSegment.getDefaultInstance();
+        }
+        
+        public com.tencent.urs.protobuf.Recommend.UserPairInfo.TimeSegment build() {
+          com.tencent.urs.protobuf.Recommend.UserPairInfo.TimeSegment result = buildPartial();
+          if (!result.isInitialized()) {
+            throw newUninitializedMessageException(result);
+          }
+          return result;
+        }
+        
+        private com.tencent.urs.protobuf.Recommend.UserPairInfo.TimeSegment buildParsed()
+            throws com.google.protobuf.InvalidProtocolBufferException {
+          com.tencent.urs.protobuf.Recommend.UserPairInfo.TimeSegment result = buildPartial();
+          if (!result.isInitialized()) {
+            throw newUninitializedMessageException(
+              result).asInvalidProtocolBufferException();
+          }
+          return result;
+        }
+        
+        public com.tencent.urs.protobuf.Recommend.UserPairInfo.TimeSegment buildPartial() {
+          com.tencent.urs.protobuf.Recommend.UserPairInfo.TimeSegment result = new com.tencent.urs.protobuf.Recommend.UserPairInfo.TimeSegment(this);
+          int from_bitField0_ = bitField0_;
+          int to_bitField0_ = 0;
+          if (((from_bitField0_ & 0x00000001) == 0x00000001)) {
+            to_bitField0_ |= 0x00000001;
+          }
+          result.timeId_ = timeId_;
+          if (((from_bitField0_ & 0x00000002) == 0x00000002)) {
+            to_bitField0_ |= 0x00000002;
+          }
+          result.count_ = count_;
+          result.bitField0_ = to_bitField0_;
+          return result;
+        }
+        
+        public Builder mergeFrom(com.tencent.urs.protobuf.Recommend.UserPairInfo.TimeSegment other) {
+          if (other == com.tencent.urs.protobuf.Recommend.UserPairInfo.TimeSegment.getDefaultInstance()) return this;
+          if (other.hasTimeId()) {
+            setTimeId(other.getTimeId());
+          }
+          if (other.hasCount()) {
+            setCount(other.getCount());
+          }
+          return this;
+        }
+        
+        public final boolean isInitialized() {
+          if (!hasTimeId()) {
+            
+            return false;
+          }
+          return true;
+        }
+        
+        public Builder mergeFrom(
+            com.google.protobuf.CodedInputStream input,
+            com.google.protobuf.ExtensionRegistryLite extensionRegistry)
+            throws java.io.IOException {
+          while (true) {
+            int tag = input.readTag();
+            switch (tag) {
+              case 0:
+                
+                return this;
+              default: {
+                if (!parseUnknownField(input, extensionRegistry, tag)) {
+                  
+                  return this;
+                }
+                break;
+              }
+              case 8: {
+                bitField0_ |= 0x00000001;
+                timeId_ = input.readUInt64();
+                break;
+              }
+              case 21: {
+                bitField0_ |= 0x00000002;
+                count_ = input.readFloat();
+                break;
+              }
+            }
+          }
+        }
+        
+        private int bitField0_;
+        
+        // required uint64 timeId = 1;
+        private long timeId_ ;
+        public boolean hasTimeId() {
+          return ((bitField0_ & 0x00000001) == 0x00000001);
+        }
+        public long getTimeId() {
+          return timeId_;
+        }
+        public Builder setTimeId(long value) {
+          bitField0_ |= 0x00000001;
+          timeId_ = value;
+          
+          return this;
+        }
+        public Builder clearTimeId() {
+          bitField0_ = (bitField0_ & ~0x00000001);
+          timeId_ = 0L;
+          
+          return this;
+        }
+        
+        // optional float count = 2;
+        private float count_ ;
+        public boolean hasCount() {
+          return ((bitField0_ & 0x00000002) == 0x00000002);
+        }
+        public float getCount() {
+          return count_;
+        }
+        public Builder setCount(float value) {
+          bitField0_ |= 0x00000002;
+          count_ = value;
+          
+          return this;
+        }
+        public Builder clearCount() {
+          bitField0_ = (bitField0_ & ~0x00000002);
+          count_ = 0F;
+          
+          return this;
+        }
+        
+        // @@protoc_insertion_point(builder_scope:com.tencent.urs.protobuf.UserPairInfo.TimeSegment)
+      }
+      
+      static {
+        defaultInstance = new TimeSegment(true);
+        defaultInstance.initFields();
+      }
+      
+      // @@protoc_insertion_point(class_scope:com.tencent.urs.protobuf.UserPairInfo.TimeSegment)
+    }
+    
+    // repeated .com.tencent.urs.protobuf.UserPairInfo.TimeSegment tsegs = 1;
+    public static final int TSEGS_FIELD_NUMBER = 1;
+    private java.util.List<com.tencent.urs.protobuf.Recommend.UserPairInfo.TimeSegment> tsegs_;
+    public java.util.List<com.tencent.urs.protobuf.Recommend.UserPairInfo.TimeSegment> getTsegsList() {
+      return tsegs_;
+    }
+    public java.util.List<? extends com.tencent.urs.protobuf.Recommend.UserPairInfo.TimeSegmentOrBuilder> 
+        getTsegsOrBuilderList() {
+      return tsegs_;
+    }
+    public int getTsegsCount() {
+      return tsegs_.size();
+    }
+    public com.tencent.urs.protobuf.Recommend.UserPairInfo.TimeSegment getTsegs(int index) {
+      return tsegs_.get(index);
+    }
+    public com.tencent.urs.protobuf.Recommend.UserPairInfo.TimeSegmentOrBuilder getTsegsOrBuilder(
+        int index) {
+      return tsegs_.get(index);
+    }
+    
+    private void initFields() {
+      tsegs_ = java.util.Collections.emptyList();
+    }
+    private byte memoizedIsInitialized = -1;
+    public final boolean isInitialized() {
+      byte isInitialized = memoizedIsInitialized;
+      if (isInitialized != -1) return isInitialized == 1;
+      
+      for (int i = 0; i < getTsegsCount(); i++) {
+        if (!getTsegs(i).isInitialized()) {
+          memoizedIsInitialized = 0;
+          return false;
+        }
+      }
+      memoizedIsInitialized = 1;
+      return true;
+    }
+    
+    public void writeTo(com.google.protobuf.CodedOutputStream output)
+                        throws java.io.IOException {
+      getSerializedSize();
+      for (int i = 0; i < tsegs_.size(); i++) {
+        output.writeMessage(1, tsegs_.get(i));
+      }
+    }
+    
+    private int memoizedSerializedSize = -1;
+    public int getSerializedSize() {
+      int size = memoizedSerializedSize;
+      if (size != -1) return size;
+    
+      size = 0;
+      for (int i = 0; i < tsegs_.size(); i++) {
+        size += com.google.protobuf.CodedOutputStream
+          .computeMessageSize(1, tsegs_.get(i));
+      }
+      memoizedSerializedSize = size;
+      return size;
+    }
+    
+    private static final long serialVersionUID = 0L;
+    @java.lang.Override
+    protected java.lang.Object writeReplace()
+        throws java.io.ObjectStreamException {
+      return super.writeReplace();
+    }
+    
+    public static com.tencent.urs.protobuf.Recommend.UserPairInfo parseFrom(
+        com.google.protobuf.ByteString data)
+        throws com.google.protobuf.InvalidProtocolBufferException {
+      return newBuilder().mergeFrom(data).buildParsed();
+    }
+    public static com.tencent.urs.protobuf.Recommend.UserPairInfo parseFrom(
+        com.google.protobuf.ByteString data,
+        com.google.protobuf.ExtensionRegistryLite extensionRegistry)
+        throws com.google.protobuf.InvalidProtocolBufferException {
+      return newBuilder().mergeFrom(data, extensionRegistry)
+               .buildParsed();
+    }
+    public static com.tencent.urs.protobuf.Recommend.UserPairInfo parseFrom(byte[] data)
+        throws com.google.protobuf.InvalidProtocolBufferException {
+      return newBuilder().mergeFrom(data).buildParsed();
+    }
+    public static com.tencent.urs.protobuf.Recommend.UserPairInfo parseFrom(
+        byte[] data,
+        com.google.protobuf.ExtensionRegistryLite extensionRegistry)
+        throws com.google.protobuf.InvalidProtocolBufferException {
+      return newBuilder().mergeFrom(data, extensionRegistry)
+               .buildParsed();
+    }
+    public static com.tencent.urs.protobuf.Recommend.UserPairInfo parseFrom(java.io.InputStream input)
+        throws java.io.IOException {
+      return newBuilder().mergeFrom(input).buildParsed();
+    }
+    public static com.tencent.urs.protobuf.Recommend.UserPairInfo parseFrom(
+        java.io.InputStream input,
+        com.google.protobuf.ExtensionRegistryLite extensionRegistry)
+        throws java.io.IOException {
+      return newBuilder().mergeFrom(input, extensionRegistry)
+               .buildParsed();
+    }
+    public static com.tencent.urs.protobuf.Recommend.UserPairInfo parseDelimitedFrom(java.io.InputStream input)
+        throws java.io.IOException {
+      Builder builder = newBuilder();
+      if (builder.mergeDelimitedFrom(input)) {
+        return builder.buildParsed();
+      } else {
+        return null;
+      }
+    }
+    public static com.tencent.urs.protobuf.Recommend.UserPairInfo parseDelimitedFrom(
+        java.io.InputStream input,
+        com.google.protobuf.ExtensionRegistryLite extensionRegistry)
+        throws java.io.IOException {
+      Builder builder = newBuilder();
+      if (builder.mergeDelimitedFrom(input, extensionRegistry)) {
+        return builder.buildParsed();
+      } else {
+        return null;
+      }
+    }
+    public static com.tencent.urs.protobuf.Recommend.UserPairInfo parseFrom(
+        com.google.protobuf.CodedInputStream input)
+        throws java.io.IOException {
+      return newBuilder().mergeFrom(input).buildParsed();
+    }
+    public static com.tencent.urs.protobuf.Recommend.UserPairInfo parseFrom(
+        com.google.protobuf.CodedInputStream input,
+        com.google.protobuf.ExtensionRegistryLite extensionRegistry)
+        throws java.io.IOException {
+      return newBuilder().mergeFrom(input, extensionRegistry)
+               .buildParsed();
+    }
+    
+    public static Builder newBuilder() { return Builder.create(); }
+    public Builder newBuilderForType() { return newBuilder(); }
+    public static Builder newBuilder(com.tencent.urs.protobuf.Recommend.UserPairInfo prototype) {
+      return newBuilder().mergeFrom(prototype);
+    }
+    public Builder toBuilder() { return newBuilder(this); }
+    
+    public static final class Builder extends
+        com.google.protobuf.GeneratedMessageLite.Builder<
+          com.tencent.urs.protobuf.Recommend.UserPairInfo, Builder>
+        implements com.tencent.urs.protobuf.Recommend.UserPairInfoOrBuilder {
+      // Construct using com.tencent.urs.protobuf.Recommend.UserPairInfo.newBuilder()
+      private Builder() {
+        maybeForceBuilderInitialization();
+      }
+      
+      private void maybeForceBuilderInitialization() {
+      }
+      private static Builder create() {
+        return new Builder();
+      }
+      
+      public Builder clear() {
+        super.clear();
+        tsegs_ = java.util.Collections.emptyList();
+        bitField0_ = (bitField0_ & ~0x00000001);
+        return this;
+      }
+      
+      public Builder clone() {
+        return create().mergeFrom(buildPartial());
+      }
+      
+      public com.tencent.urs.protobuf.Recommend.UserPairInfo getDefaultInstanceForType() {
+        return com.tencent.urs.protobuf.Recommend.UserPairInfo.getDefaultInstance();
+      }
+      
+      public com.tencent.urs.protobuf.Recommend.UserPairInfo build() {
+        com.tencent.urs.protobuf.Recommend.UserPairInfo result = buildPartial();
+        if (!result.isInitialized()) {
+          throw newUninitializedMessageException(result);
+        }
+        return result;
+      }
+      
+      private com.tencent.urs.protobuf.Recommend.UserPairInfo buildParsed()
+          throws com.google.protobuf.InvalidProtocolBufferException {
+        com.tencent.urs.protobuf.Recommend.UserPairInfo result = buildPartial();
+        if (!result.isInitialized()) {
+          throw newUninitializedMessageException(
+            result).asInvalidProtocolBufferException();
+        }
+        return result;
+      }
+      
+      public com.tencent.urs.protobuf.Recommend.UserPairInfo buildPartial() {
+        com.tencent.urs.protobuf.Recommend.UserPairInfo result = new com.tencent.urs.protobuf.Recommend.UserPairInfo(this);
+        int from_bitField0_ = bitField0_;
+        if (((bitField0_ & 0x00000001) == 0x00000001)) {
+          tsegs_ = java.util.Collections.unmodifiableList(tsegs_);
+          bitField0_ = (bitField0_ & ~0x00000001);
+        }
+        result.tsegs_ = tsegs_;
+        return result;
+      }
+      
+      public Builder mergeFrom(com.tencent.urs.protobuf.Recommend.UserPairInfo other) {
+        if (other == com.tencent.urs.protobuf.Recommend.UserPairInfo.getDefaultInstance()) return this;
+        if (!other.tsegs_.isEmpty()) {
+          if (tsegs_.isEmpty()) {
+            tsegs_ = other.tsegs_;
+            bitField0_ = (bitField0_ & ~0x00000001);
+          } else {
+            ensureTsegsIsMutable();
+            tsegs_.addAll(other.tsegs_);
+          }
+          
+        }
+        return this;
+      }
+      
+      public final boolean isInitialized() {
+        for (int i = 0; i < getTsegsCount(); i++) {
+          if (!getTsegs(i).isInitialized()) {
+            
+            return false;
+          }
+        }
+        return true;
+      }
+      
+      public Builder mergeFrom(
+          com.google.protobuf.CodedInputStream input,
+          com.google.protobuf.ExtensionRegistryLite extensionRegistry)
+          throws java.io.IOException {
+        while (true) {
+          int tag = input.readTag();
+          switch (tag) {
+            case 0:
+              
+              return this;
+            default: {
+              if (!parseUnknownField(input, extensionRegistry, tag)) {
+                
+                return this;
+              }
+              break;
+            }
+            case 10: {
+              com.tencent.urs.protobuf.Recommend.UserPairInfo.TimeSegment.Builder subBuilder = com.tencent.urs.protobuf.Recommend.UserPairInfo.TimeSegment.newBuilder();
+              input.readMessage(subBuilder, extensionRegistry);
+              addTsegs(subBuilder.buildPartial());
+              break;
+            }
+          }
+        }
+      }
+      
+      private int bitField0_;
+      
+      // repeated .com.tencent.urs.protobuf.UserPairInfo.TimeSegment tsegs = 1;
+      private java.util.List<com.tencent.urs.protobuf.Recommend.UserPairInfo.TimeSegment> tsegs_ =
+        java.util.Collections.emptyList();
+      private void ensureTsegsIsMutable() {
+        if (!((bitField0_ & 0x00000001) == 0x00000001)) {
+          tsegs_ = new java.util.ArrayList<com.tencent.urs.protobuf.Recommend.UserPairInfo.TimeSegment>(tsegs_);
+          bitField0_ |= 0x00000001;
+         }
+      }
+      
+      public java.util.List<com.tencent.urs.protobuf.Recommend.UserPairInfo.TimeSegment> getTsegsList() {
+        return java.util.Collections.unmodifiableList(tsegs_);
+      }
+      public int getTsegsCount() {
+        return tsegs_.size();
+      }
+      public com.tencent.urs.protobuf.Recommend.UserPairInfo.TimeSegment getTsegs(int index) {
+        return tsegs_.get(index);
+      }
+      public Builder setTsegs(
+          int index, com.tencent.urs.protobuf.Recommend.UserPairInfo.TimeSegment value) {
+        if (value == null) {
+          throw new NullPointerException();
+        }
+        ensureTsegsIsMutable();
+        tsegs_.set(index, value);
+        
+        return this;
+      }
+      public Builder setTsegs(
+          int index, com.tencent.urs.protobuf.Recommend.UserPairInfo.TimeSegment.Builder builderForValue) {
+        ensureTsegsIsMutable();
+        tsegs_.set(index, builderForValue.build());
+        
+        return this;
+      }
+      public Builder addTsegs(com.tencent.urs.protobuf.Recommend.UserPairInfo.TimeSegment value) {
+        if (value == null) {
+          throw new NullPointerException();
+        }
+        ensureTsegsIsMutable();
+        tsegs_.add(value);
+        
+        return this;
+      }
+      public Builder addTsegs(
+          int index, com.tencent.urs.protobuf.Recommend.UserPairInfo.TimeSegment value) {
+        if (value == null) {
+          throw new NullPointerException();
+        }
+        ensureTsegsIsMutable();
+        tsegs_.add(index, value);
+        
+        return this;
+      }
+      public Builder addTsegs(
+          com.tencent.urs.protobuf.Recommend.UserPairInfo.TimeSegment.Builder builderForValue) {
+        ensureTsegsIsMutable();
+        tsegs_.add(builderForValue.build());
+        
+        return this;
+      }
+      public Builder addTsegs(
+          int index, com.tencent.urs.protobuf.Recommend.UserPairInfo.TimeSegment.Builder builderForValue) {
+        ensureTsegsIsMutable();
+        tsegs_.add(index, builderForValue.build());
+        
+        return this;
+      }
+      public Builder addAllTsegs(
+          java.lang.Iterable<? extends com.tencent.urs.protobuf.Recommend.UserPairInfo.TimeSegment> values) {
+        ensureTsegsIsMutable();
+        super.addAll(values, tsegs_);
+        
+        return this;
+      }
+      public Builder clearTsegs() {
+        tsegs_ = java.util.Collections.emptyList();
+        bitField0_ = (bitField0_ & ~0x00000001);
+        
+        return this;
+      }
+      public Builder removeTsegs(int index) {
+        ensureTsegsIsMutable();
+        tsegs_.remove(index);
+        
+        return this;
+      }
+      
+      // @@protoc_insertion_point(builder_scope:com.tencent.urs.protobuf.UserPairInfo)
+    }
+    
+    static {
+      defaultInstance = new UserPairInfo(true);
+      defaultInstance.initFields();
+    }
+    
+    // @@protoc_insertion_point(class_scope:com.tencent.urs.protobuf.UserPairInfo)
+  }
+  
+  public interface GroupPairInfoOrBuilder
+      extends com.google.protobuf.MessageLiteOrBuilder {
+    
+    // repeated .com.tencent.urs.protobuf.GroupPairInfo.TimeSegment tsegs = 1;
+    java.util.List<com.tencent.urs.protobuf.Recommend.GroupPairInfo.TimeSegment> 
+        getTsegsList();
+    com.tencent.urs.protobuf.Recommend.GroupPairInfo.TimeSegment getTsegs(int index);
+    int getTsegsCount();
+  }
+  public static final class GroupPairInfo extends
+      com.google.protobuf.GeneratedMessageLite
+      implements GroupPairInfoOrBuilder {
+    // Use GroupPairInfo.newBuilder() to construct.
+    private GroupPairInfo(Builder builder) {
+      super(builder);
+    }
+    private GroupPairInfo(boolean noInit) {}
+    
+    private static final GroupPairInfo defaultInstance;
+    public static GroupPairInfo getDefaultInstance() {
+      return defaultInstance;
+    }
+    
+    public GroupPairInfo getDefaultInstanceForType() {
+      return defaultInstance;
+    }
+    
+    public interface TimeSegmentOrBuilder
+        extends com.google.protobuf.MessageLiteOrBuilder {
+      
+      // required uint64 timeId = 1;
+      boolean hasTimeId();
+      long getTimeId();
+      
+      // optional float count = 2;
+      boolean hasCount();
+      float getCount();
+    }
+    public static final class TimeSegment extends
+        com.google.protobuf.GeneratedMessageLite
+        implements TimeSegmentOrBuilder {
+      // Use TimeSegment.newBuilder() to construct.
+      private TimeSegment(Builder builder) {
+        super(builder);
+      }
+      private TimeSegment(boolean noInit) {}
+      
+      private static final TimeSegment defaultInstance;
+      public static TimeSegment getDefaultInstance() {
+        return defaultInstance;
+      }
+      
+      public TimeSegment getDefaultInstanceForType() {
+        return defaultInstance;
+      }
+      
+      private int bitField0_;
+      // required uint64 timeId = 1;
+      public static final int TIMEID_FIELD_NUMBER = 1;
+      private long timeId_;
+      public boolean hasTimeId() {
+        return ((bitField0_ & 0x00000001) == 0x00000001);
+      }
+      public long getTimeId() {
+        return timeId_;
+      }
+      
+      // optional float count = 2;
+      public static final int COUNT_FIELD_NUMBER = 2;
+      private float count_;
+      public boolean hasCount() {
+        return ((bitField0_ & 0x00000002) == 0x00000002);
+      }
+      public float getCount() {
+        return count_;
+      }
+      
+      private void initFields() {
+        timeId_ = 0L;
+        count_ = 0F;
+      }
+      private byte memoizedIsInitialized = -1;
+      public final boolean isInitialized() {
+        byte isInitialized = memoizedIsInitialized;
+        if (isInitialized != -1) return isInitialized == 1;
+        
+        if (!hasTimeId()) {
+          memoizedIsInitialized = 0;
+          return false;
+        }
+        memoizedIsInitialized = 1;
+        return true;
+      }
+      
+      public void writeTo(com.google.protobuf.CodedOutputStream output)
+                          throws java.io.IOException {
+        getSerializedSize();
+        if (((bitField0_ & 0x00000001) == 0x00000001)) {
+          output.writeUInt64(1, timeId_);
+        }
+        if (((bitField0_ & 0x00000002) == 0x00000002)) {
+          output.writeFloat(2, count_);
+        }
+      }
+      
+      private int memoizedSerializedSize = -1;
+      public int getSerializedSize() {
+        int size = memoizedSerializedSize;
+        if (size != -1) return size;
+      
+        size = 0;
+        if (((bitField0_ & 0x00000001) == 0x00000001)) {
+          size += com.google.protobuf.CodedOutputStream
+            .computeUInt64Size(1, timeId_);
+        }
+        if (((bitField0_ & 0x00000002) == 0x00000002)) {
+          size += com.google.protobuf.CodedOutputStream
+            .computeFloatSize(2, count_);
+        }
+        memoizedSerializedSize = size;
+        return size;
+      }
+      
+      private static final long serialVersionUID = 0L;
+      @java.lang.Override
+      protected java.lang.Object writeReplace()
+          throws java.io.ObjectStreamException {
+        return super.writeReplace();
+      }
+      
+      public static com.tencent.urs.protobuf.Recommend.GroupPairInfo.TimeSegment parseFrom(
+          com.google.protobuf.ByteString data)
+          throws com.google.protobuf.InvalidProtocolBufferException {
+        return newBuilder().mergeFrom(data).buildParsed();
+      }
+      public static com.tencent.urs.protobuf.Recommend.GroupPairInfo.TimeSegment parseFrom(
+          com.google.protobuf.ByteString data,
+          com.google.protobuf.ExtensionRegistryLite extensionRegistry)
+          throws com.google.protobuf.InvalidProtocolBufferException {
+        return newBuilder().mergeFrom(data, extensionRegistry)
+                 .buildParsed();
+      }
+      public static com.tencent.urs.protobuf.Recommend.GroupPairInfo.TimeSegment parseFrom(byte[] data)
+          throws com.google.protobuf.InvalidProtocolBufferException {
+        return newBuilder().mergeFrom(data).buildParsed();
+      }
+      public static com.tencent.urs.protobuf.Recommend.GroupPairInfo.TimeSegment parseFrom(
+          byte[] data,
+          com.google.protobuf.ExtensionRegistryLite extensionRegistry)
+          throws com.google.protobuf.InvalidProtocolBufferException {
+        return newBuilder().mergeFrom(data, extensionRegistry)
+                 .buildParsed();
+      }
+      public static com.tencent.urs.protobuf.Recommend.GroupPairInfo.TimeSegment parseFrom(java.io.InputStream input)
+          throws java.io.IOException {
+        return newBuilder().mergeFrom(input).buildParsed();
+      }
+      public static com.tencent.urs.protobuf.Recommend.GroupPairInfo.TimeSegment parseFrom(
+          java.io.InputStream input,
+          com.google.protobuf.ExtensionRegistryLite extensionRegistry)
+          throws java.io.IOException {
+        return newBuilder().mergeFrom(input, extensionRegistry)
+                 .buildParsed();
+      }
+      public static com.tencent.urs.protobuf.Recommend.GroupPairInfo.TimeSegment parseDelimitedFrom(java.io.InputStream input)
+          throws java.io.IOException {
+        Builder builder = newBuilder();
+        if (builder.mergeDelimitedFrom(input)) {
+          return builder.buildParsed();
+        } else {
+          return null;
+        }
+      }
+      public static com.tencent.urs.protobuf.Recommend.GroupPairInfo.TimeSegment parseDelimitedFrom(
+          java.io.InputStream input,
+          com.google.protobuf.ExtensionRegistryLite extensionRegistry)
+          throws java.io.IOException {
+        Builder builder = newBuilder();
+        if (builder.mergeDelimitedFrom(input, extensionRegistry)) {
+          return builder.buildParsed();
+        } else {
+          return null;
+        }
+      }
+      public static com.tencent.urs.protobuf.Recommend.GroupPairInfo.TimeSegment parseFrom(
+          com.google.protobuf.CodedInputStream input)
+          throws java.io.IOException {
+        return newBuilder().mergeFrom(input).buildParsed();
+      }
+      public static com.tencent.urs.protobuf.Recommend.GroupPairInfo.TimeSegment parseFrom(
+          com.google.protobuf.CodedInputStream input,
+          com.google.protobuf.ExtensionRegistryLite extensionRegistry)
+          throws java.io.IOException {
+        return newBuilder().mergeFrom(input, extensionRegistry)
+                 .buildParsed();
+      }
+      
+      public static Builder newBuilder() { return Builder.create(); }
+      public Builder newBuilderForType() { return newBuilder(); }
+      public static Builder newBuilder(com.tencent.urs.protobuf.Recommend.GroupPairInfo.TimeSegment prototype) {
+        return newBuilder().mergeFrom(prototype);
+      }
+      public Builder toBuilder() { return newBuilder(this); }
+      
+      public static final class Builder extends
+          com.google.protobuf.GeneratedMessageLite.Builder<
+            com.tencent.urs.protobuf.Recommend.GroupPairInfo.TimeSegment, Builder>
+          implements com.tencent.urs.protobuf.Recommend.GroupPairInfo.TimeSegmentOrBuilder {
+        // Construct using com.tencent.urs.protobuf.Recommend.GroupPairInfo.TimeSegment.newBuilder()
+        private Builder() {
+          maybeForceBuilderInitialization();
+        }
+        
+        private void maybeForceBuilderInitialization() {
+        }
+        private static Builder create() {
+          return new Builder();
+        }
+        
+        public Builder clear() {
+          super.clear();
+          timeId_ = 0L;
+          bitField0_ = (bitField0_ & ~0x00000001);
+          count_ = 0F;
+          bitField0_ = (bitField0_ & ~0x00000002);
+          return this;
+        }
+        
+        public Builder clone() {
+          return create().mergeFrom(buildPartial());
+        }
+        
+        public com.tencent.urs.protobuf.Recommend.GroupPairInfo.TimeSegment getDefaultInstanceForType() {
+          return com.tencent.urs.protobuf.Recommend.GroupPairInfo.TimeSegment.getDefaultInstance();
+        }
+        
+        public com.tencent.urs.protobuf.Recommend.GroupPairInfo.TimeSegment build() {
+          com.tencent.urs.protobuf.Recommend.GroupPairInfo.TimeSegment result = buildPartial();
+          if (!result.isInitialized()) {
+            throw newUninitializedMessageException(result);
+          }
+          return result;
+        }
+        
+        private com.tencent.urs.protobuf.Recommend.GroupPairInfo.TimeSegment buildParsed()
+            throws com.google.protobuf.InvalidProtocolBufferException {
+          com.tencent.urs.protobuf.Recommend.GroupPairInfo.TimeSegment result = buildPartial();
+          if (!result.isInitialized()) {
+            throw newUninitializedMessageException(
+              result).asInvalidProtocolBufferException();
+          }
+          return result;
+        }
+        
+        public com.tencent.urs.protobuf.Recommend.GroupPairInfo.TimeSegment buildPartial() {
+          com.tencent.urs.protobuf.Recommend.GroupPairInfo.TimeSegment result = new com.tencent.urs.protobuf.Recommend.GroupPairInfo.TimeSegment(this);
+          int from_bitField0_ = bitField0_;
+          int to_bitField0_ = 0;
+          if (((from_bitField0_ & 0x00000001) == 0x00000001)) {
+            to_bitField0_ |= 0x00000001;
+          }
+          result.timeId_ = timeId_;
+          if (((from_bitField0_ & 0x00000002) == 0x00000002)) {
+            to_bitField0_ |= 0x00000002;
+          }
+          result.count_ = count_;
+          result.bitField0_ = to_bitField0_;
+          return result;
+        }
+        
+        public Builder mergeFrom(com.tencent.urs.protobuf.Recommend.GroupPairInfo.TimeSegment other) {
+          if (other == com.tencent.urs.protobuf.Recommend.GroupPairInfo.TimeSegment.getDefaultInstance()) return this;
+          if (other.hasTimeId()) {
+            setTimeId(other.getTimeId());
+          }
+          if (other.hasCount()) {
+            setCount(other.getCount());
+          }
+          return this;
+        }
+        
+        public final boolean isInitialized() {
+          if (!hasTimeId()) {
+            
+            return false;
+          }
+          return true;
+        }
+        
+        public Builder mergeFrom(
+            com.google.protobuf.CodedInputStream input,
+            com.google.protobuf.ExtensionRegistryLite extensionRegistry)
+            throws java.io.IOException {
+          while (true) {
+            int tag = input.readTag();
+            switch (tag) {
+              case 0:
+                
+                return this;
+              default: {
+                if (!parseUnknownField(input, extensionRegistry, tag)) {
+                  
+                  return this;
+                }
+                break;
+              }
+              case 8: {
+                bitField0_ |= 0x00000001;
+                timeId_ = input.readUInt64();
+                break;
+              }
+              case 21: {
+                bitField0_ |= 0x00000002;
+                count_ = input.readFloat();
+                break;
+              }
+            }
+          }
+        }
+        
+        private int bitField0_;
+        
+        // required uint64 timeId = 1;
+        private long timeId_ ;
+        public boolean hasTimeId() {
+          return ((bitField0_ & 0x00000001) == 0x00000001);
+        }
+        public long getTimeId() {
+          return timeId_;
+        }
+        public Builder setTimeId(long value) {
+          bitField0_ |= 0x00000001;
+          timeId_ = value;
+          
+          return this;
+        }
+        public Builder clearTimeId() {
+          bitField0_ = (bitField0_ & ~0x00000001);
+          timeId_ = 0L;
+          
+          return this;
+        }
+        
+        // optional float count = 2;
+        private float count_ ;
+        public boolean hasCount() {
+          return ((bitField0_ & 0x00000002) == 0x00000002);
+        }
+        public float getCount() {
+          return count_;
+        }
+        public Builder setCount(float value) {
+          bitField0_ |= 0x00000002;
+          count_ = value;
+          
+          return this;
+        }
+        public Builder clearCount() {
+          bitField0_ = (bitField0_ & ~0x00000002);
+          count_ = 0F;
+          
+          return this;
+        }
+        
+        // @@protoc_insertion_point(builder_scope:com.tencent.urs.protobuf.GroupPairInfo.TimeSegment)
+      }
+      
+      static {
+        defaultInstance = new TimeSegment(true);
+        defaultInstance.initFields();
+      }
+      
+      // @@protoc_insertion_point(class_scope:com.tencent.urs.protobuf.GroupPairInfo.TimeSegment)
+    }
+    
+    // repeated .com.tencent.urs.protobuf.GroupPairInfo.TimeSegment tsegs = 1;
+    public static final int TSEGS_FIELD_NUMBER = 1;
+    private java.util.List<com.tencent.urs.protobuf.Recommend.GroupPairInfo.TimeSegment> tsegs_;
+    public java.util.List<com.tencent.urs.protobuf.Recommend.GroupPairInfo.TimeSegment> getTsegsList() {
+      return tsegs_;
+    }
+    public java.util.List<? extends com.tencent.urs.protobuf.Recommend.GroupPairInfo.TimeSegmentOrBuilder> 
+        getTsegsOrBuilderList() {
+      return tsegs_;
+    }
+    public int getTsegsCount() {
+      return tsegs_.size();
+    }
+    public com.tencent.urs.protobuf.Recommend.GroupPairInfo.TimeSegment getTsegs(int index) {
+      return tsegs_.get(index);
+    }
+    public com.tencent.urs.protobuf.Recommend.GroupPairInfo.TimeSegmentOrBuilder getTsegsOrBuilder(
+        int index) {
+      return tsegs_.get(index);
+    }
+    
+    private void initFields() {
+      tsegs_ = java.util.Collections.emptyList();
+    }
+    private byte memoizedIsInitialized = -1;
+    public final boolean isInitialized() {
+      byte isInitialized = memoizedIsInitialized;
+      if (isInitialized != -1) return isInitialized == 1;
+      
+      for (int i = 0; i < getTsegsCount(); i++) {
+        if (!getTsegs(i).isInitialized()) {
+          memoizedIsInitialized = 0;
+          return false;
+        }
+      }
+      memoizedIsInitialized = 1;
+      return true;
+    }
+    
+    public void writeTo(com.google.protobuf.CodedOutputStream output)
+                        throws java.io.IOException {
+      getSerializedSize();
+      for (int i = 0; i < tsegs_.size(); i++) {
+        output.writeMessage(1, tsegs_.get(i));
+      }
+    }
+    
+    private int memoizedSerializedSize = -1;
+    public int getSerializedSize() {
+      int size = memoizedSerializedSize;
+      if (size != -1) return size;
+    
+      size = 0;
+      for (int i = 0; i < tsegs_.size(); i++) {
+        size += com.google.protobuf.CodedOutputStream
+          .computeMessageSize(1, tsegs_.get(i));
+      }
+      memoizedSerializedSize = size;
+      return size;
+    }
+    
+    private static final long serialVersionUID = 0L;
+    @java.lang.Override
+    protected java.lang.Object writeReplace()
+        throws java.io.ObjectStreamException {
+      return super.writeReplace();
+    }
+    
+    public static com.tencent.urs.protobuf.Recommend.GroupPairInfo parseFrom(
+        com.google.protobuf.ByteString data)
+        throws com.google.protobuf.InvalidProtocolBufferException {
+      return newBuilder().mergeFrom(data).buildParsed();
+    }
+    public static com.tencent.urs.protobuf.Recommend.GroupPairInfo parseFrom(
+        com.google.protobuf.ByteString data,
+        com.google.protobuf.ExtensionRegistryLite extensionRegistry)
+        throws com.google.protobuf.InvalidProtocolBufferException {
+      return newBuilder().mergeFrom(data, extensionRegistry)
+               .buildParsed();
+    }
+    public static com.tencent.urs.protobuf.Recommend.GroupPairInfo parseFrom(byte[] data)
+        throws com.google.protobuf.InvalidProtocolBufferException {
+      return newBuilder().mergeFrom(data).buildParsed();
+    }
+    public static com.tencent.urs.protobuf.Recommend.GroupPairInfo parseFrom(
+        byte[] data,
+        com.google.protobuf.ExtensionRegistryLite extensionRegistry)
+        throws com.google.protobuf.InvalidProtocolBufferException {
+      return newBuilder().mergeFrom(data, extensionRegistry)
+               .buildParsed();
+    }
+    public static com.tencent.urs.protobuf.Recommend.GroupPairInfo parseFrom(java.io.InputStream input)
+        throws java.io.IOException {
+      return newBuilder().mergeFrom(input).buildParsed();
+    }
+    public static com.tencent.urs.protobuf.Recommend.GroupPairInfo parseFrom(
+        java.io.InputStream input,
+        com.google.protobuf.ExtensionRegistryLite extensionRegistry)
+        throws java.io.IOException {
+      return newBuilder().mergeFrom(input, extensionRegistry)
+               .buildParsed();
+    }
+    public static com.tencent.urs.protobuf.Recommend.GroupPairInfo parseDelimitedFrom(java.io.InputStream input)
+        throws java.io.IOException {
+      Builder builder = newBuilder();
+      if (builder.mergeDelimitedFrom(input)) {
+        return builder.buildParsed();
+      } else {
+        return null;
+      }
+    }
+    public static com.tencent.urs.protobuf.Recommend.GroupPairInfo parseDelimitedFrom(
+        java.io.InputStream input,
+        com.google.protobuf.ExtensionRegistryLite extensionRegistry)
+        throws java.io.IOException {
+      Builder builder = newBuilder();
+      if (builder.mergeDelimitedFrom(input, extensionRegistry)) {
+        return builder.buildParsed();
+      } else {
+        return null;
+      }
+    }
+    public static com.tencent.urs.protobuf.Recommend.GroupPairInfo parseFrom(
+        com.google.protobuf.CodedInputStream input)
+        throws java.io.IOException {
+      return newBuilder().mergeFrom(input).buildParsed();
+    }
+    public static com.tencent.urs.protobuf.Recommend.GroupPairInfo parseFrom(
+        com.google.protobuf.CodedInputStream input,
+        com.google.protobuf.ExtensionRegistryLite extensionRegistry)
+        throws java.io.IOException {
+      return newBuilder().mergeFrom(input, extensionRegistry)
+               .buildParsed();
+    }
+    
+    public static Builder newBuilder() { return Builder.create(); }
+    public Builder newBuilderForType() { return newBuilder(); }
+    public static Builder newBuilder(com.tencent.urs.protobuf.Recommend.GroupPairInfo prototype) {
+      return newBuilder().mergeFrom(prototype);
+    }
+    public Builder toBuilder() { return newBuilder(this); }
+    
+    public static final class Builder extends
+        com.google.protobuf.GeneratedMessageLite.Builder<
+          com.tencent.urs.protobuf.Recommend.GroupPairInfo, Builder>
+        implements com.tencent.urs.protobuf.Recommend.GroupPairInfoOrBuilder {
+      // Construct using com.tencent.urs.protobuf.Recommend.GroupPairInfo.newBuilder()
+      private Builder() {
+        maybeForceBuilderInitialization();
+      }
+      
+      private void maybeForceBuilderInitialization() {
+      }
+      private static Builder create() {
+        return new Builder();
+      }
+      
+      public Builder clear() {
+        super.clear();
+        tsegs_ = java.util.Collections.emptyList();
+        bitField0_ = (bitField0_ & ~0x00000001);
+        return this;
+      }
+      
+      public Builder clone() {
+        return create().mergeFrom(buildPartial());
+      }
+      
+      public com.tencent.urs.protobuf.Recommend.GroupPairInfo getDefaultInstanceForType() {
+        return com.tencent.urs.protobuf.Recommend.GroupPairInfo.getDefaultInstance();
+      }
+      
+      public com.tencent.urs.protobuf.Recommend.GroupPairInfo build() {
+        com.tencent.urs.protobuf.Recommend.GroupPairInfo result = buildPartial();
+        if (!result.isInitialized()) {
+          throw newUninitializedMessageException(result);
+        }
+        return result;
+      }
+      
+      private com.tencent.urs.protobuf.Recommend.GroupPairInfo buildParsed()
+          throws com.google.protobuf.InvalidProtocolBufferException {
+        com.tencent.urs.protobuf.Recommend.GroupPairInfo result = buildPartial();
+        if (!result.isInitialized()) {
+          throw newUninitializedMessageException(
+            result).asInvalidProtocolBufferException();
+        }
+        return result;
+      }
+      
+      public com.tencent.urs.protobuf.Recommend.GroupPairInfo buildPartial() {
+        com.tencent.urs.protobuf.Recommend.GroupPairInfo result = new com.tencent.urs.protobuf.Recommend.GroupPairInfo(this);
+        int from_bitField0_ = bitField0_;
+        if (((bitField0_ & 0x00000001) == 0x00000001)) {
+          tsegs_ = java.util.Collections.unmodifiableList(tsegs_);
+          bitField0_ = (bitField0_ & ~0x00000001);
+        }
+        result.tsegs_ = tsegs_;
+        return result;
+      }
+      
+      public Builder mergeFrom(com.tencent.urs.protobuf.Recommend.GroupPairInfo other) {
+        if (other == com.tencent.urs.protobuf.Recommend.GroupPairInfo.getDefaultInstance()) return this;
+        if (!other.tsegs_.isEmpty()) {
+          if (tsegs_.isEmpty()) {
+            tsegs_ = other.tsegs_;
+            bitField0_ = (bitField0_ & ~0x00000001);
+          } else {
+            ensureTsegsIsMutable();
+            tsegs_.addAll(other.tsegs_);
+          }
+          
+        }
+        return this;
+      }
+      
+      public final boolean isInitialized() {
+        for (int i = 0; i < getTsegsCount(); i++) {
+          if (!getTsegs(i).isInitialized()) {
+            
+            return false;
+          }
+        }
+        return true;
+      }
+      
+      public Builder mergeFrom(
+          com.google.protobuf.CodedInputStream input,
+          com.google.protobuf.ExtensionRegistryLite extensionRegistry)
+          throws java.io.IOException {
+        while (true) {
+          int tag = input.readTag();
+          switch (tag) {
+            case 0:
+              
+              return this;
+            default: {
+              if (!parseUnknownField(input, extensionRegistry, tag)) {
+                
+                return this;
+              }
+              break;
+            }
+            case 10: {
+              com.tencent.urs.protobuf.Recommend.GroupPairInfo.TimeSegment.Builder subBuilder = com.tencent.urs.protobuf.Recommend.GroupPairInfo.TimeSegment.newBuilder();
+              input.readMessage(subBuilder, extensionRegistry);
+              addTsegs(subBuilder.buildPartial());
+              break;
+            }
+          }
+        }
+      }
+      
+      private int bitField0_;
+      
+      // repeated .com.tencent.urs.protobuf.GroupPairInfo.TimeSegment tsegs = 1;
+      private java.util.List<com.tencent.urs.protobuf.Recommend.GroupPairInfo.TimeSegment> tsegs_ =
+        java.util.Collections.emptyList();
+      private void ensureTsegsIsMutable() {
+        if (!((bitField0_ & 0x00000001) == 0x00000001)) {
+          tsegs_ = new java.util.ArrayList<com.tencent.urs.protobuf.Recommend.GroupPairInfo.TimeSegment>(tsegs_);
+          bitField0_ |= 0x00000001;
+         }
+      }
+      
+      public java.util.List<com.tencent.urs.protobuf.Recommend.GroupPairInfo.TimeSegment> getTsegsList() {
+        return java.util.Collections.unmodifiableList(tsegs_);
+      }
+      public int getTsegsCount() {
+        return tsegs_.size();
+      }
+      public com.tencent.urs.protobuf.Recommend.GroupPairInfo.TimeSegment getTsegs(int index) {
+        return tsegs_.get(index);
+      }
+      public Builder setTsegs(
+          int index, com.tencent.urs.protobuf.Recommend.GroupPairInfo.TimeSegment value) {
+        if (value == null) {
+          throw new NullPointerException();
+        }
+        ensureTsegsIsMutable();
+        tsegs_.set(index, value);
+        
+        return this;
+      }
+      public Builder setTsegs(
+          int index, com.tencent.urs.protobuf.Recommend.GroupPairInfo.TimeSegment.Builder builderForValue) {
+        ensureTsegsIsMutable();
+        tsegs_.set(index, builderForValue.build());
+        
+        return this;
+      }
+      public Builder addTsegs(com.tencent.urs.protobuf.Recommend.GroupPairInfo.TimeSegment value) {
+        if (value == null) {
+          throw new NullPointerException();
+        }
+        ensureTsegsIsMutable();
+        tsegs_.add(value);
+        
+        return this;
+      }
+      public Builder addTsegs(
+          int index, com.tencent.urs.protobuf.Recommend.GroupPairInfo.TimeSegment value) {
+        if (value == null) {
+          throw new NullPointerException();
+        }
+        ensureTsegsIsMutable();
+        tsegs_.add(index, value);
+        
+        return this;
+      }
+      public Builder addTsegs(
+          com.tencent.urs.protobuf.Recommend.GroupPairInfo.TimeSegment.Builder builderForValue) {
+        ensureTsegsIsMutable();
+        tsegs_.add(builderForValue.build());
+        
+        return this;
+      }
+      public Builder addTsegs(
+          int index, com.tencent.urs.protobuf.Recommend.GroupPairInfo.TimeSegment.Builder builderForValue) {
+        ensureTsegsIsMutable();
+        tsegs_.add(index, builderForValue.build());
+        
+        return this;
+      }
+      public Builder addAllTsegs(
+          java.lang.Iterable<? extends com.tencent.urs.protobuf.Recommend.GroupPairInfo.TimeSegment> values) {
+        ensureTsegsIsMutable();
+        super.addAll(values, tsegs_);
+        
+        return this;
+      }
+      public Builder clearTsegs() {
+        tsegs_ = java.util.Collections.emptyList();
+        bitField0_ = (bitField0_ & ~0x00000001);
+        
+        return this;
+      }
+      public Builder removeTsegs(int index) {
+        ensureTsegsIsMutable();
+        tsegs_.remove(index);
+        
+        return this;
+      }
+      
+      // @@protoc_insertion_point(builder_scope:com.tencent.urs.protobuf.GroupPairInfo)
+    }
+    
+    static {
+      defaultInstance = new GroupPairInfo(true);
+      defaultInstance.initFields();
+    }
+    
+    // @@protoc_insertion_point(class_scope:com.tencent.urs.protobuf.GroupPairInfo)
+  }
+  
   
   static {
   }

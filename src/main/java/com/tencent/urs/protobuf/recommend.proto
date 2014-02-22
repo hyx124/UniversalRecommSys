@@ -174,4 +174,36 @@ message CtrInfo
     repeated TimeSegment tsegs  = 1;
 }
 
+message UserCountInfo{
+	message TimeSegment {		
+		required uint64 timeId = 1;						
+		optional float count = 2;								//权重
+	}
+    repeated TimeSegment tsegs  = 1;
+}
+
+message GroupCountInfo{
+	message TimeSegment {		
+		required uint64 timeId = 1;						
+		optional float count = 2;								//权重
+	}
+    repeated TimeSegment tsegs  = 1;
+}
+
+message UserPairInfo{
+	message TimeSegment {		
+		required uint64 timeId = 1;						
+		optional float count = 2;								//权重
+	}
+    repeated TimeSegment tsegs  = 1;
+}
+
+message GroupPairInfo{
+	message TimeSegment {		
+		required uint64 timeId = 1;						
+		optional float count = 2;								//权重
+	}
+    repeated TimeSegment tsegs  = 1;
+}
+
 option optimize_for = LITE_RUNTIME;

@@ -85,18 +85,8 @@ public class UserActionSpout2 extends TdbankSpout {
 				
 		if(dealMsg != null && dealMsg.length >= 16){
 			dealMsgByConfig(dealMsg);
-			if(!cateIDSet.contains(categoryId)){
-				cateIDSet.add(categoryId);
-				logger.info("in:"+categoryId+":"+event);
-				
-				String outputString = "";
-				for(String each: dealMsg){
-					outputString += ","+each;
-				}
-				logger.info("out:"+categoryId+":"+outputString);
-			}
 		}else{
-			this.collector.emit("filter_data",new Values(""));
+			this.collector.emit(categoryId,new Values(""));
 		}
 		
 	}
@@ -129,7 +119,7 @@ public class UserActionSpout2 extends TdbankSpout {
 		
 		String expId = "";
 		String error = "";
-		
+				
 		String[] event_array = event.split("\t",-1);
 		if (categoryId.equals("pppv") && event_array.length > 15) {	
 			qq =  event_array[2];
@@ -166,6 +156,9 @@ public class UserActionSpout2 extends TdbankSpout {
 			return null;
 		}
 		
+		if(adpos.length() > 2  || adpos.equals("") || !adpos.matches("[0-9]+")){
+			return null;
+		}
 
 		String[] returnstr = {impDate,bid,qq, weixin_no,uid,imei,itemId,lbsInfo,platform,adpos,actType,actionDate,actionTime,error,expId,actionResult};
 		return  returnstr;

@@ -1,7 +1,7 @@
 <?xml version="1.0" encoding="UTF-8" ?>
 <topology name="urs-topology" works="20" ackers="0" debug="false">	
 	<spouts>
-		<spout name="UserActionSpout" class="com.tencent.urs.spouts.UserActionSpout2" parallelism="1">
+		<spout name="UserActionSpout" class="com.tencent.urs.spouts.TestSpout2" parallelism="1">
 			<tdbank_zookeeper_address>sk-zk-td1:2181,sk-zk-td2:2181,sk-zk-td3:2181,sk-zk-td4:2181,sk-zk-td5:2181</tdbank_zookeeper_address>
 			<tdbank_zookeeper_timeout>10000</tdbank_zookeeper_timeout>
 			<tdbank_zookeeper_connecttimeout>30000</tdbank_zookeeper_connecttimeout>
@@ -50,6 +50,7 @@
 				<fields>hash_key,topic,bid,imp_date,cate_id,cate_name,level,father_id</fields>
 			</output_fields>
 		</spout>
+		-->
 	</spouts>
 	
 	<bolts>
@@ -79,10 +80,10 @@
 			</grouping>
 			
 			<debug>true</debug>
-			<item_detail_table>521</item_detail_table>
-			<user_detail_table>522</user_detail_table>
-			<action_weight_table>523</action_weight_table>
-			<category_level_table>524</category_level_table>
+			<item_detail_table>311</item_detail_table>
+			<user_detail_table>312</user_detail_table>
+			<action_weight_table>313</action_weight_table>
+			<category_level_table>314</category_level_table>
 			
 			<data_expiretime>259200</data_expiretime>
 			<cache_expiretime>3600</cache_expiretime>		
@@ -99,11 +100,6 @@
 				<stream_id>user_action</stream_id>
 				<fields>bid,topic,adpos,action_type,action_time,item_id,action_result,imei,platform,lbs_info,qq,group_id</fields>
 			</output_fields>	
-			
-			<output_fields>
-				<stream_id>recommend_action</stream_id>
-				<fields>bid,topic,adpos,action_type,action_time,item_id,action_result,imei,platform,lbs_info,qq,group_id</fields>
-			</output_fields>
 		</bolt>
 
 		<bolt name="TopActionBolt" class="com.tencent.urs.bolts.TopActionBolt" parallelsim="1">
@@ -115,7 +111,7 @@
 			
 			<debug>true</debug>
 			<topNum>30</topNum>>
-			<storage_table>511</storage_table>
+			<storage_table>301</storage_table>
 			<data_expiretime>259200</data_expiretime>
 			<cache_expiretime>3600</cache_expiretime>
 		</bolt>
@@ -128,7 +124,7 @@
 			</grouping>
 		
 			<debug>true</debug>
-			<storage_table>512</storage_table>
+			<storage_table>302</storage_table>
 			<data_expiretime>259200</data_expiretime>
 			<cache_expiretime>3600</cache_expiretime>
 		</bolt>
@@ -141,9 +137,9 @@
 			</grouping>
 		
 			<debug>true</debug>
-			<user_count_table>513</user_count_table>
-			<group_count_table>514</group_count_table>
-			<dependent_table>512</dependent_table>
+			<user_count_table>303</user_count_table>
+			<group_count_table>304</group_count_table>
+			<dependent_table>302</dependent_table>
 			<data_expiretime>259200</data_expiretime>
 			<cache_expiretime>3600</cache_expiretime>
 		</bolt>
@@ -156,9 +152,9 @@
 			</grouping>
 		
 			<debug>true</debug>
-			<user_pair_table>515</user_pair_table>
-			<group_pair_table>516</group_pair_table>
-			<dependent_table>512</dependent_table>
+			<user_pair_table>305</user_pair_table>
+			<group_pair_table>306</group_pair_table>
+			<dependent_table>302</dependent_table>
 			<data_expiretime>259200</data_expiretime>
 			<cache_expiretime>3600</cache_expiretime>
 		</bolt>
@@ -167,11 +163,11 @@
 			<grouping type="field">
 				<fields>qq</fields>
 				<component>PretreatmentBolt</component>
-				<streaming_ids>recommend_action</streaming_ids>
+				<streaming_ids>user_action</streaming_ids>
 			</grouping>
 			
 			<debug>true</debug>
-			<storage_table>517</storage_table>
+			<storage_table>307</storage_table>
 			<data_expiretime>259200</data_expiretime>
 			<cache_expiretime>3600</cache_expiretime>
 		</bolt>
@@ -184,9 +180,9 @@
 			</grouping>
 		
 			<debug>true</debug>
-			<group_count_table>514</group_count_table>
-			<group_pair_table>516</group_pair_table>
-			<dependent_table>512</dependent_table>
+			<group_count_table>304</group_count_table>
+			<group_pair_table>306</group_pair_table>
+			<dependent_table>302</dependent_table>
 			<data_expiretime>259200</data_expiretime>
 			<cache_expiretime>3600</cache_expiretime>
 			
@@ -204,7 +200,7 @@
 			</grouping>
 		
 			<debug>true</debug>
-			<group_count_table>514</group_count_table>
+			<group_count_table>304</group_count_table>
 			<data_expiretime>259200</data_expiretime>
 			<cache_expiretime>3600</cache_expiretime>
 			
@@ -218,11 +214,11 @@
 			<grouping type="field">
 				<fields>qq</fields>
 				<component>PretreatmentBolt</component>
-				<streaming_ids>recommend_action</streaming_ids>
+				<streaming_ids>user_action</streaming_ids>
 			</grouping>
 		
 			<debug>true</debug>
-			<storage_table>517</storage_table>
+			<storage_table>307</storage_table>
 			<data_expiretime>259200</data_expiretime>
 			<cache_expiretime>3600</cache_expiretime>
 			
@@ -252,7 +248,7 @@
 			</grouping>
 		
 			<debug>true</debug>
-			<item_detail_table>521</item_detail_table>
+			<item_detail_table>311</item_detail_table>
 			<data_expiretime>259200</data_expiretime>
 			<cache_expiretime>86400</cache_expiretime>
 			
@@ -272,7 +268,7 @@
 			
 			<debug>true</debug>
 			<topNum>100</topNum>>
-			<storage_table>518</storage_table>
+			<storage_table>309</storage_table>
 			<data_expiretime>15552000</data_expiretime>
 			<cache_expiretime>3600</cache_expiretime>
 		</bolt>
@@ -286,7 +282,7 @@
 		
 			<debug>true</debug>
 			<top_num>100</top_num>
-			<storage_table>520</storage_table>
+			<storage_table>310</storage_table>
 			<data_expiretime>259200</data_expiretime>
 			<cache_expiretime>3600</cache_expiretime>
 		</bolt>

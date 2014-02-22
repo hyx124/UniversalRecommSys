@@ -3,22 +3,18 @@ package com.tencent.urs.bolts;
 import com.google.common.collect.ImmutableList;
 import com.tencent.urs.protobuf.Recommend;
 import com.tencent.urs.protobuf.Recommend.ActiveType;
-import com.tencent.urs.protobuf.Recommend.UserActiveDetail;
 import com.tencent.urs.protobuf.Recommend.UserActiveDetail.TimeSegment;
 import com.tencent.urs.protobuf.Recommend.UserActiveDetail.TimeSegment.ItemInfo;
 import com.tencent.urs.protobuf.Recommend.UserActiveDetail.TimeSegment.ItemInfo.ActType;
-import com.tencent.urs.protobuf.Recommend.UserActiveHistory.ActiveRecord;
 
 import java.lang.ref.SoftReference;
 import java.text.SimpleDateFormat;
-import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
 import java.util.Set;
 import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.Future;
 
-import org.apache.commons.configuration.ConfigurationException;
 import org.apache.commons.configuration.XMLConfiguration;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -48,71 +44,82 @@ import com.tencent.urs.utils.Constants;
 import com.tencent.urs.utils.DataCache;
 import com.tencent.urs.utils.Utils;
 
-
-
-public class ItemPairBolt  extends AbstractConfigUpdateBolt{
-	private static final long serialVersionUID = -3578535683081183276L;
+public class ItemCountBolt2 extends AbstractConfigUpdateBolt{
+	private static final long serialVersionUID = 2972911860800045348L;
 	private List<ClientAttr> mtClientList;	
-	private Long lastUpdateTime; 
 	private MonitorTools mt;
-	private DataCache<UserActiveDetail> userActionCache;
-	private DataCache<Float> groupPairCache;
-	private DataCache<Float> userPairCache;
-	private UpdateCallBack putCallBack;
+	private DataCache<Float> groupCountCache;
+	private DataCache<Float> userCountCache;
+
 	private ConcurrentHashMap<UpdateKey, GroupActionCombinerValue> combinerMap;
 	private ConcurrentHashMap<Recommend.ActiveType, Float> actWeightMap;
-
+	private Long lastUpdateTime; 
+	private UpdateCallBack putCallBack;	
 	
-
+	private int nsUserCountTableId;
+	private int nsGroupCountTableId;
 	private int nsDetailTableId;
-	private int dataExpireTime;
-	private int cacheExpireTime;
-	private int nsUserPairTableId;
-	private int nsGroupPairTableId;
 	private int nsActWeightTableId;
 	
-	private static Logger logger = LoggerFactory
-			.getLogger(ItemPairBolt.class);
+	private int dataExpireTime;
+	private int cacheExpireTime;
+	private boolean debug;
 	
-	public ItemPairBolt(String config, ImmutableList<Output> outputField){
+	public ItemCountBolt2(String config, ImmutableList<Output> outputField) {
 		super(config, outputField, Constants.config_stream);
+	}
+
+	@Override
+	public void updateConfig(XMLConfiguration config) {
+		nsUserCountTableId = config.getInt("user_count_table",303);
+		nsGroupCountTableId = config.getInt("group_count_table",304);
+		nsDetailTableId = config.getInt("dependent_table",302);
+		
+		nsActWeightTableId = config.getInt("act_weight_table",314);
+		dataExpireTime = config.getInt("data_expiretime",1*24*3600);
+		cacheExpireTime = config.getInt("cache_expiretime",3600);
+		debug = config.getBoolean("debug",false);
+	}
+	
+	private void weightInit(){
+		actWeightMap.put(Recommend.ActiveType.Impress, 0.5F);
+		actWeightMap.put(Recommend.ActiveType.Click, 1F);
+		actWeightMap.put(Recommend.ActiveType.PageView, 1F);
+		actWeightMap.put(Recommend.ActiveType.Read, 1.5F);
+		actWeightMap.put(Recommend.ActiveType.Save, 2F);
+		actWeightMap.put(Recommend.ActiveType.BuyCart, 2F);
+		actWeightMap.put(Recommend.ActiveType.Deal, 2F);
+		actWeightMap.put(Recommend.ActiveType.Score, 3F);
+		actWeightMap.put(Recommend.ActiveType.Comments, 3F);
+		actWeightMap.put(Recommend.ActiveType.Reply, 3F);
+		actWeightMap.put(Recommend.ActiveType.Ups, 3F);
+		actWeightMap.put(Recommend.ActiveType.Praise, 4F);
+		actWeightMap.put(Recommend.ActiveType.Share, 4F);
 	}
 	
 	@Override
 	public void prepare(Map conf, TopologyContext context, OutputCollector collector){
 		super.prepare(conf, context, collector);
-		this.updateConfig(super.config);
-
-		this.groupPairCache = new DataCache<Float>(conf);
-		this.userPairCache = new DataCache<Float>(conf);
+		updateConfig(super.config);
+	
+		this.lastUpdateTime = 0L;
 		this.mtClientList = TDEngineClientFactory.createMTClientList(conf);
 		this.mt = MonitorTools.getMonitorInstance(conf);
-		this.userActionCache = new DataCache<UserActiveDetail>(conf);
-		this.combinerMap = new ConcurrentHashMap<UpdateKey,GroupActionCombinerValue>(1024);
-				
-		this.lastUpdateTime = 0L;
+		this.groupCountCache = new DataCache<Float>(conf);
+		this.userCountCache = new DataCache<Float>(conf);
+		
 		this.actWeightMap = new ConcurrentHashMap<Recommend.ActiveType, Float>(20);
 		
+		this.combinerMap = new ConcurrentHashMap<UpdateKey,GroupActionCombinerValue>(1024);
+				
 		this.putCallBack = new UpdateCallBack(mt, Constants.systemID, Constants.tde_interfaceID, this.getClass().getName());
 		
 		int combinerExpireTime = Utils.getInt(conf, "combiner.expireTime",5);
 		setCombinerTime(combinerExpireTime);
-	}	
-
-
-	@Override
-	public void updateConfig(XMLConfiguration config) {
-		nsUserPairTableId = config.getInt("user_pair_table",303);
-		nsGroupPairTableId = config.getInt("group_pair_table",304);
-		nsDetailTableId = config.getInt("dependent_table",302);
-		dataExpireTime = config.getInt("data_expiretime",1*24*3600);
-		cacheExpireTime = config.getInt("cache_expiretime",3600);
-		nsActWeightTableId = config.getInt("act_weight_table",314);
 	}
 
 	@Override
-	public void processEvent(String sid, Tuple tuple) {
-		// TODO Auto-generated method stub	
+	public void processEvent(String sid, Tuple tuple) {	
 		String bid = tuple.getStringByField("bid");
 		String qq = tuple.getStringByField("qq");
 		String groupId = tuple.getStringByField("group_id");
@@ -121,7 +128,7 @@ public class ItemPairBolt  extends AbstractConfigUpdateBolt{
 		
 		String actionType = tuple.getStringByField("action_type");
 		String actionTime = tuple.getStringByField("action_time");
-		
+	
 		ActiveType actType = Utils.getActionTypeByString(actionType);
 		
 		if(!Utils.isBidValid(bid) || !Utils.isQNumValid(qq) || !Utils.isGroupIdVaild(groupId) || !Utils.isItemIdValid(itemId)){
@@ -130,8 +137,11 @@ public class ItemPairBolt  extends AbstractConfigUpdateBolt{
 		
 		GroupActionCombinerValue value = new GroupActionCombinerValue(actType,Long.valueOf(actionTime));
 		UpdateKey key = new UpdateKey(bid,Long.valueOf(qq),Integer.valueOf(groupId),adpos,itemId);
-		combinerKeys(key,value);		
+		combinerKeys(key,value);
 	}
+	
+	private static Logger logger = LoggerFactory
+			.getLogger(ItemCountBolt2.class);
 	
 	private void setCombinerTime(final int second) {
 		new Thread(new Runnable() {
@@ -151,40 +161,23 @@ public class ItemPairBolt  extends AbstractConfigUpdateBolt{
 						}
 					}
 				} catch (Exception e) {
-					logger.error(e.getMessage(), e);
+					logger.error("Schedule thread error:" + e, e);
 				}
 			}
 		}).start();
 	}
 	
-	private void combinerKeys(UpdateKey key,GroupActionCombinerValue value) {
+	private void combinerKeys(UpdateKey key,GroupActionCombinerValue value) {		
 		synchronized(combinerMap){
 			if(combinerMap.containsKey(key)){
 				GroupActionCombinerValue oldValue = combinerMap.get(key);
 				oldValue.incrument(value);
-				combinerMap.put(key, oldValue);
+				combinerMap.put(key, oldValue);				
 			}else{
-				combinerMap.put(key, value);
+				combinerMap.put(key, value);			
 			}
-			
 		}
 	}	
-
-	private void weightInit(){
-		actWeightMap.put(Recommend.ActiveType.Impress, 0.5F);
-		actWeightMap.put(Recommend.ActiveType.Click, 1F);
-		actWeightMap.put(Recommend.ActiveType.PageView, 1F);
-		actWeightMap.put(Recommend.ActiveType.Read, 1.5F);
-		actWeightMap.put(Recommend.ActiveType.Save, 2F);
-		actWeightMap.put(Recommend.ActiveType.BuyCart, 2F);
-		actWeightMap.put(Recommend.ActiveType.Deal, 2F);
-		actWeightMap.put(Recommend.ActiveType.Score, 3F);
-		actWeightMap.put(Recommend.ActiveType.Comments, 3F);
-		actWeightMap.put(Recommend.ActiveType.Reply, 3F);
-		actWeightMap.put(Recommend.ActiveType.Ups, 3F);
-		actWeightMap.put(Recommend.ActiveType.Praise, 4F);
-		actWeightMap.put(Recommend.ActiveType.Share, 4F);
-	}
 	
 	private Float getWeightByType(Recommend.ActiveType actionType){
 		
@@ -214,57 +207,56 @@ public class ItemPairBolt  extends AbstractConfigUpdateBolt{
 					}
 				}					
 			}catch(Exception e){
-				logger.error(e.getMessage(), e);
+				logger.error(e.toString());
 			}
 		}
 		return 0F;
 	}
 
-	private class GroupPairUpdateCallback implements MutiClientCallBack{
-		private final UpdateKey key;
+	private class GroupCountUpdateCallback implements MutiClientCallBack{
+		private final Float value;
 		private final String putKey;
-		private final Float changeWeight;
 
-		public GroupPairUpdateCallback(UpdateKey key, String otherItem, Float changeWeight) {
-			this.key = key ; 
-			this.changeWeight = changeWeight;
-			this.putKey = key.getGroupPairKey(otherItem);
+		public GroupCountUpdateCallback(UpdateKey key, Float value) {
+			this.value = value;		
+			this.putKey = key.getGroupCountKey();
 		}
 		
 		public void excute() {
-			try {
-				Float oldCount = null;
-				SoftReference<Float> sr = groupPairCache.get(putKey);
+			try {			
+				Float oldValue = null;
+				SoftReference<Float> sr = groupCountCache.get(putKey);
 				if(sr != null){
-					oldCount = sr.get();
+					oldValue = sr.get();
 				}
 				
-				if(oldCount != null){								
-					Save(putKey,oldCount+changeWeight);
+				if(oldValue != null){		
+					Float newValue = oldValue+value;
+					logger.info("get step3 key="+putKey+",group old count="+oldValue+",new count="+this.value+",merge count="+newValue);
+					Save(putKey,newValue);
 				}else{
 					ClientAttr clientEntry = mtClientList.get(0);		
 					TairOption opt = new TairOption(clientEntry.getTimeout());
-					Future<Result<byte[]>> future = clientEntry.getClient().getAsync((short)nsDetailTableId,putKey.getBytes(),opt);
+					Future<Result<byte[]>> future = clientEntry.getClient().getAsync((short)nsGroupCountTableId,putKey.getBytes(),opt);
 					clientEntry.getClient().notifyFuture(future, this,clientEntry);	
 				}			
 				
-			} catch (Exception e) {
+			} catch (Exception e){
 				logger.error(e.getMessage(), e);
 			}
 		}
 
-		private void Save(String key,Float value){	
-		
-			synchronized(groupPairCache){
-				groupPairCache.set(key, new SoftReference<Float>(value), cacheExpireTime);
+		private void Save(String key,Float value){		
+			synchronized(groupCountCache){
+				groupCountCache.set(key, new SoftReference<Float>(value), cacheExpireTime);
 			}
 			
+			logger.info("step3 save pair count,key="+key+",value="+value);
 			Future<Result<Void>> future = null;
-			logger.info("key="+key+",value="+value);
 			for(ClientAttr clientEntry:mtClientList ){
 				TairOption putopt = new TairOption(clientEntry.getTimeout(),(short)0, dataExpireTime);
 				try {
-					future = clientEntry.getClient().putAsync((short)nsGroupPairTableId, key.getBytes(),String.valueOf(value).getBytes(), putopt);
+					future = clientEntry.getClient().putAsync((short)nsGroupCountTableId, key.getBytes(),String.valueOf(value).getBytes(), putopt);
 					clientEntry.getClient().notifyFuture(future, putCallBack, 
 							new UpdateCallBackContext(clientEntry,key,String.valueOf(value).getBytes(),putopt));
 					
@@ -286,55 +278,49 @@ public class ItemPairBolt  extends AbstractConfigUpdateBolt{
 			// TODO Auto-generated method stub
 			@SuppressWarnings("unchecked")
 			Future<Result<byte[]>> afuture = (Future<Result<byte[]>>) future;
+			Float newValue = 0F;
 			try {
 				Result<byte[]> res = afuture.get();
 				if(res.isSuccess() && res.getResult() != null){
-					String oldVal = new String(afuture.get().getResult());
-					Float oldValue = Float.valueOf(oldVal);
-					Float newValue = oldValue + this.changeWeight;
+					String oldValue = new String(res.getResult());
+					newValue = this.value + Float.parseFloat(oldValue);
 					Save(putKey,newValue);
 					return;
-				}else{
-					Save(putKey,this.changeWeight);
 				}
 			} catch (Exception e) {
 				logger.error(e.getMessage(), e);
-				Save(putKey,this.changeWeight);
 			}
-			
+			Save(putKey,this.value);
 		}
 		
 	}
 	
-	private class UserPairUpdateCallBack implements MutiClientCallBack{
+	private class UserCountUpdateCallBack implements MutiClientCallBack{
 		
 		private UpdateKey key;
 		private Float count;
-		private String userPairKey;
-		private String itemId;
+		private String userCountKey;
 
-		public UserPairUpdateCallBack(UpdateKey key,String otherItem, Float count) {
+		public UserCountUpdateCallBack(UpdateKey key, Float count) {
 			this.key = key ; 
 			this.count = count;	
-			this.itemId = otherItem;
-			
-			this.userPairKey = key.getUserPairKey(otherItem);
+			this.userCountKey = key.getUserCountKey();
 		}
 		
 		public void excute() {
 			try {
 				Float oldCount = null;
-				SoftReference<Float> sr = userPairCache.get(userPairKey);	
+				SoftReference<Float> sr = userCountCache.get(userCountKey);
 				if(sr != null){
 					oldCount = sr.get();
 				}
 				
-				if(oldCount != null){			
+				if(oldCount != null){		
 					next(oldCount);
 				}else{
 					ClientAttr clientEntry = mtClientList.get(0);		
 					TairOption opt = new TairOption(clientEntry.getTimeout());
-					Future<Result<byte[]>> future = clientEntry.getClient().getAsync((short)nsUserPairTableId,userPairKey.getBytes(),opt);
+					Future<Result<byte[]>> future = clientEntry.getClient().getAsync((short)nsUserCountTableId,userCountKey.getBytes(),opt);
 					clientEntry.getClient().notifyFuture(future, this,clientEntry);	
 				}			
 				
@@ -344,38 +330,31 @@ public class ItemPairBolt  extends AbstractConfigUpdateBolt{
 		}
 		
 		public void next(Float oldCount){
-			logger.info("get step2 key="+userPairKey+",old count="+oldCount+",new count="+count);
-			if(oldCount == 0 && count >0){
-				new GroupPairUpdateCallback(key,itemId,count).excute();
+			logger.info("get step2 key="+userCountKey+",old count="+oldCount+",new count="+count);
+			if(count != oldCount){
+				new GroupCountUpdateCallback(key,count-oldCount).excute();
 				
 				UpdateKey noGroupKey = new UpdateKey(key.getBid(),key.getUin(),0,key.getAdpos(),key.getItemId());
-				new GroupPairUpdateCallback(noGroupKey,itemId,count-oldCount).excute();
+				new GroupCountUpdateCallback(noGroupKey,count-oldCount).excute();
 				
-				save(userPairKey,count);
-			}else if(oldCount > 0 && count < oldCount){
-				new GroupPairUpdateCallback(key,itemId,count-oldCount).excute();
-				
-				UpdateKey noGroupKey = new UpdateKey(key.getBid(),key.getUin(),0,key.getAdpos(),key.getItemId());
-				new GroupPairUpdateCallback(noGroupKey,itemId,count-oldCount).excute();
-				
-				save(userPairKey,count);
+				save(userCountKey,count);
 			}
 			
 		}
 		
-		private void save(String userPairKey,Float count){
+		private void save(String userCountKey,Float count){
 			Future<Result<Void>> future = null;
-			synchronized(userPairCache){
-				userPairCache.set(userPairKey, new SoftReference<Float>(count), cacheExpireTime);
+			synchronized(userCountCache){
+				userCountCache.set(userCountKey, new SoftReference<Float>(count), cacheExpireTime);
 			}
 			
-			logger.info("key="+userPairKey+",value="+count);
+			logger.info("step2,save usercount,key="+userCountKey+",value="+count);
 			for(ClientAttr clientEntry:mtClientList ){
 				TairOption putopt = new TairOption(clientEntry.getTimeout(),(short)0, dataExpireTime);
 				try {
-					future = clientEntry.getClient().putAsync((short)nsUserPairTableId, userPairKey.getBytes(),String.valueOf(count).getBytes(), putopt);
+					future = clientEntry.getClient().putAsync((short)nsUserCountTableId, userCountKey.getBytes(),String.valueOf(count).getBytes(), putopt);
 					clientEntry.getClient().notifyFuture(future, putCallBack, 
-							new UpdateCallBackContext(clientEntry,userPairKey,String.valueOf(count).getBytes(),putopt));
+							new UpdateCallBackContext(clientEntry,userCountKey,String.valueOf(count).getBytes(),putopt));
 					
 					/*
 					if(mt!=null){
@@ -398,10 +377,9 @@ public class ItemPairBolt  extends AbstractConfigUpdateBolt{
 			Float oldCount = 0F;
 			try {
 				Result<byte[]> res = afuture.get();
-				if(res.isSuccess() && res.getResult()!=null){
-					byte[] oldVal = afuture.get().getResult();
-					oldCount = Float.valueOf(new String(oldVal));
-				}	
+				if(res.isSuccess() && res.getResult() != null){
+					oldCount = Float.parseFloat(new String(res.getResult()));
+				}				
 			} catch (Exception e) {
 				logger.error(e.getMessage(), e);
 			}
@@ -412,18 +390,22 @@ public class ItemPairBolt  extends AbstractConfigUpdateBolt{
 	
 	private class ActionDetailCallBack implements MutiClientCallBack{
 		private final UpdateKey key;
-		private final String checkKey;
+		private final String userCheckKey;
 		private final GroupActionCombinerValue values;
 
-		public ActionDetailCallBack(UpdateKey key, GroupActionCombinerValue values){
+		public ActionDetailCallBack(UpdateKey key, GroupActionCombinerValue values) {
 			this.key = key ; 
 			this.values = values;		
-			this.checkKey =  key.getDetailKey();
+			this.userCheckKey = key.getDetailKey();
 		}
 
-		private void next(String item, HashMap<String,Float> itemMap){
-			for(String itemId:itemMap.keySet()){
-				new UserPairUpdateCallBack(key, itemId, itemMap.get(itemId)).excute();
+		public void next(Float weight){
+			if(debug){
+				logger.info("step1, key="+userCheckKey+",new count="+weight);
+			}
+			
+			if(weight>0){
+				new UserCountUpdateCallBack(key,weight).excute();
 			}
 		}
 		
@@ -431,35 +413,15 @@ public class ItemPairBolt  extends AbstractConfigUpdateBolt{
 			try {
 				ClientAttr clientEntry = mtClientList.get(0);		
 				TairOption opt = new TairOption(clientEntry.getTimeout());
-				Future<Result<byte[]>> future = clientEntry.getClient().getAsync((short)nsDetailTableId,checkKey.getBytes(),opt);
+				Future<Result<byte[]>> future = clientEntry.getClient().getAsync((short)nsDetailTableId,userCheckKey.getBytes(),opt);
 				clientEntry.getClient().notifyFuture(future, this,clientEntry);	
 			} catch (Exception e) {
 				logger.error(e.getMessage(), e);
 			}
 		}
-
-		@Override
-		public void handle(Future<?> future, Object context) {			
-			@SuppressWarnings("unchecked")
-			Future<Result<byte[]>> afuture = (Future<Result<byte[]>>) future;
-			byte[] oldVal = null;
-			try {
-				oldVal = afuture.get().getResult();
-				UserActiveDetail oldValueHeap = UserActiveDetail.parseFrom(oldVal);
-				HashMap<String,Float> weightMap = getPairItems(oldValueHeap , values);
-				next(key.getItemId(),weightMap);
-			} catch (Exception e) {
-				logger.error(e.getMessage(), e);
-			}	
-		}
-		
-		private Long getWinIdByTime(Long time){	
-			String expireId = new SimpleDateFormat("yyyyMMdd").format(time*1000L);
-			return Long.valueOf(expireId);
-		}
-		
-		private Integer getWeight(Recommend.UserActiveDetail oldValueHeap){				
-			Integer newWeight = values.getType().getNumber();					
+			
+		private Float getWeight(Recommend.UserActiveDetail oldValueHeap){						
+			Float newWeight = getWeightByType(this.values.getType());					
 			for(TimeSegment ts:oldValueHeap.getTsegsList()){
 				if(ts.getTimeId() < getWinIdByTime(values.getTime() - dataExpireTime)){
 					continue;
@@ -469,44 +431,37 @@ public class ItemPairBolt  extends AbstractConfigUpdateBolt{
 					if(item.getItem().equals(key.getItemId())){	
 						for(ActType act: item.getActsList()){	
 							if(act.getLastUpdateTime() > (values.getTime() - dataExpireTime)){
-								newWeight =  Math.min(newWeight,act.getActType().getNumber());
+								Float actWeight = getWeightByType(act.getActType());
+								newWeight =  Math.max(newWeight,actWeight);
+								logger.info("timeId="+ts.getTimeId()+",type="+act.getActType()+",weight="+newWeight);
 							}
 						}	
 					}					
 				}
 			}
-			return newWeight;			
-		}
-			
-		private HashMap<String,Float> getPairItems(UserActiveDetail oldValueHeap, GroupActionCombinerValue values ){
-			Integer thisWeight = getWeight(oldValueHeap);//old,new
-			HashMap<String,Float> weightMap = new HashMap<String,Float>();
-			
-			for(Recommend.UserActiveDetail.TimeSegment tsegs:oldValueHeap.getTsegsList()){
-				if(tsegs.getTimeId() >= getWinIdByTime(values.getTime() - dataExpireTime)){
-					for(Recommend.UserActiveDetail.TimeSegment.ItemInfo item: tsegs.getItemsList()){
-						if(!item.getItem().equals(key.getItemId())){
-							Float itemWeight = getMinWeightFromAct(item.getActsList());
-							weightMap.put(item.getItem(),  Math.min(thisWeight, itemWeight));
-						}
-					}
-				}				
-			}
-			return weightMap;
-		}
-
-		private Float getMinWeightFromAct(List<ActType> actsList) {
-			Float min = getWeightByType(this.values.getType());	;		
-			for(ActType act:actsList){
-				Float thisWeight = getWeightByType(act.getActType());
-				if(min == 0){
-					min = thisWeight;
-				}else{
-					min = Math.min(thisWeight, min);
-				}
-			}
-			return min;
+			logger.info("item="+key.getItemId()+",final weight="+newWeight);
+			return newWeight;
 		}
 		
+		private Long getWinIdByTime(Long time){	
+			String expireId = new SimpleDateFormat("yyyyMMdd").format(time*1000L);
+			return Long.valueOf(expireId);
+		}
+		
+		@Override
+		public void handle(Future<?> future, Object context) {			
+			@SuppressWarnings("unchecked")
+			Future<Result<byte[]>> afuture = (Future<Result<byte[]>>) future;
+			try {
+				Result<byte[]> res = afuture.get();
+				if(res.isSuccess() && res.getResult() !=null){
+					Recommend.UserActiveDetail oldValueHeap = Recommend.UserActiveDetail.parseFrom(res.getResult());
+					next(getWeight(oldValueHeap));
+				}
+			} catch (Exception e) {
+				logger.error(e.getMessage(), e);
+			}	
+		}
 	}
+	
 }

@@ -132,20 +132,22 @@ public class CtrStorBolt extends AbstractConfigUpdateBolt{
 			return;
 		}
 		
-		if(actType == ActiveType.Click || actType == ActiveType.Impress){
-			String pageId = tuple.getStringByField("item_id");
-			String actionResult = tuple.getStringByField("action_result");
-			String[] items = actionResult.split(";",-1);
-			
-			if(Utils.isItemIdValid(pageId)){
-				for(String eachItem: items){
-					if(Utils.isItemIdValid(eachItem)){						
-						StringBuffer getKey = new StringBuffer(bid);		
-						getKey.append("#").append(adpos).append("#").append(pageId).append("#").append(eachItem);	
-						
-						CtrCombinerValue vlaue = new CtrCombinerValue(actType,1L, Long.valueOf(actionTime));
-						combinerKeys(getKey.toString(),vlaue);
-					}
+		if(actType != ActiveType.Click || actType != ActiveType.Impress){
+			return;
+		}
+		
+		String pageId = tuple.getStringByField("item_id");
+		String actionResult = tuple.getStringByField("action_result");
+		String[] items = actionResult.split(";",-1);
+		
+		if(Utils.isItemIdValid(pageId)){
+			for(String eachItem: items){
+				if(Utils.isItemIdValid(eachItem)){						
+					StringBuffer getKey = new StringBuffer(bid);		
+					getKey.append("#").append(adpos).append("#").append(pageId).append("#").append(eachItem);	
+					
+					CtrCombinerValue vlaue = new CtrCombinerValue(actType,1L, Long.valueOf(actionTime));
+					combinerKeys(getKey.toString(),vlaue);
 				}
 			}
 		}

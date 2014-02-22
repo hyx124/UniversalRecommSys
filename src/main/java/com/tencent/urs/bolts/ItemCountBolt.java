@@ -331,7 +331,7 @@ public class ItemCountBolt extends AbstractConfigUpdateBolt{
 		
 		public void next(Float oldCount){
 			logger.info("get step2 key="+userCountKey+",old count="+oldCount+",new count="+count);
-			if(count > oldCount){
+			if(count != oldCount){
 				new GroupCountUpdateCallback(key,count-oldCount).excute();
 				
 				UpdateKey noGroupKey = new UpdateKey(key.getBid(),key.getUin(),0,key.getAdpos(),key.getItemId());
