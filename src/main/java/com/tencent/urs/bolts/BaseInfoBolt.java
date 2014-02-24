@@ -57,12 +57,13 @@ public class BaseInfoBolt extends AbstractConfigUpdateBolt{
 		this.putCallBack = new UpdateCallBack(mt, Constants.systemID, Constants.tde_interfaceID, this.getClass().getName());
 	}
 	
-	private void save(short tablId,String key,byte[] values) {
+	private void save(short tableId,String key,byte[] values) {
 		if(values != null){
+			logger.info("key="+key+",tableId="+tableId);
 			for(ClientAttr clientEntry:mtClientList){
 				TairOption putopt = new TairOption(clientEntry.getTimeout(),(short)0, dataExpireTime);				
 				try {
-					Future<Result<Void>> future = clientEntry.getClient().putAsync(tablId, 
+					Future<Result<Void>> future = clientEntry.getClient().putAsync(tableId, 
 										key.getBytes(), values, putopt);
 					
 					clientEntry.getClient().notifyFuture(future, putCallBack, 
@@ -106,11 +107,12 @@ public class BaseInfoBolt extends AbstractConfigUpdateBolt{
 		String itemTime = input.getStringByField("item_time");
 		String platForm = input.getStringByField("plat_form");
 		String score = input.getStringByField("score");
+		String shopId = input.getStringByField("shop_id");
 		
 		Recommend.ItemDetailInfo.Builder builder =
 				Recommend.ItemDetailInfo.newBuilder();
 		builder.setItem(itemId).setFreeFlag(freeFlag).setPublicFlag(publicFlag).setImpDate(Long.valueOf(impDate))
-				.setPrice(Float.parseFloat(price)).setText(text)
+				.setPrice(Float.parseFloat(price)).setText(text).setShopId(shopId)
 				.setItemTime(Long.valueOf(itemTime)).setPlatform(Long.valueOf(platForm)).setScore(Long.valueOf(score))
 				.setBigType(Long.valueOf(bigType)).setBigTypeName(bigTypeName)
 				.setMiddleType(Long.valueOf(midType)).setMiddleTypeName(midTypeName)
@@ -176,25 +178,25 @@ public class BaseInfoBolt extends AbstractConfigUpdateBolt{
 		String key = null;
 		byte[] value = null;
 		
-		if(topic.equals("item_detail_info")){
+		if(topic.equals(Constants.item_info_stream)){
 			String itemId = tuple.getStringByField("item_id");
 			key = bid+"#"+itemId;
 			tableId = nsItemDetailTableId;
 			
 			value = genItemInfoPbValue(itemId,tuple);		
-		}else if(topic.equals("user_detail_info")){
+		}else if(topic.equals(Constants.user_info_stream)){
 			String qq = tuple.getStringByField("qq");
 			key = bid+"#"+qq;
 			tableId = nsUserDetailTableId;
 			
 			value = genUserInfoPbValue(qq,tuple);
-		}else if(topic.equals("action_weight_info")){
+		}else if(topic.equals(Constants.action_weight_stream)){
 			String actionType = tuple.getStringByField("type_id");
 			key = bid+"#"+actionType;
 			tableId = nsActionWeightTableId;
 			
 			value = genActionWeightPbValue(actionType,tuple);
-		}else if(topic.equals("category_level_info")){
+		}else if(topic.equals(Constants.category_level_stream)){
 			String cate_id = tuple.getStringByField("cate_id");
 			key = bid+"#"+cate_id;
 			tableId = nsCateLevelTableId;

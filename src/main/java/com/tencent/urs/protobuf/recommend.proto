@@ -56,6 +56,8 @@ message ItemDetailInfo
 	optional uint64 ItemTime = 13;			//创建时间
 	optional uint64 Platform = 14;			//所投放平台
 	optional uint64 Score = 15;				//分值
+	
+	optional string shopId = 16;			//商品所属商家
 }
 
 message UserDetailInfo
@@ -100,6 +102,8 @@ message RecommendResult
 		optional uint64 UpdateTime = 8;		//更新时间
 		optional uint64 ExpireTime = 9;		//过期时间
 		optional string Comment = 10;		//备注
+		
+		optional string shopId = 11;		//商品所属商家
     }
     repeated Result Results  = 1;
 }
@@ -123,6 +127,8 @@ message UserActiveHistory
 		optional string LBSInfo = 12;								//item行为产生时的LBS信息
 		
 		optional double Weight = 13 [default = 0.0];              	//行为权重
+		
+		optional string shopId = 14;								//商品所属商家
     }
 
     repeated ActiveRecord ActRecords  = 1;
@@ -142,6 +148,8 @@ message ItemInfo
 	optional uint32 MiddleType = 3;  							//item所属中类目
 	optional uint32 SmallType = 4;  							//item所属小类目
 	required ValidType VFlag = 5 [default = UNKNOWN];			//item是否有效
+	
+	optional string shopId = 6;									//商品所属商家
 }
 
 

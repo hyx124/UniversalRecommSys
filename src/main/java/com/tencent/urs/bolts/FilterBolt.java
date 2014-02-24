@@ -81,10 +81,10 @@ public class FilterBolt extends AbstractConfigUpdateBolt {
 	
 	@Override
 	public void updateConfig(XMLConfiguration config) {	
-		nsTableId = config.getInt("storage_table",309);
+		nsTableId = config.getInt("storage_table",308);
 		dataExpireTime = config.getInt("data_expiretime",180*24*3600);
 		cacheExpireTime = config.getInt("cache_expiretime",3600);
-		topNum = config.getInt("topNum",100);
+		topNum = config.getInt("top_num",100);
 	}
 
 	@Override
@@ -102,20 +102,27 @@ public class FilterBolt extends AbstractConfigUpdateBolt {
 		String actionTime = tuple.getStringByField("action_time");
 		String lbsInfo = tuple.getStringByField("lbs_info");
 		String platform = tuple.getStringByField("platform");
+		
+		Long bigType = tuple.getLongByField("big_type");
+		Long midType = tuple.getLongByField("mid_type");
+		Long smallType = tuple.getLongByField("small_type");
+
+		String shopId = tuple.getStringByField("shop_id");
 		ActiveType actType = Utils.getActionTypeByString(actionType);
 		
-		if(actType != Recommend.ActiveType.BuyCart){
+		if(actType != Recommend.ActiveType.Deal){
 			return;
 		}
 		
 		Recommend.UserActiveHistory.ActiveRecord.Builder actBuilder =
 				Recommend.UserActiveHistory.ActiveRecord.newBuilder();
 		actBuilder.setItem(itemId).setActTime(Long.valueOf(actionTime)).setActType(actType)
-					.setLBSInfo(lbsInfo).setPlatForm(platform);
+					.setBigType(bigType.intValue()).setMiddleType(midType.intValue()).setSmallType(smallType.intValue())
+					.setLBSInfo(lbsInfo).setPlatForm(platform).setShopId(shopId);
 
 		ActionCombinerValue value = new ActionCombinerValue();
 		value.init(itemId,actBuilder.build());
-		String key = bid+"#"+qq+"#F1";
+		String key = bid+"#"+qq;
 		combinerKeys(key, value);	
 	}
 	

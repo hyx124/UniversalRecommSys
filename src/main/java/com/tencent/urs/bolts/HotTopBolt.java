@@ -40,6 +40,7 @@ public class HotTopBolt extends AbstractConfigUpdateBolt{
 	private int combinerExpireTime;
 	private OutputCollector collector;
 	private int nsGroupCountTableId;
+	private String categoryType;
 
 	
 	private static Logger logger = LoggerFactory
@@ -53,6 +54,7 @@ public class HotTopBolt extends AbstractConfigUpdateBolt{
 	@Override
 	public void updateConfig(XMLConfiguration config) {
 		nsGroupCountTableId = config.getInt("item_count_table",304);
+		categoryType = config.getString("category_type","Small-Type");
 		//dataExpireTime = config.getInt("data_expiretime",1*24*3600);
 		//cacheExpireTime = config.getInt("cache_expiretime",3600);
 	}

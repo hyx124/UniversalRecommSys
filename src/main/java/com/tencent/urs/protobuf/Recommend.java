@@ -191,6 +191,10 @@ public final class Recommend {
     // optional uint64 Score = 15;
     boolean hasScore();
     long getScore();
+    
+    // optional string shopId = 16;
+    boolean hasShopId();
+    String getShopId();
   }
   public static final class ItemDetailInfo extends
       com.google.protobuf.GeneratedMessageLite
@@ -515,6 +519,38 @@ public final class Recommend {
       return score_;
     }
     
+    // optional string shopId = 16;
+    public static final int SHOPID_FIELD_NUMBER = 16;
+    private java.lang.Object shopId_;
+    public boolean hasShopId() {
+      return ((bitField0_ & 0x00008000) == 0x00008000);
+    }
+    public String getShopId() {
+      java.lang.Object ref = shopId_;
+      if (ref instanceof String) {
+        return (String) ref;
+      } else {
+        com.google.protobuf.ByteString bs = 
+            (com.google.protobuf.ByteString) ref;
+        String s = bs.toStringUtf8();
+        if (com.google.protobuf.Internal.isValidUtf8(bs)) {
+          shopId_ = s;
+        }
+        return s;
+      }
+    }
+    private com.google.protobuf.ByteString getShopIdBytes() {
+      java.lang.Object ref = shopId_;
+      if (ref instanceof String) {
+        com.google.protobuf.ByteString b = 
+            com.google.protobuf.ByteString.copyFromUtf8((String) ref);
+        shopId_ = b;
+        return b;
+      } else {
+        return (com.google.protobuf.ByteString) ref;
+      }
+    }
+    
     private void initFields() {
       item_ = "";
       impDate_ = 0L;
@@ -531,6 +567,7 @@ public final class Recommend {
       itemTime_ = 0L;
       platform_ = 0L;
       score_ = 0L;
+      shopId_ = "";
     }
     private byte memoizedIsInitialized = -1;
     public final boolean isInitialized() {
@@ -596,6 +633,9 @@ public final class Recommend {
       }
       if (((bitField0_ & 0x00004000) == 0x00004000)) {
         output.writeUInt64(15, score_);
+      }
+      if (((bitField0_ & 0x00008000) == 0x00008000)) {
+        output.writeBytes(16, getShopIdBytes());
       }
     }
     
@@ -664,6 +704,10 @@ public final class Recommend {
       if (((bitField0_ & 0x00004000) == 0x00004000)) {
         size += com.google.protobuf.CodedOutputStream
           .computeUInt64Size(15, score_);
+      }
+      if (((bitField0_ & 0x00008000) == 0x00008000)) {
+        size += com.google.protobuf.CodedOutputStream
+          .computeBytesSize(16, getShopIdBytes());
       }
       memoizedSerializedSize = size;
       return size;
@@ -797,6 +841,8 @@ public final class Recommend {
         bitField0_ = (bitField0_ & ~0x00002000);
         score_ = 0L;
         bitField0_ = (bitField0_ & ~0x00004000);
+        shopId_ = "";
+        bitField0_ = (bitField0_ & ~0x00008000);
         return this;
       }
       
@@ -890,6 +936,10 @@ public final class Recommend {
           to_bitField0_ |= 0x00004000;
         }
         result.score_ = score_;
+        if (((from_bitField0_ & 0x00008000) == 0x00008000)) {
+          to_bitField0_ |= 0x00008000;
+        }
+        result.shopId_ = shopId_;
         result.bitField0_ = to_bitField0_;
         return result;
       }
@@ -940,6 +990,9 @@ public final class Recommend {
         }
         if (other.hasScore()) {
           setScore(other.getScore());
+        }
+        if (other.hasShopId()) {
+          setShopId(other.getShopId());
         }
         return this;
       }
@@ -1054,6 +1107,11 @@ public final class Recommend {
             case 120: {
               bitField0_ |= 0x00004000;
               score_ = input.readUInt64();
+              break;
+            }
+            case 130: {
+              bitField0_ |= 0x00008000;
+              shopId_ = input.readBytes();
               break;
             }
           }
@@ -1456,6 +1514,42 @@ public final class Recommend {
         score_ = 0L;
         
         return this;
+      }
+      
+      // optional string shopId = 16;
+      private java.lang.Object shopId_ = "";
+      public boolean hasShopId() {
+        return ((bitField0_ & 0x00008000) == 0x00008000);
+      }
+      public String getShopId() {
+        java.lang.Object ref = shopId_;
+        if (!(ref instanceof String)) {
+          String s = ((com.google.protobuf.ByteString) ref).toStringUtf8();
+          shopId_ = s;
+          return s;
+        } else {
+          return (String) ref;
+        }
+      }
+      public Builder setShopId(String value) {
+        if (value == null) {
+    throw new NullPointerException();
+  }
+  bitField0_ |= 0x00008000;
+        shopId_ = value;
+        
+        return this;
+      }
+      public Builder clearShopId() {
+        bitField0_ = (bitField0_ & ~0x00008000);
+        shopId_ = getDefaultInstance().getShopId();
+        
+        return this;
+      }
+      void setShopId(com.google.protobuf.ByteString value) {
+        bitField0_ |= 0x00008000;
+        shopId_ = value;
+        
       }
       
       // @@protoc_insertion_point(builder_scope:com.tencent.urs.protobuf.ItemDetailInfo)
@@ -3158,6 +3252,10 @@ public final class Recommend {
       // optional string Comment = 10;
       boolean hasComment();
       String getComment();
+      
+      // optional string shopId = 11;
+      boolean hasShopId();
+      String getShopId();
     }
     public static final class Result extends
         com.google.protobuf.GeneratedMessageLite
@@ -3322,6 +3420,38 @@ public final class Recommend {
         }
       }
       
+      // optional string shopId = 11;
+      public static final int SHOPID_FIELD_NUMBER = 11;
+      private java.lang.Object shopId_;
+      public boolean hasShopId() {
+        return ((bitField0_ & 0x00000400) == 0x00000400);
+      }
+      public String getShopId() {
+        java.lang.Object ref = shopId_;
+        if (ref instanceof String) {
+          return (String) ref;
+        } else {
+          com.google.protobuf.ByteString bs = 
+              (com.google.protobuf.ByteString) ref;
+          String s = bs.toStringUtf8();
+          if (com.google.protobuf.Internal.isValidUtf8(bs)) {
+            shopId_ = s;
+          }
+          return s;
+        }
+      }
+      private com.google.protobuf.ByteString getShopIdBytes() {
+        java.lang.Object ref = shopId_;
+        if (ref instanceof String) {
+          com.google.protobuf.ByteString b = 
+              com.google.protobuf.ByteString.copyFromUtf8((String) ref);
+          shopId_ = b;
+          return b;
+        } else {
+          return (com.google.protobuf.ByteString) ref;
+        }
+      }
+      
       private void initFields() {
         item_ = "";
         bigType_ = 0;
@@ -3333,6 +3463,7 @@ public final class Recommend {
         updateTime_ = 0L;
         expireTime_ = 0L;
         comment_ = "";
+        shopId_ = "";
       }
       private byte memoizedIsInitialized = -1;
       public final boolean isInitialized() {
@@ -3379,6 +3510,9 @@ public final class Recommend {
         }
         if (((bitField0_ & 0x00000200) == 0x00000200)) {
           output.writeBytes(10, getCommentBytes());
+        }
+        if (((bitField0_ & 0x00000400) == 0x00000400)) {
+          output.writeBytes(11, getShopIdBytes());
         }
       }
       
@@ -3427,6 +3561,10 @@ public final class Recommend {
         if (((bitField0_ & 0x00000200) == 0x00000200)) {
           size += com.google.protobuf.CodedOutputStream
             .computeBytesSize(10, getCommentBytes());
+        }
+        if (((bitField0_ & 0x00000400) == 0x00000400)) {
+          size += com.google.protobuf.CodedOutputStream
+            .computeBytesSize(11, getShopIdBytes());
         }
         memoizedSerializedSize = size;
         return size;
@@ -3550,6 +3688,8 @@ public final class Recommend {
           bitField0_ = (bitField0_ & ~0x00000100);
           comment_ = "";
           bitField0_ = (bitField0_ & ~0x00000200);
+          shopId_ = "";
+          bitField0_ = (bitField0_ & ~0x00000400);
           return this;
         }
         
@@ -3623,6 +3763,10 @@ public final class Recommend {
             to_bitField0_ |= 0x00000200;
           }
           result.comment_ = comment_;
+          if (((from_bitField0_ & 0x00000400) == 0x00000400)) {
+            to_bitField0_ |= 0x00000400;
+          }
+          result.shopId_ = shopId_;
           result.bitField0_ = to_bitField0_;
           return result;
         }
@@ -3658,6 +3802,9 @@ public final class Recommend {
           }
           if (other.hasComment()) {
             setComment(other.getComment());
+          }
+          if (other.hasShopId()) {
+            setShopId(other.getShopId());
           }
           return this;
         }
@@ -3739,6 +3886,11 @@ public final class Recommend {
               case 82: {
                 bitField0_ |= 0x00000200;
                 comment_ = input.readBytes();
+                break;
+              }
+              case 90: {
+                bitField0_ |= 0x00000400;
+                shopId_ = input.readBytes();
                 break;
               }
             }
@@ -3987,6 +4139,42 @@ public final class Recommend {
         void setComment(com.google.protobuf.ByteString value) {
           bitField0_ |= 0x00000200;
           comment_ = value;
+          
+        }
+        
+        // optional string shopId = 11;
+        private java.lang.Object shopId_ = "";
+        public boolean hasShopId() {
+          return ((bitField0_ & 0x00000400) == 0x00000400);
+        }
+        public String getShopId() {
+          java.lang.Object ref = shopId_;
+          if (!(ref instanceof String)) {
+            String s = ((com.google.protobuf.ByteString) ref).toStringUtf8();
+            shopId_ = s;
+            return s;
+          } else {
+            return (String) ref;
+          }
+        }
+        public Builder setShopId(String value) {
+          if (value == null) {
+    throw new NullPointerException();
+  }
+  bitField0_ |= 0x00000400;
+          shopId_ = value;
+          
+          return this;
+        }
+        public Builder clearShopId() {
+          bitField0_ = (bitField0_ & ~0x00000400);
+          shopId_ = getDefaultInstance().getShopId();
+          
+          return this;
+        }
+        void setShopId(com.google.protobuf.ByteString value) {
+          bitField0_ |= 0x00000400;
+          shopId_ = value;
           
         }
         
@@ -4437,6 +4625,10 @@ public final class Recommend {
       // optional double Weight = 13 [default = 0];
       boolean hasWeight();
       double getWeight();
+      
+      // optional string shopId = 14;
+      boolean hasShopId();
+      String getShopId();
     }
     public static final class ActiveRecord extends
         com.google.protobuf.GeneratedMessageLite
@@ -4719,6 +4911,38 @@ public final class Recommend {
         return weight_;
       }
       
+      // optional string shopId = 14;
+      public static final int SHOPID_FIELD_NUMBER = 14;
+      private java.lang.Object shopId_;
+      public boolean hasShopId() {
+        return ((bitField0_ & 0x00002000) == 0x00002000);
+      }
+      public String getShopId() {
+        java.lang.Object ref = shopId_;
+        if (ref instanceof String) {
+          return (String) ref;
+        } else {
+          com.google.protobuf.ByteString bs = 
+              (com.google.protobuf.ByteString) ref;
+          String s = bs.toStringUtf8();
+          if (com.google.protobuf.Internal.isValidUtf8(bs)) {
+            shopId_ = s;
+          }
+          return s;
+        }
+      }
+      private com.google.protobuf.ByteString getShopIdBytes() {
+        java.lang.Object ref = shopId_;
+        if (ref instanceof String) {
+          com.google.protobuf.ByteString b = 
+              com.google.protobuf.ByteString.copyFromUtf8((String) ref);
+          shopId_ = b;
+          return b;
+        } else {
+          return (com.google.protobuf.ByteString) ref;
+        }
+      }
+      
       private void initFields() {
         item_ = "";
         bigType_ = 0;
@@ -4733,6 +4957,7 @@ public final class Recommend {
         platForm_ = "";
         lBSInfo_ = "";
         weight_ = 0D;
+        shopId_ = "";
       }
       private byte memoizedIsInitialized = -1;
       public final boolean isInitialized() {
@@ -4788,6 +5013,9 @@ public final class Recommend {
         }
         if (((bitField0_ & 0x00001000) == 0x00001000)) {
           output.writeDouble(13, weight_);
+        }
+        if (((bitField0_ & 0x00002000) == 0x00002000)) {
+          output.writeBytes(14, getShopIdBytes());
         }
       }
       
@@ -4848,6 +5076,10 @@ public final class Recommend {
         if (((bitField0_ & 0x00001000) == 0x00001000)) {
           size += com.google.protobuf.CodedOutputStream
             .computeDoubleSize(13, weight_);
+        }
+        if (((bitField0_ & 0x00002000) == 0x00002000)) {
+          size += com.google.protobuf.CodedOutputStream
+            .computeBytesSize(14, getShopIdBytes());
         }
         memoizedSerializedSize = size;
         return size;
@@ -4977,6 +5209,8 @@ public final class Recommend {
           bitField0_ = (bitField0_ & ~0x00000800);
           weight_ = 0D;
           bitField0_ = (bitField0_ & ~0x00001000);
+          shopId_ = "";
+          bitField0_ = (bitField0_ & ~0x00002000);
           return this;
         }
         
@@ -5062,6 +5296,10 @@ public final class Recommend {
             to_bitField0_ |= 0x00001000;
           }
           result.weight_ = weight_;
+          if (((from_bitField0_ & 0x00002000) == 0x00002000)) {
+            to_bitField0_ |= 0x00002000;
+          }
+          result.shopId_ = shopId_;
           result.bitField0_ = to_bitField0_;
           return result;
         }
@@ -5106,6 +5344,9 @@ public final class Recommend {
           }
           if (other.hasWeight()) {
             setWeight(other.getWeight());
+          }
+          if (other.hasShopId()) {
+            setShopId(other.getShopId());
           }
           return this;
         }
@@ -5202,6 +5443,11 @@ public final class Recommend {
               case 105: {
                 bitField0_ |= 0x00001000;
                 weight_ = input.readDouble();
+                break;
+              }
+              case 114: {
+                bitField0_ |= 0x00002000;
+                shopId_ = input.readBytes();
                 break;
               }
             }
@@ -5574,6 +5820,42 @@ public final class Recommend {
           weight_ = 0D;
           
           return this;
+        }
+        
+        // optional string shopId = 14;
+        private java.lang.Object shopId_ = "";
+        public boolean hasShopId() {
+          return ((bitField0_ & 0x00002000) == 0x00002000);
+        }
+        public String getShopId() {
+          java.lang.Object ref = shopId_;
+          if (!(ref instanceof String)) {
+            String s = ((com.google.protobuf.ByteString) ref).toStringUtf8();
+            shopId_ = s;
+            return s;
+          } else {
+            return (String) ref;
+          }
+        }
+        public Builder setShopId(String value) {
+          if (value == null) {
+    throw new NullPointerException();
+  }
+  bitField0_ |= 0x00002000;
+          shopId_ = value;
+          
+          return this;
+        }
+        public Builder clearShopId() {
+          bitField0_ = (bitField0_ & ~0x00002000);
+          shopId_ = getDefaultInstance().getShopId();
+          
+          return this;
+        }
+        void setShopId(com.google.protobuf.ByteString value) {
+          bitField0_ |= 0x00002000;
+          shopId_ = value;
+          
         }
         
         // @@protoc_insertion_point(builder_scope:com.tencent.urs.protobuf.UserActiveHistory.ActiveRecord)
@@ -5964,6 +6246,10 @@ public final class Recommend {
     // required .com.tencent.urs.protobuf.ItemInfo.ValidType VFlag = 5 [default = UNKNOWN];
     boolean hasVFlag();
     com.tencent.urs.protobuf.Recommend.ItemInfo.ValidType getVFlag();
+    
+    // optional string shopId = 6;
+    boolean hasShopId();
+    String getShopId();
   }
   public static final class ItemInfo extends
       com.google.protobuf.GeneratedMessageLite
@@ -6078,12 +6364,45 @@ public final class Recommend {
       return vFlag_;
     }
     
+    // optional string shopId = 6;
+    public static final int SHOPID_FIELD_NUMBER = 6;
+    private java.lang.Object shopId_;
+    public boolean hasShopId() {
+      return ((bitField0_ & 0x00000020) == 0x00000020);
+    }
+    public String getShopId() {
+      java.lang.Object ref = shopId_;
+      if (ref instanceof String) {
+        return (String) ref;
+      } else {
+        com.google.protobuf.ByteString bs = 
+            (com.google.protobuf.ByteString) ref;
+        String s = bs.toStringUtf8();
+        if (com.google.protobuf.Internal.isValidUtf8(bs)) {
+          shopId_ = s;
+        }
+        return s;
+      }
+    }
+    private com.google.protobuf.ByteString getShopIdBytes() {
+      java.lang.Object ref = shopId_;
+      if (ref instanceof String) {
+        com.google.protobuf.ByteString b = 
+            com.google.protobuf.ByteString.copyFromUtf8((String) ref);
+        shopId_ = b;
+        return b;
+      } else {
+        return (com.google.protobuf.ByteString) ref;
+      }
+    }
+    
     private void initFields() {
       updateTime_ = 0L;
       bigType_ = 0;
       middleType_ = 0;
       smallType_ = 0;
       vFlag_ = com.tencent.urs.protobuf.Recommend.ItemInfo.ValidType.UNKNOWN;
+      shopId_ = "";
     }
     private byte memoizedIsInitialized = -1;
     public final boolean isInitialized() {
@@ -6120,6 +6439,9 @@ public final class Recommend {
       if (((bitField0_ & 0x00000010) == 0x00000010)) {
         output.writeEnum(5, vFlag_.getNumber());
       }
+      if (((bitField0_ & 0x00000020) == 0x00000020)) {
+        output.writeBytes(6, getShopIdBytes());
+      }
     }
     
     private int memoizedSerializedSize = -1;
@@ -6147,6 +6469,10 @@ public final class Recommend {
       if (((bitField0_ & 0x00000010) == 0x00000010)) {
         size += com.google.protobuf.CodedOutputStream
           .computeEnumSize(5, vFlag_.getNumber());
+      }
+      if (((bitField0_ & 0x00000020) == 0x00000020)) {
+        size += com.google.protobuf.CodedOutputStream
+          .computeBytesSize(6, getShopIdBytes());
       }
       memoizedSerializedSize = size;
       return size;
@@ -6260,6 +6586,8 @@ public final class Recommend {
         bitField0_ = (bitField0_ & ~0x00000008);
         vFlag_ = com.tencent.urs.protobuf.Recommend.ItemInfo.ValidType.UNKNOWN;
         bitField0_ = (bitField0_ & ~0x00000010);
+        shopId_ = "";
+        bitField0_ = (bitField0_ & ~0x00000020);
         return this;
       }
       
@@ -6313,6 +6641,10 @@ public final class Recommend {
           to_bitField0_ |= 0x00000010;
         }
         result.vFlag_ = vFlag_;
+        if (((from_bitField0_ & 0x00000020) == 0x00000020)) {
+          to_bitField0_ |= 0x00000020;
+        }
+        result.shopId_ = shopId_;
         result.bitField0_ = to_bitField0_;
         return result;
       }
@@ -6333,6 +6665,9 @@ public final class Recommend {
         }
         if (other.hasVFlag()) {
           setVFlag(other.getVFlag());
+        }
+        if (other.hasShopId()) {
+          setShopId(other.getShopId());
         }
         return this;
       }
@@ -6393,6 +6728,11 @@ public final class Recommend {
                 bitField0_ |= 0x00000010;
                 vFlag_ = value;
               }
+              break;
+            }
+            case 50: {
+              bitField0_ |= 0x00000020;
+              shopId_ = input.readBytes();
               break;
             }
           }
@@ -6507,6 +6847,42 @@ public final class Recommend {
         vFlag_ = com.tencent.urs.protobuf.Recommend.ItemInfo.ValidType.UNKNOWN;
         
         return this;
+      }
+      
+      // optional string shopId = 6;
+      private java.lang.Object shopId_ = "";
+      public boolean hasShopId() {
+        return ((bitField0_ & 0x00000020) == 0x00000020);
+      }
+      public String getShopId() {
+        java.lang.Object ref = shopId_;
+        if (!(ref instanceof String)) {
+          String s = ((com.google.protobuf.ByteString) ref).toStringUtf8();
+          shopId_ = s;
+          return s;
+        } else {
+          return (String) ref;
+        }
+      }
+      public Builder setShopId(String value) {
+        if (value == null) {
+    throw new NullPointerException();
+  }
+  bitField0_ |= 0x00000020;
+        shopId_ = value;
+        
+        return this;
+      }
+      public Builder clearShopId() {
+        bitField0_ = (bitField0_ & ~0x00000020);
+        shopId_ = getDefaultInstance().getShopId();
+        
+        return this;
+      }
+      void setShopId(com.google.protobuf.ByteString value) {
+        bitField0_ |= 0x00000020;
+        shopId_ = value;
+        
       }
       
       // @@protoc_insertion_point(builder_scope:com.tencent.urs.protobuf.ItemInfo)

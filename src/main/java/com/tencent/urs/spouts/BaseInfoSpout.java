@@ -18,6 +18,7 @@ import backtype.storm.task.TopologyContext;
 import backtype.storm.tuple.Values;
 
 import com.tencent.urs.protobuf.Recommend;
+import com.tencent.urs.utils.Constants;
 import com.tencent.urs.utils.Utils;
 
 public class BaseInfoSpout extends TdbankSpout {
@@ -79,7 +80,7 @@ public class BaseInfoSpout extends TdbankSpout {
 			dealMsgByConfig("1",categoryId,event_array);
 		}
 		
-		if (categoryId.equals("item_detail_info") && event_array.length >= 17) {	
+		if (categoryId.equals(Constants.item_info_stream) && event_array.length >= 17) {	
 			String impDate = event_array[0];
 			String bid = event_array[1];
 			String itemId = event_array[2];
@@ -98,14 +99,16 @@ public class BaseInfoSpout extends TdbankSpout {
 			String expireTime = event_array[14];
 			String platForm = event_array[15];
 			String score = event_array[16];
+			
+			String shopId = "";
 					
 			//hash_key,topic,bid,imp_date,item_id,cate_id1,cate_id2,cate_id3,
 			//cate_name1,cate_name2,cate_name3,free,publish,price,text,item_time,
 			//expire_time,plat_form,score
 			String[] dealMsg ={itemId,categoryId,bid,impDate,itemId,categoryId1,categoryId2,categoryId3,
-						categoryName1,categoryName2,categoryName3,free,publish,price,text,itemTime,expireTime,platForm,score}; 
+						categoryName1,categoryName2,categoryName3,free,publish,price,text,itemTime,expireTime,platForm,score,shopId}; 
 			dealMsgByConfig(bid,categoryId,dealMsg);
-		}else if (categoryId.equals("user_detail_info") && event_array.length >= 9) {	
+		}else if (categoryId.equals(Constants.user_info_stream) && event_array.length >= 9) {	
 			String impDate = event_array[0];
 			String bid = event_array[1];
 			String qq = event_array[2];
@@ -118,7 +121,7 @@ public class BaseInfoSpout extends TdbankSpout {
 			//hash_key,topic,bid,imp_date,qq,imei,uid,level,reg_date, reg_time
 			String[] dealMsg ={qq,categoryId,bid,impDate,qq,imei,uid,level,regDate,regTime};
 			dealMsgByConfig(bid,categoryId,dealMsg);
-		}else if (categoryId.equals("action_weight_info") && event_array.length >= 4) {	
+		}else if (categoryId.equals(Constants.action_weight_stream) && event_array.length >= 4) {	
 			String impDate = event_array[0];
 			String bid = event_array[1];
 			String actType = event_array[2];
@@ -127,7 +130,7 @@ public class BaseInfoSpout extends TdbankSpout {
 			//hash_key,topic,bid,imp_date,type_id,weight
 			String[] dealMsg ={actType,categoryId,bid,impDate,actType,weight};
 			dealMsgByConfig(bid,categoryId,dealMsg);
-		}else if(categoryId.equals("category_level_info") && event_array.length >= 6){
+		}else if(categoryId.equals(Constants.category_level_stream) && event_array.length >= 6){
 			String impDate = event_array[0];
 			String bid = event_array[1];
 			String cateId = event_array[2];
@@ -184,7 +187,7 @@ public class BaseInfoSpout extends TdbankSpout {
 			this.collector.emit("filter_data",new Values(""));
 			return;	
 		}
-	
+		
 		Values outputValues = new Values();
 		for(String value: msg_array){
 			outputValues.add(value);

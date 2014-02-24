@@ -84,7 +84,7 @@ public class TopActionBolt extends AbstractConfigUpdateBolt {
 		nsTableId = config.getInt("storage_table",301);
 		dataExpireTime = config.getInt("data_expiretime",1*24*3600);
 		cacheExpireTime = config.getInt("cache_expiretime",3600);
-		topNum = config.getInt("topNum",30);
+		topNum = config.getInt("top_num",30);
 	}
 
 	@Override
@@ -103,15 +103,27 @@ public class TopActionBolt extends AbstractConfigUpdateBolt {
 		String lbsInfo = tuple.getStringByField("lbs_info");
 		String platform = tuple.getStringByField("platform");
 		ActiveType actType = Utils.getActionTypeByString(actionType);
+	
+		Long bigType = tuple.getLongByField("big_type");
+		Long midType = tuple.getLongByField("mid_type");
+		Long smallType = tuple.getLongByField("small_type");
+
+		String shopId = tuple.getStringByField("shop_id");
+		
+		if(actType != Recommend.ActiveType.PageView){
+			return;
+		}
 		
 		Recommend.UserActiveHistory.ActiveRecord.Builder actBuilder =
 				Recommend.UserActiveHistory.ActiveRecord.newBuilder();
 		actBuilder.setItem(itemId).setActTime(Long.valueOf(actionTime)).setActType(actType)
-					.setLBSInfo(lbsInfo).setPlatForm(platform);
+					.setBigType(bigType.intValue()).setMiddleType(midType.intValue()).setSmallType(smallType.intValue())
+					.setLBSInfo(lbsInfo).setPlatForm(platform).setShopId(shopId);
 
+		
 		ActionCombinerValue value = new ActionCombinerValue();
 		value.init(itemId,actBuilder.build());
-		String key = bid+"#"+qq+"#D1";
+		String key = bid+"#"+qq+"#"+Constants.topN_alg_name;
 		combinerKeys(key, value);	
 	}
 	

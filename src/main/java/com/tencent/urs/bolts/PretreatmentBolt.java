@@ -110,7 +110,7 @@ public class PretreatmentBolt extends AbstractConfigUpdateBolt {
 		Values outputValues = new Values();		
 		outputValues.add(bid);
 		outputValues.add(topic);
-		outputValues.add(tuple.getStringByField("adpos"));
+		outputValues.add("0");//adpos = 0 ,表示行为不区分广告位
 		outputValues.add(actTypeStr);
 		outputValues.add(tuple.getStringByField("action_time"));
 		outputValues.add(tuple.getStringByField("item_id"));

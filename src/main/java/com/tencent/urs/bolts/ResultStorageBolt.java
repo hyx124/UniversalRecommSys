@@ -65,29 +65,31 @@ public class ResultStorageBolt extends AbstractConfigUpdateBolt {
 	@Override
 	public void processEvent(String sid, Tuple tuple) {		
 		//bid,key,item_id,weight,alg_name,big_type,mid_type,small_type,free,price
+		
 		String algName = tuple.getStringByField("alg_name");
-		String key = tuple.getStringByField("key");
+		String key = tuple.getStringByField("key");			
 		String itemId = tuple.getStringByField("item_id");
 		Double weight = tuple.getDoubleByField("weight");
-	
+		
 		Long bigType = tuple.getLongByField("big_type");
 		Long midType = tuple.getLongByField("mid_type");
 		Long smallType = tuple.getLongByField("small_type");
-		
+			
 		Recommend.ChargeType charType = (Recommend.ChargeType) tuple.getValueByField("free");
 		Long price = tuple.getLongByField("price");
-		
+		String shopId = tuple.getStringByField("shop_id");
+			
 		logger.info("enter ,key="+key);
 		Recommend.RecommendResult.Result.Builder value =
 				Recommend.RecommendResult.Result.newBuilder();
 		value.setBigType(bigType.intValue())
-			.setMiddleType(midType.intValue())
-			.setSmallType(smallType.intValue())
-			.setPrice(price)
-			.setItem(itemId).setWeight(weight).setFreeFlag(charType)
-			.setUpdateTime(System.currentTimeMillis()/1000L);
-		new putToTDEUpdateCallBack(key,value.build(),algName).excute();
-		
+				.setMiddleType(midType.intValue())
+				.setSmallType(smallType.intValue())
+				.setPrice(price)
+				.setItem(itemId).setWeight(weight).setFreeFlag(charType)
+				.setUpdateTime(System.currentTimeMillis()/1000L)
+				.setShopId(shopId);
+		new putToTDEUpdateCallBack(key,value.build(),algName).excute();	
 	}
 	
 	@Override

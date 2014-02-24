@@ -23,6 +23,7 @@ import com.tencent.urs.tdengine.TDEngineClientFactory;
 import com.tencent.urs.tdengine.TDEngineClientFactory.ClientAttr;
 import com.tencent.urs.utils.Constants;
 import com.tencent.urs.utils.DataCache;
+import com.tencent.urs.utils.Utils;
 
 import backtype.storm.task.OutputCollector;
 import backtype.storm.task.TopologyContext;
@@ -69,30 +70,23 @@ public class AddItemInfoBolt extends AbstractConfigUpdateBolt {
 	@Override
 	public void processEvent(String sid, Tuple tuple) {
 		String bid = tuple.getStringByField("bid");
-		String key = tuple.getStringByField("key");	
 		String itemId = tuple.getStringByField("item_id");	
-		double weight = tuple.getDoubleByField("weight");	
-		String algName = tuple.getStringByField("alg_name");	
 		
-		new GetItemInfoCallBack(bid,key,itemId,weight,algName).excute();
-		
+		if(Utils.isBidValid(bid) && Utils.isItemIdValid(itemId)){
+			new GetItemInfoCallBack(sid, bid, itemId,tuple).excute();
+		}		
 	}
 	
 	public class GetItemInfoCallBack implements MutiClientCallBack{
-		private String key;
-		private String itemId;
-		private String bid;
-		private double weight;
-		private String algName;
 		private String cacheKey;
+		private String sid;
+		private Tuple tuple;
+		private String bid;
 		
-		public GetItemInfoCallBack(String bid,String key,String itemId, double weight, String algName){
+		public GetItemInfoCallBack(String sid ,String bid, String itemId, Tuple tuple){	
+			this.sid = sid;
 			this.bid = bid;
-			this.key = key;
-			this.itemId = itemId;
-			this.weight = weight;
-			this.algName = algName;
-			
+			this.tuple = tuple;
 			this.cacheKey = bid+"#"+itemId;
 		}
 		
@@ -113,25 +107,67 @@ public class AddItemInfoBolt extends AbstractConfigUpdateBolt {
 		}
 
 		private void emitData(ItemDetailInfo itemInfo){
-			Values value = new Values(bid,key,itemId,weight,algName);
+			Values value = null;
+			String streamId = null;
+			if(sid.equals(Constants.actions_stream)){
+				String bid = tuple.getStringByField("bid");
+				String qq = tuple.getStringByField("qq");
+				String itemId = tuple.getStringByField("item_id");
+				
+				if(!Utils.isItemIdValid(itemId) || !Utils.isQNumValid(qq)){
+					return;
+				}
+				
+				String actionType = tuple.getStringByField("action_type");
+				String actionTime = tuple.getStringByField("action_time");
+				String lbsInfo = tuple.getStringByField("lbs_info");
+				String platform = tuple.getStringByField("platform");
+				
+				streamId = Constants.actions_stream;
+				value = new Values(bid,itemId,qq,actionType,actionTime,platform,lbsInfo);	
+			}else if(sid.equals(Constants.action_weight_stream)){
+				String algName = this.tuple.getStringByField("alg_name");	
+				String key = tuple.getStringByField("key");
+				String itemId = tuple.getStringByField("itemId");
+				double weight = tuple.getDoubleByField("weight");
+				
+				if(algName.equals(Constants.cate_alg_name)){
+					if(key.indexOf("Big-Type") > 0){
+						key = key.replace("Mid-Type", String.valueOf(itemInfo.getBigType()));
+					}else if(key.indexOf("Mid-Type") > 0){
+						key = key.replace("Mid-Type", String.valueOf(itemInfo.getMiddleType()));
+					}else if(key.indexOf("Small-Type") > 0){
+						key = key.replace("Small-Type", String.valueOf(itemInfo.getSmallType()));
+					}
+				}
+	
+				streamId = Constants.alg_result_stream;
+				value = new Values(bid,key,itemId,weight,algName);
+			}
+			
 			if(itemInfo != null){
 				value.add(itemInfo.getBigType());
 				value.add(itemInfo.getMiddleType());
 				value.add(itemInfo.getSmallType());
 				value.add(itemInfo.getFreeFlag());
+			
 				Float price = itemInfo.getPrice();
 				
-				value.add(price.longValue());		
+				value.add(price.longValue());	
+				value.add(itemInfo.getShopId());
 			}else{
 				value.add(0L);
 				value.add(0L);
 				value.add(0L);
 				value.add(ChargeType.NormalFee);
-				value.add(0L);		
+				value.add(0L);	
+				value.add("");
 			}
-			//bid,key,item_id,weight,alg_name,big_type,mid_type,small_type,free,price
-			synchronized(collector){
-				collector.emit("computer_result",value);	
+			
+			if(value!=null && streamId != null){
+				synchronized(collector){
+					collector.emit(streamId,value);	
+				}
 			}		
 		}
 		

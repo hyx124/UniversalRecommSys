@@ -1,5 +1,6 @@
 package com.tencent.urs.utils;
 
+import java.text.SimpleDateFormat;
 import java.util.HashSet;
 import java.util.Map;
 
@@ -152,5 +153,10 @@ public class Utils {
 			.append("#").append(uin)
 			.append("#").append(algName);
 		return getKey.toString();
+	}
+	
+	public static Long getDateByTime(Long time){	
+		String expireId = new SimpleDateFormat("yyyyMMdd").format(time*1000L);
+		return Long.valueOf(expireId);
 	}
 }
