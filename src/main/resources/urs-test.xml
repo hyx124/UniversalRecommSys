@@ -210,13 +210,8 @@
 			</output_fields>
 			
 			<output_fields>
-				<stream_id>top_actions</stream_id>
+				<stream_id>user_action</stream_id>
 				<fields>bid,key,item_id,qq,action_type,action_time,imei,platform,lbs_info,qq,big_type,mid_type,small_type,free,price,shop_id</fields>
-			</output_fields>
-			
-			<output_fields>
-				<stream_id>filter_actions</stream_id>
-				<fields>bid,item_id,qq,action_type,action_time,imei,platform,lbs_info,big_type,mid_type,small_type,free,price,shop_id</fields>
 			</output_fields>
 			
 		</bolt>

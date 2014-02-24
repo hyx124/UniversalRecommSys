@@ -56,20 +56,22 @@ public class TestSpout2 implements IRichSpout {
 	 */
 	public void nextTuple() {
 		Long now = System.currentTimeMillis()/1000L;
-		String itemId = String.valueOf(now.intValue()%50);
+		String itemId = String.valueOf(now.intValue()%1000);
 		String actType = String.valueOf(now%10+1);
 		//<fields>bid,topic,qq,uid,adpos,action_type,action_time,item_id,action_result,imei,platform,lbs_info</fields>
 		String action_result = itemId+"0";
-		for(int i=0; i<10; i++){
+		for(int i=1; i<10; i++){
 			action_result = action_result +";"+ itemId+i;
 		}
 		
-		String[] dealMsg ={"17139104","1","user_action","0","17139104","1",actType,String.valueOf(now),itemId,action_result,"","",""}; 
-		String[] dealMsg2 ={"17139104","1","user_action","0","17139104","1","1",String.valueOf(now),itemId,action_result,"","",""}; 
-		String[] dealMsg3 ={"17139104","1","user_action","0","17139104","1","2",String.valueOf(now),itemId,action_result,"","",""}; 
-		dealMsgByConfig("1","user_action",dealMsg);
+		String[] dealMsg1 ={"17139104","1","user_action","0","17139104","1","1",String.valueOf(now),itemId,action_result,"","",""}; 
+		String[] dealMsg2 ={"17139104","1","user_action","0","17139104","1","2",String.valueOf(now),itemId,action_result,"","",""}; 
+		String[] dealMsg3 ={"17139104","1","user_action","0","17139104","1","3",String.valueOf(now),itemId,action_result,"","",""}; 
+		String[] dealMsg4 ={"17139104","1","user_action","0","17139104","1","7",String.valueOf(now),itemId,action_result,"","",""}; 
+		dealMsgByConfig("1","user_action",dealMsg1);
 		dealMsgByConfig("1","user_action",dealMsg2);
 		dealMsgByConfig("1","user_action",dealMsg3);
+		dealMsgByConfig("1","user_action",dealMsg4);
 		try {
 			Time.sleep(1000L);
 		} catch (InterruptedException e) {

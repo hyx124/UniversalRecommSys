@@ -3,11 +3,13 @@ package com.tencent.urs.bolts;
 import com.google.common.collect.ImmutableList;
 import com.tencent.urs.protobuf.Recommend;
 import com.tencent.urs.protobuf.Recommend.ActiveType;
+import com.tencent.urs.protobuf.Recommend.GroupPairInfo;
 import com.tencent.urs.protobuf.Recommend.UserActiveDetail;
 import com.tencent.urs.protobuf.Recommend.UserActiveDetail.TimeSegment;
 import com.tencent.urs.protobuf.Recommend.UserActiveDetail.TimeSegment.ItemInfo;
 import com.tencent.urs.protobuf.Recommend.UserActiveDetail.TimeSegment.ItemInfo.ActType;
 import com.tencent.urs.protobuf.Recommend.UserActiveHistory.ActiveRecord;
+import com.tencent.urs.protobuf.Recommend.UserPairInfo;
 
 import java.lang.ref.SoftReference;
 import java.text.SimpleDateFormat;
@@ -55,9 +57,8 @@ public class ItemPairBolt  extends AbstractConfigUpdateBolt{
 	private List<ClientAttr> mtClientList;	
 	private Long lastUpdateTime; 
 	private MonitorTools mt;
-	private DataCache<UserActiveDetail> userActionCache;
-	private DataCache<Float> groupPairCache;
-	private DataCache<Float> userPairCache;
+	private DataCache<Recommend.GroupPairInfo> groupPairCache;
+	private DataCache<Recommend.UserPairInfo> userPairCache;
 	private UpdateCallBack putCallBack;
 	private ConcurrentHashMap<UpdateKey, GroupActionCombinerValue> combinerMap;
 	private ConcurrentHashMap<Recommend.ActiveType, Float> actWeightMap;
@@ -78,16 +79,34 @@ public class ItemPairBolt  extends AbstractConfigUpdateBolt{
 		super(config, outputField, Constants.config_stream);
 	}
 	
+	public class MidInfo {
+		private Long timeId;
+		private Float weight;
+		
+		MidInfo(Long timeId,Float weight){
+			this.timeId = timeId;
+			this.weight = weight;
+		}
+		
+		public Long getTimeId(){
+			return this.timeId;
+		}
+		
+		public Float getWeight(){
+			return this.weight;
+		}
+	}
+	
+	
 	@Override
 	public void prepare(Map conf, TopologyContext context, OutputCollector collector){
 		super.prepare(conf, context, collector);
 		this.updateConfig(super.config);
 
-		this.groupPairCache = new DataCache<Float>(conf);
-		this.userPairCache = new DataCache<Float>(conf);
+		this.groupPairCache = new DataCache<Recommend.GroupPairInfo>(conf);
+		this.userPairCache = new DataCache<Recommend.UserPairInfo>(conf);
 		this.mtClientList = TDEngineClientFactory.createMTClientList(conf);
 		this.mt = MonitorTools.getMonitorInstance(conf);
-		this.userActionCache = new DataCache<UserActiveDetail>(conf);
 		this.combinerMap = new ConcurrentHashMap<UpdateKey,GroupActionCombinerValue>(1024);
 				
 		this.lastUpdateTime = 0L;
@@ -223,24 +242,26 @@ public class ItemPairBolt  extends AbstractConfigUpdateBolt{
 	private class GroupPairUpdateCallback implements MutiClientCallBack{
 		private final UpdateKey key;
 		private final String putKey;
-		private final Float changeWeight;
+		private final Recommend.UserPairInfo userInfo;
 
-		public GroupPairUpdateCallback(UpdateKey key, String otherItem, Float changeWeight) {
+		public GroupPairUpdateCallback(UpdateKey key, String otherItem, Recommend.UserPairInfo userInfo) {
 			this.key = key ; 
-			this.changeWeight = changeWeight;
+			this.userInfo = userInfo;
 			this.putKey = key.getGroupPairKey(otherItem);
 		}
 		
 		public void excute() {
 			try {
-				Float oldCount = null;
-				SoftReference<Float> sr = groupPairCache.get(putKey);
+				GroupPairInfo oldInfo = null;
+				SoftReference<GroupPairInfo> sr = groupPairCache.get(putKey);
 				if(sr != null){
-					oldCount = sr.get();
+					oldInfo = sr.get();
 				}
 				
-				if(oldCount != null){								
-					Save(putKey,oldCount+changeWeight);
+				if(oldInfo != null){		
+					GroupPairInfo.Builder newInfoBuilder = GroupPairInfo.newBuilder();
+					addUserToGroup(oldInfo,userInfo,newInfoBuilder);
+					Save(putKey,newInfoBuilder.build());
 				}else{
 					ClientAttr clientEntry = mtClientList.get(0);		
 					TairOption opt = new TairOption(clientEntry.getTimeout());
@@ -253,20 +274,45 @@ public class ItemPairBolt  extends AbstractConfigUpdateBolt{
 			}
 		}
 
-		private void Save(String key,Float value){	
+		private void addUserToGroup(GroupPairInfo oldGroupInfo,UserPairInfo userInfo,GroupPairInfo.Builder newInfoBuilder){
+			
+			for(UserPairInfo.TimeSegment uts: userInfo.getTsegsList()){
+				boolean isAdded = false;
+				for(GroupPairInfo.TimeSegment gts: oldGroupInfo.getTsegsList()){
+					if(gts.getTimeId() == uts.getTimeId()){
+						Recommend.GroupPairInfo.TimeSegment.Builder newTs = 
+									Recommend.GroupPairInfo.TimeSegment.newBuilder();
+							
+						newTs.setTimeId(gts.getTimeId()).setCount(gts.getCount() + uts.getCount());
+						newInfoBuilder.addTsegs(newTs.build());
+						
+						isAdded = true;
+					}
+				}
+				
+				if(!isAdded){
+					Recommend.GroupPairInfo.TimeSegment.Builder newTs = 
+							Recommend.GroupPairInfo.TimeSegment.newBuilder();
+					newTs.setTimeId(uts.getTimeId()).setCount(uts.getCount());
+					newInfoBuilder.addTsegs(newTs.build());
+				}
+				
+			}
+		}
+		
+		private void Save(String key,GroupPairInfo newInfo){	
 		
 			synchronized(groupPairCache){
-				groupPairCache.set(key, new SoftReference<Float>(value), cacheExpireTime);
+				groupPairCache.set(key, new SoftReference<Recommend.GroupPairInfo>(newInfo), cacheExpireTime);
 			}
 			
 			Future<Result<Void>> future = null;
-			logger.info("key="+key+",value="+value);
 			for(ClientAttr clientEntry:mtClientList ){
 				TairOption putopt = new TairOption(clientEntry.getTimeout(),(short)0, dataExpireTime);
 				try {
-					future = clientEntry.getClient().putAsync((short)nsGroupPairTableId, key.getBytes(),String.valueOf(value).getBytes(), putopt);
+					future = clientEntry.getClient().putAsync((short)nsGroupPairTableId, key.getBytes(),newInfo.toByteArray(), putopt);
 					clientEntry.getClient().notifyFuture(future, putCallBack, 
-							new UpdateCallBackContext(clientEntry,key,String.valueOf(value).getBytes(),putopt));
+							new UpdateCallBackContext(clientEntry,key,newInfo.toByteArray(),putopt));
 					
 					/*
 					if(mt!=null){
@@ -286,22 +332,18 @@ public class ItemPairBolt  extends AbstractConfigUpdateBolt{
 			// TODO Auto-generated method stub
 			@SuppressWarnings("unchecked")
 			Future<Result<byte[]>> afuture = (Future<Result<byte[]>>) future;
+			GroupPairInfo.Builder newInfoBuilder = GroupPairInfo.newBuilder();
+			GroupPairInfo oldInfo = null;
 			try {
 				Result<byte[]> res = afuture.get();
 				if(res.isSuccess() && res.getResult() != null){
-					String oldVal = new String(afuture.get().getResult());
-					Float oldValue = Float.valueOf(oldVal);
-					Float newValue = oldValue + this.changeWeight;
-					Save(putKey,newValue);
-					return;
-				}else{
-					Save(putKey,this.changeWeight);
+					oldInfo	= GroupPairInfo.parseFrom(res.getResult());	
 				}
 			} catch (Exception e) {
-				logger.error(e.getMessage(), e);
-				Save(putKey,this.changeWeight);
+				logger.error(e.getMessage(), e);	
 			}
-			
+			addUserToGroup(oldInfo,userInfo,newInfoBuilder);
+			Save(putKey,newInfoBuilder.build());
 		}
 		
 	}
@@ -309,13 +351,13 @@ public class ItemPairBolt  extends AbstractConfigUpdateBolt{
 	private class UserPairUpdateCallBack implements MutiClientCallBack{
 		
 		private UpdateKey key;
-		private Float count;
+		private MidInfo weightInfo;
 		private String userPairKey;
 		private String itemId;
 
-		public UserPairUpdateCallBack(UpdateKey key,String otherItem, Float count) {
+		public UserPairUpdateCallBack(UpdateKey key,String otherItem, MidInfo weightInfo) {
 			this.key = key ; 
-			this.count = count;	
+			this.weightInfo = weightInfo;	
 			this.itemId = otherItem;
 			
 			this.userPairKey = key.getUserPairKey(otherItem);
@@ -323,14 +365,16 @@ public class ItemPairBolt  extends AbstractConfigUpdateBolt{
 		
 		public void excute() {
 			try {
-				Float oldCount = null;
-				SoftReference<Float> sr = userPairCache.get(userPairKey);	
+				Recommend.UserPairInfo oldInfo = null;
+				SoftReference<Recommend.UserPairInfo> sr = userPairCache.get(userPairKey);	
 				if(sr != null){
-					oldCount = sr.get();
+					oldInfo = sr.get();
 				}
 				
-				if(oldCount != null){			
-					next(oldCount);
+				if(oldInfo != null){	
+					UserPairInfo.Builder newInfoBuilder  =  UserPairInfo.newBuilder();
+					genNewInfoFromOld(oldInfo,newInfoBuilder);
+					next(newInfoBuilder.build());
 				}else{
 					ClientAttr clientEntry = mtClientList.get(0);		
 					TairOption opt = new TairOption(clientEntry.getTimeout());
@@ -343,39 +387,55 @@ public class ItemPairBolt  extends AbstractConfigUpdateBolt{
 			}
 		}
 		
-		public void next(Float oldCount){
-			logger.info("get step2 key="+userPairKey+",old count="+oldCount+",new count="+count);
-			if(oldCount == 0 && count >0){
-				new GroupPairUpdateCallback(key,itemId,count).excute();
-				
-				UpdateKey noGroupKey = new UpdateKey(key.getBid(),key.getUin(),0,key.getAdpos(),key.getItemId());
-				new GroupPairUpdateCallback(noGroupKey,itemId,count-oldCount).excute();
-				
-				save(userPairKey,count);
-			}else if(oldCount > 0 && count < oldCount){
-				new GroupPairUpdateCallback(key,itemId,count-oldCount).excute();
-				
-				UpdateKey noGroupKey = new UpdateKey(key.getBid(),key.getUin(),0,key.getAdpos(),key.getItemId());
-				new GroupPairUpdateCallback(noGroupKey,itemId,count-oldCount).excute();
-				
-				save(userPairKey,count);
+		private void genNewInfoFromOld(UserPairInfo oldInfo,UserPairInfo.Builder newInfoBuilder){
+			boolean isAdded = false;
+			if(oldInfo != null){
+				for(Recommend.UserPairInfo.TimeSegment ts: oldInfo.getTsegsList()){
+					if(ts.getTimeId() == weightInfo.getTimeId()){
+						if(weightInfo.getWeight() != ts.getCount()){
+							Recommend.UserPairInfo.TimeSegment.Builder newTs = 
+									Recommend.UserPairInfo.TimeSegment.newBuilder();
+							
+							newTs.setTimeId(ts.getTimeId()).setCount(weightInfo.getWeight() - ts.getCount());
+							newInfoBuilder.addTsegs(newTs.build());
+							isAdded = true;
+						}
+					}
+				}
 			}
 			
+			if(!isAdded){
+				Recommend.UserPairInfo.TimeSegment.Builder newTs = 
+						Recommend.UserPairInfo.TimeSegment.newBuilder();
+				
+				newTs.setTimeId(weightInfo.getTimeId()).setCount(weightInfo.getWeight());
+				newInfoBuilder.addTsegs(newTs.build());
+			}
 		}
 		
-		private void save(String userPairKey,Float count){
+		private void next(Recommend.UserPairInfo newInfo){
+		
+			new GroupPairUpdateCallback(key,itemId,newInfo).excute();
+				
+			UpdateKey noGroupKey = new UpdateKey(key.getBid(),key.getUin(),0,key.getAdpos(),key.getItemId());
+			new GroupPairUpdateCallback(noGroupKey,itemId,newInfo).excute();
+				
+			save(userPairKey,newInfo);			
+		}
+		
+		private void save(String userPairKey,UserPairInfo newInfo){
 			Future<Result<Void>> future = null;
 			synchronized(userPairCache){
-				userPairCache.set(userPairKey, new SoftReference<Float>(count), cacheExpireTime);
+				userPairCache.set(userPairKey, new SoftReference<UserPairInfo>(newInfo), cacheExpireTime);
 			}
 			
-			logger.info("key="+userPairKey+",value="+count);
+			logger.info("key="+userPairKey+",value="+newInfo);
 			for(ClientAttr clientEntry:mtClientList ){
 				TairOption putopt = new TairOption(clientEntry.getTimeout(),(short)0, dataExpireTime);
 				try {
-					future = clientEntry.getClient().putAsync((short)nsUserPairTableId, userPairKey.getBytes(),String.valueOf(count).getBytes(), putopt);
+					future = clientEntry.getClient().putAsync((short)nsUserPairTableId, userPairKey.getBytes(),newInfo.toByteArray(), putopt);
 					clientEntry.getClient().notifyFuture(future, putCallBack, 
-							new UpdateCallBackContext(clientEntry,userPairKey,String.valueOf(count).getBytes(),putopt));
+							new UpdateCallBackContext(clientEntry,userPairKey,String.valueOf(newInfo).getBytes(),putopt));
 					
 					/*
 					if(mt!=null){
@@ -395,17 +455,18 @@ public class ItemPairBolt  extends AbstractConfigUpdateBolt{
 			// TODO Auto-generated method stub
 			@SuppressWarnings("unchecked")
 			Future<Result<byte[]>> afuture = (Future<Result<byte[]>>) future;
-			Float oldCount = 0F;
+			UserPairInfo oldInfo = null;
 			try {
 				Result<byte[]> res = afuture.get();
 				if(res.isSuccess() && res.getResult()!=null){
-					byte[] oldVal = afuture.get().getResult();
-					oldCount = Float.valueOf(new String(oldVal));
+					oldInfo = UserPairInfo.parseFrom(res.getResult());
 				}	
 			} catch (Exception e) {
 				logger.error(e.getMessage(), e);
 			}
-			next(oldCount);	
+			UserPairInfo.Builder newInfoBuilder  =  UserPairInfo.newBuilder();
+			genNewInfoFromOld(oldInfo,newInfoBuilder);
+			next(newInfoBuilder.build());
 		}
 		
 	}
@@ -421,9 +482,11 @@ public class ItemPairBolt  extends AbstractConfigUpdateBolt{
 			this.checkKey =  key.getDetailKey();
 		}
 
-		private void next(String item, HashMap<String,Float> itemMap){
-			for(String itemId:itemMap.keySet()){
-				new UserPairUpdateCallBack(key, itemId, itemMap.get(itemId)).excute();
+		private void next(String item, HashMap<String,MidInfo> weightMap){
+			for(String itemId:weightMap.keySet()){
+				if(!itemId.equals(key.getItemId())){
+					new UserPairUpdateCallBack(key, itemId, weightMap.get(itemId)).excute();
+				}
 			}
 		}
 		
@@ -446,7 +509,7 @@ public class ItemPairBolt  extends AbstractConfigUpdateBolt{
 			try {
 				oldVal = afuture.get().getResult();
 				UserActiveDetail oldValueHeap = UserActiveDetail.parseFrom(oldVal);
-				HashMap<String,Float> weightMap = getPairItems(oldValueHeap , values);
+				HashMap<String,MidInfo> weightMap = getPairItems(oldValueHeap , values);
 				next(key.getItemId(),weightMap);
 			} catch (Exception e) {
 				logger.error(e.getMessage(), e);
@@ -458,54 +521,45 @@ public class ItemPairBolt  extends AbstractConfigUpdateBolt{
 			return Long.valueOf(expireId);
 		}
 		
-		private Integer getWeight(Recommend.UserActiveDetail oldValueHeap){				
-			Integer newWeight = values.getType().getNumber();					
+		private HashMap<String,MidInfo> getPairItems(UserActiveDetail oldValueHeap, GroupActionCombinerValue values ){
+			HashMap<String,MidInfo> weightMap = new HashMap<String,MidInfo>();
+			
 			for(TimeSegment ts:oldValueHeap.getTsegsList()){
 				if(ts.getTimeId() < getWinIdByTime(values.getTime() - dataExpireTime)){
 					continue;
 				}
 			
 				for(ItemInfo item:ts.getItemsList()){						
-					if(item.getItem().equals(key.getItemId())){	
-						for(ActType act: item.getActsList()){	
-							if(act.getLastUpdateTime() > (values.getTime() - dataExpireTime)){
-								newWeight =  Math.min(newWeight,act.getActType().getNumber());
+					for(ActType act: item.getActsList()){	
+						if(act.getLastUpdateTime() > (values.getTime() - dataExpireTime)){
+							Float actWeight = getWeightByType(act.getActType());
+					
+							if(weightMap.containsKey(item.getItem())){
+								
+								if(weightMap.get(item.getItem()).getWeight() < actWeight){
+									MidInfo midInfo = new MidInfo(ts.getTimeId(),actWeight);
+									weightMap.put(item.getItem(), midInfo);
+								}
+								
+							}else{
+								MidInfo midInfo = new MidInfo(ts.getTimeId(),actWeight);
+								weightMap.put(item.getItem(), midInfo);
 							}
-						}	
-					}					
+							
+							
+						}
+					}			
 				}
 			}
-			return newWeight;			
-		}
 			
-		private HashMap<String,Float> getPairItems(UserActiveDetail oldValueHeap, GroupActionCombinerValue values ){
-			Integer thisWeight = getWeight(oldValueHeap);//old,new
-			HashMap<String,Float> weightMap = new HashMap<String,Float>();
+			MidInfo valueInfo = weightMap.remove(key.getItemId());
 			
-			for(Recommend.UserActiveDetail.TimeSegment tsegs:oldValueHeap.getTsegsList()){
-				if(tsegs.getTimeId() >= getWinIdByTime(values.getTime() - dataExpireTime)){
-					for(Recommend.UserActiveDetail.TimeSegment.ItemInfo item: tsegs.getItemsList()){
-						if(!item.getItem().equals(key.getItemId())){
-							Float itemWeight = getMinWeightFromAct(item.getActsList());
-							weightMap.put(item.getItem(),  Math.min(thisWeight, itemWeight));
-						}
-					}
-				}				
+			for(String itemId: weightMap.keySet()){
+				Float minWeight =  Math.min(weightMap.get(itemId).getWeight(), valueInfo.getWeight());
+				MidInfo minWeightInfo = new MidInfo(weightMap.get(itemId).getTimeId(),minWeight);
+				weightMap.put(itemId, minWeightInfo);
 			}
 			return weightMap;
-		}
-
-		private Float getMinWeightFromAct(List<ActType> actsList) {
-			Float min = getWeightByType(this.values.getType());	;		
-			for(ActType act:actsList){
-				Float thisWeight = getWeightByType(act.getActType());
-				if(min == 0){
-					min = thisWeight;
-				}else{
-					min = Math.min(thisWeight, min);
-				}
-			}
-			return min;
 		}
 		
 	}

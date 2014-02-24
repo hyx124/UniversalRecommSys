@@ -1,6 +1,5 @@
 package com.tencent.urs.bolts;
 
-import java.text.SimpleDateFormat;
 import java.util.HashSet;
 import java.util.List;
 import java.util.Map;
@@ -24,14 +23,12 @@ import com.tencent.streaming.commons.bolts.config.AbstractConfigUpdateBolt;
 import com.tencent.streaming.commons.spouts.tdbank.Output;
 import com.tencent.tde.client.Result;
 import com.tencent.tde.client.TairClient.TairOption;
-import com.tencent.tde.client.error.TairFlowLimit;
-import com.tencent.tde.client.error.TairQueueOverflow;
-import com.tencent.tde.client.error.TairRpcError;
 import com.tencent.tde.client.impl.MutiThreadCallbackClient.MutiClientCallBack;
 import com.tencent.urs.combine.GroupActionCombinerValue;
 import com.tencent.urs.combine.UpdateKey;
-import com.tencent.urs.protobuf.Recommend;
 import com.tencent.urs.protobuf.Recommend.ActiveType;
+import com.tencent.urs.protobuf.Recommend.GroupCountInfo;
+import com.tencent.urs.protobuf.Recommend.GroupPairInfo;
 import com.tencent.urs.protobuf.Recommend.UserActiveDetail;
 import com.tencent.urs.tdengine.TDEngineClientFactory;
 import com.tencent.urs.tdengine.TDEngineClientFactory.ClientAttr;
@@ -179,17 +176,17 @@ public class ARCFBolt extends AbstractConfigUpdateBolt{
 		public void handle(Future<?> future, Object context) {			
 			@SuppressWarnings("unchecked")
 			Future<Result<byte[]>> afuture = (Future<Result<byte[]>>) future;
-			Float pairCount = 0F;
 			logger.info("enter step3");
+			GroupPairInfo weightInfo = null;
 			try {
-				Result<byte[]> result = afuture.get();	
-				if(result.isSuccess() && result.getResult()!=null){
-					pairCount = Float.parseFloat(new String(result.getResult()));
+				Result<byte[]> res = afuture.get();	
+				if(res.isSuccess() && res.getResult()!=null){
+					weightInfo = GroupPairInfo.parseFrom(res.getResult());
 				}
 			} catch (Exception e){
 				logger.error(e.getMessage(), e);
 			}
-			
+			Float pairCount = getWeight(weightInfo);
 			//logger.info("item1="+key.getItemId()+",item2="+otherItem+"itemcount1="+itemCount1+",itemcount2="+itemCount2+",paircount="+pairCount);
 			
 			Double cf12Weight = computeCFWeight(itemCount1,itemCount2,pairCount);
@@ -201,6 +198,21 @@ public class ARCFBolt extends AbstractConfigUpdateBolt{
 			doEmit(key.getBid(),otherItem,key.getAdpos(),key.getItemId(),Constants.cf_alg_name,String.valueOf(key.getGroupId()),cf21Weight);
 			doEmit(key.getBid(),key.getItemId(),key.getAdpos(),otherItem,Constants.cf_alg_name,String.valueOf(key.getGroupId()),ar12Weight);
 			doEmit(key.getBid(),otherItem,key.getAdpos(),key.getItemId(),Constants.ar_alg_name,String.valueOf(key.getGroupId()),ar21Weight);	
+		}
+		
+		private Float getWeight(GroupPairInfo weightInfo){
+			Float sumCount = 0F;
+			if(weightInfo == null){
+				return sumCount;
+			}
+			
+			for(GroupPairInfo.TimeSegment ts: weightInfo.getTsegsList()){
+				if(ts.getTimeId() > Utils.getDateByTime(System.currentTimeMillis() - dataExpireTime)){
+					sumCount += ts.getCount();
+				}
+			}
+			
+			return sumCount;
 		}
 		
 		private void doEmit(String bid,String itemId,String adpos,String otherItem,  String algName, String groupId, double weight){
@@ -258,15 +270,17 @@ public class ARCFBolt extends AbstractConfigUpdateBolt{
 		public void handle(Future<?> future, Object context) {			
 			@SuppressWarnings("unchecked")
 			Future<Result<byte[]>> afuture = (Future<Result<byte[]>>) future;
-			Float count = 0F;
+			GroupCountInfo weightInfo = null;
 			try {
 				Result<byte[]> res = afuture.get();
 				if(res.isSuccess() && res.getResult()!=null){
-					count = Float.parseFloat(new String(res.getResult()));
+					weightInfo = GroupCountInfo.parseFrom(res.getResult());
 				}
 			} catch (Exception e) {
 				logger.error(e.getMessage(), e);
 			}
+			
+			Float count = getWeight(weightInfo);
 			
 			if(step == 1){
 				new GetItemCountCallBack(key,otherItem,count,2).excute();
@@ -277,6 +291,20 @@ public class ARCFBolt extends AbstractConfigUpdateBolt{
 			}
 			
 			
+		}
+		
+		private Float getWeight(GroupCountInfo weightInfo){
+			Float sumCount = 0F;
+			if(weightInfo == null){
+				return sumCount;
+			}
+			for(GroupCountInfo.TimeSegment ts: weightInfo.getTsegsList()){
+				if(ts.getTimeId() > Utils.getDateByTime(System.currentTimeMillis() - dataExpireTime)){
+					sumCount += ts.getCount();
+				}
+			}
+			
+			return sumCount;
 		}
 	}
 	
@@ -303,17 +331,12 @@ public class ARCFBolt extends AbstractConfigUpdateBolt{
 			}
 		}
 		
-		private Long getWinIdByTime(Long time){	
-			String expireId = new SimpleDateFormat("yyyyMMdd").format(time*1000L);
-			return Long.valueOf(expireId);
-		}
-		
 		private HashSet<String> getPairItems(UserActiveDetail oldValueHeap, String itemId){
 			HashSet<String>  itemSet = new HashSet<String>();		
 			
-			for(Recommend.UserActiveDetail.TimeSegment tsegs:oldValueHeap.getTsegsList()){
-				if(tsegs.getTimeId() > getWinIdByTime(value.getTime() - dataExpireTime)){
-					for(Recommend.UserActiveDetail.TimeSegment.ItemInfo item: tsegs.getItemsList()){
+			for(UserActiveDetail.TimeSegment tsegs:oldValueHeap.getTsegsList()){
+				if(tsegs.getTimeId() > Utils.getDateByTime(value.getTime() - dataExpireTime)){
+					for(UserActiveDetail.TimeSegment.ItemInfo item: tsegs.getItemsList()){
 						if(!item.getItem().equals(key.getItemId())){
 							itemSet.add(item.getItem());
 						}
@@ -330,7 +353,7 @@ public class ARCFBolt extends AbstractConfigUpdateBolt{
 			try {
 				Result<byte[]> result = afuture.get();	
 				if(result.isSuccess() && result.getResult()!=null){
-					UserActiveDetail oldValueHeap = Recommend.UserActiveDetail.parseFrom(result.getResult());
+					UserActiveDetail oldValueHeap = UserActiveDetail.parseFrom(result.getResult());
 					HashSet<String> itemSet = getPairItems(oldValueHeap,key.getItemId());
 					for(String otherItem:itemSet){
 						new GetItemCountCallBack(key,otherItem, 0F,1).excute();

@@ -26,6 +26,7 @@ import com.tencent.tde.client.impl.MutiThreadCallbackClient.MutiClientCallBack;
 import com.tencent.urs.combine.GroupActionCombinerValue;
 import com.tencent.urs.combine.UpdateKey;
 import com.tencent.urs.protobuf.Recommend.ActiveType;
+import com.tencent.urs.protobuf.Recommend.GroupCountInfo;
 import com.tencent.urs.tdengine.TDEngineClientFactory;
 import com.tencent.urs.tdengine.TDEngineClientFactory.ClientAttr;
 import com.tencent.urs.utils.Constants;
@@ -38,6 +39,7 @@ public class HotTopBolt extends AbstractConfigUpdateBolt{
 	private MonitorTools mt;
 	private ConcurrentHashMap<UpdateKey, GroupActionCombinerValue> combinerMap;
 	private int combinerExpireTime;
+	private int dataExpireTime;
 	private OutputCollector collector;
 	private int nsGroupCountTableId;
 	private String categoryType;
@@ -55,7 +57,7 @@ public class HotTopBolt extends AbstractConfigUpdateBolt{
 	public void updateConfig(XMLConfiguration config) {
 		nsGroupCountTableId = config.getInt("item_count_table",304);
 		categoryType = config.getString("category_type","Small-Type");
-		//dataExpireTime = config.getInt("data_expiretime",1*24*3600);
+		dataExpireTime = config.getInt("data_expiretime",1*24*3600);
 		//cacheExpireTime = config.getInt("cache_expiretime",3600);
 	}
 	
@@ -157,33 +159,47 @@ public class HotTopBolt extends AbstractConfigUpdateBolt{
 			@SuppressWarnings("unchecked")
 			Future<Result<byte[]>> afuture = (Future<Result<byte[]>>) future;
 			try {
-				Result<byte[]> result = afuture.get();	
-				if(result.isSuccess() && result.getResult()!=null){
-					Double count = Double.parseDouble(new String(result.getResult()));
+				Result<byte[]> res = afuture.get();	
+				if(res.isSuccess() && res.getResult()!=null){
+					GroupCountInfo weightInfo = GroupCountInfo.parseFrom(res.getResult());
 					//bid,key,item_id,weight,alg_name
+					Double weight = getWeight(weightInfo);
 					
 					String algKey1 = key.getBid()+"#0#"+key.getAdpos()+"#"+Constants.ht_alg_name+"#"+key.getGroupId();
 					String algKey2 = key.getBid()+"#0#"+key.getAdpos()+"#"+Constants.cate_alg_name+"#"+key.getGroupId();
 					synchronized(collector){
-						collector.emit("computer_result",new Values(key.getBid(),algKey1,key.getItemId(),count,Constants.ht_alg_name));
-						collector.emit("computer_result",new Values(key.getBid(),algKey2,key.getItemId(),count,Constants.cate_alg_name));
+						collector.emit(Constants.alg_result_stream,new Values(key.getBid(),algKey1,key.getItemId(),weight,Constants.ht_alg_name));
+						collector.emit(Constants.alg_result_stream,new Values(key.getBid(),algKey2,key.getItemId(),weight,Constants.cate_alg_name));
 					}
 					if(!key.getGroupId().equals("0")){
 						String algKey3 =  key.getBid()+"#0#"+key.getAdpos()+"#"+Constants.ht_alg_name+"#0";
 						String algKey4 =  key.getBid()+"#0#"+key.getAdpos()+"#"+Constants.cate_alg_name+"#0";
 						synchronized(collector){
-							collector.emit("computer_result",new Values(key.getBid(),algKey3,key.getItemId(),count,Constants.ht_alg_name));
-							collector.emit("computer_result",new Values(key.getBid(),algKey4,key.getItemId(),count,Constants.cate_alg_name));
+							collector.emit(Constants.alg_result_stream,new Values(key.getBid(),algKey3,key.getItemId(),weight,Constants.ht_alg_name));
+							collector.emit(Constants.alg_result_stream,new Values(key.getBid(),algKey4,key.getItemId(),weight,Constants.cate_alg_name));
 						}
-					}
-					
-				}else{
-					logger.info("parse failed");
+					}					
 				}
 			} catch (Exception e) {
 				logger.error(e.getMessage(), e);
 			}
 		}
+		
+		private Double getWeight(GroupCountInfo weightInfo){
+			Double sumCount = 0D;
+			if(weightInfo == null){
+				return sumCount;
+			}
+			for(GroupCountInfo.TimeSegment ts: weightInfo.getTsegsList()){
+				if(ts.getTimeId() > Utils.getDateByTime(System.currentTimeMillis() - dataExpireTime)){
+					sumCount += ts.getCount();
+				}
+			}
+			
+			return sumCount;
+		}
 	}
+	
+	
 	
 }
