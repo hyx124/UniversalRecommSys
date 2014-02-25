@@ -185,7 +185,6 @@ public class ItemPairBolt  extends AbstractConfigUpdateBolt{
 			}else{
 				combinerMap.put(key, value);
 			}
-			
 		}
 	}	
 

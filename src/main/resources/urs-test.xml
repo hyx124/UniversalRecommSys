@@ -36,7 +36,7 @@
 			<debug>true</debug>
 			<item_detail_table>311</item_detail_table>
 			<user_detail_table>312</user_detail_table>
-			<action_weight_table>313/action_weight_table>
+			<action_weight_table>313</action_weight_table>
 			<category_level_table>314</category_level_table>
 			
 			<data_expiretime>259200</data_expiretime>
@@ -211,7 +211,7 @@
 			
 			<output_fields>
 				<stream_id>user_action</stream_id>
-				<fields>bid,key,item_id,qq,action_type,action_time,imei,platform,lbs_info,qq,big_type,mid_type,small_type,free,price,shop_id</fields>
+				<fields>bid,item_id,qq,action_type,action_time,platform,lbs_info,big_type,mid_type,small_type,free,price,shop_id</fields>
 			</output_fields>
 			
 		</bolt>
@@ -220,7 +220,7 @@
 			<grouping type="field">
 				<fields>key</fields>
 				<component>AddItemInfoBolt</component>
-				<streaming_ids>user_action</streaming_ids>
+				<streaming_ids>computer_result</streaming_ids>
 			</grouping>
 		
 			<debug>true</debug>
@@ -229,9 +229,7 @@
 			<data_expiretime>259200</data_expiretime>
 			<cache_expiretime>3600</cache_expiretime>
 		</bolt>
-		
-		
-		
+				
 		<bolt name="TopActionBolt" class="com.tencent.urs.bolts.TopActionBolt" parallelsim="1">
 			<grouping type="field">
 				<fields>qq</fields>
@@ -280,7 +278,7 @@
 
 		<config>
 			<key>list.tdengine.timeout</key>
-			<value>2000</value>
+			<value>20000</value>
 		</config>
 
 		<config>

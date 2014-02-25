@@ -96,7 +96,7 @@ public class AddItemInfoBolt extends AbstractConfigUpdateBolt {
 			ItemDetailInfo itemInfo = null;
 			try {
 				Result<byte[]> res = afuture.get();
-				if(res.getCode().equals(ResultCode.OK) && res.getResult() != null){
+				if(res.isSuccess() && res.getResult() != null){
 					itemInfo = Recommend.ItemDetailInfo.parseFrom(res.getResult());
 					itemCache.set(cacheKey, new SoftReference<ItemDetailInfo>(itemInfo),cacheExpireTime);
 				}
@@ -107,16 +107,14 @@ public class AddItemInfoBolt extends AbstractConfigUpdateBolt {
 		}
 
 		private void emitData(ItemDetailInfo itemInfo){
+			
+			logger.info("get data,"+sid+",key="+cacheKey);
 			Values value = null;
 			String streamId = null;
 			if(sid.equals(Constants.actions_stream)){
 				String bid = tuple.getStringByField("bid");
 				String qq = tuple.getStringByField("qq");
 				String itemId = tuple.getStringByField("item_id");
-				
-				if(!Utils.isItemIdValid(itemId) || !Utils.isQNumValid(qq)){
-					return;
-				}
 				
 				String actionType = tuple.getStringByField("action_type");
 				String actionTime = tuple.getStringByField("action_time");
@@ -125,7 +123,7 @@ public class AddItemInfoBolt extends AbstractConfigUpdateBolt {
 				
 				streamId = Constants.actions_stream;
 				value = new Values(bid,itemId,qq,actionType,actionTime,platform,lbsInfo);	
-			}else if(sid.equals(Constants.action_weight_stream)){
+			}else if(sid.equals(Constants.alg_result_stream)){
 				String algName = this.tuple.getStringByField("alg_name");	
 				String key = tuple.getStringByField("key");
 				String itemId = tuple.getStringByField("itemId");
@@ -143,6 +141,9 @@ public class AddItemInfoBolt extends AbstractConfigUpdateBolt {
 	
 				streamId = Constants.alg_result_stream;
 				value = new Values(bid,key,itemId,weight,algName);
+			}else{
+				logger.info("error,sid="+sid+"--");
+				return;
 			}
 			
 			if(itemInfo != null){
@@ -164,6 +165,7 @@ public class AddItemInfoBolt extends AbstractConfigUpdateBolt {
 				value.add("");
 			}
 			
+			logger.info("emit");
 			if(value!=null && streamId != null){
 				synchronized(collector){
 					collector.emit(streamId,value);	

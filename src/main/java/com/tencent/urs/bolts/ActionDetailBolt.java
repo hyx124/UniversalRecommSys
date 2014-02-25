@@ -4,16 +4,22 @@ import com.google.common.collect.ImmutableList;
 import com.tencent.urs.protobuf.Recommend;
 import com.tencent.urs.protobuf.Recommend.ActiveType;
 import com.tencent.urs.protobuf.Recommend.UserActiveDetail;
+import com.tencent.urs.protobuf.Recommend.UserActiveHistory;
 import com.tencent.urs.protobuf.Recommend.UserActiveDetail.TimeSegment.ItemInfo.ActType;
 import com.tencent.urs.protobuf.Recommend.UserActiveDetail.Builder;
 import com.tencent.urs.protobuf.Recommend.UserActiveHistory.ActiveRecord;
 
 import java.lang.ref.SoftReference;
+import java.lang.reflect.Array;
 import java.text.SimpleDateFormat;
+import java.util.ArrayList;
+import java.util.Collections;
+import java.util.Comparator;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
 import java.util.Set;
+import java.util.Map.Entry;
 import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.Future;
 
@@ -196,11 +202,6 @@ public class ActionDetailBolt extends AbstractConfigUpdateBolt{
 
 		}	
 		
-		private Long getWinIdByTime(Long time){	
-			String expireId = new SimpleDateFormat("yyyyMMdd").format(time*1000L);
-			return Long.valueOf(expireId);
-		}
-		
 		private void mergeOldToMap(UserActiveDetail oldValList,
 				HashMap<Long,HashMap<String,HashMap<Recommend.ActiveType,ActType>>> detailMap ){
 			if(oldValList == null || oldValList.getTsegsCount() <=0 ){
@@ -291,7 +292,7 @@ public class ActionDetailBolt extends AbstractConfigUpdateBolt{
 			
 			for(String item:newValueList.getActRecodeMap().keySet()){
 				ActiveRecord action = newValueList.getActRecodeMap().get(item);
-				Long winId = getWinIdByTime(action.getActTime());				
+				Long winId = Utils.getDateByTime(action.getActTime());				
 				mergeNewRecordsToMap(winId,item,action,detailMap);
 				if(debug){
 					logger.info("add new values,size="+detailMap.get(winId).size());
@@ -300,12 +301,24 @@ public class ActionDetailBolt extends AbstractConfigUpdateBolt{
 			changeMapToPB(detailMap,mergeValueBuilder);
 		}
 		
+		
+		
 		private void changeMapToPB(
 				HashMap<Long, HashMap<String, HashMap<ActiveType, ActType>>> detailMap,
 				Builder mergeValueBuilder) {
 			Long time = System.currentTimeMillis()/1000;
-			for(Long timeId: detailMap.keySet()){
-				if(timeId < getWinIdByTime(time - dataExpireTime) || timeId >getWinIdByTime(time)){
+
+			ArrayList<Long> sortList = new ArrayList<Long>(detailMap.keySet());
+			
+			Collections.sort(sortList, new Comparator<Long>() {   
+				@Override
+				public int compare(Long arg0,Long arg1) {
+					return (int)(arg1 - arg0);
+				}
+			}); 
+			
+			for(Long timeId: sortList){
+				if(timeId < Utils.getDateByTime(time - dataExpireTime) || timeId > Utils.getDateByTime(time)){
 					continue;
 				}
 				

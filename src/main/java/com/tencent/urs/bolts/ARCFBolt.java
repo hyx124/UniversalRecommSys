@@ -216,17 +216,18 @@ public class ARCFBolt extends AbstractConfigUpdateBolt{
 		}
 		
 		private void doEmit(String bid,String itemId,String adpos,String otherItem,  String algName, String groupId, double weight){
-			String resultKey = Utils.getAlgKey(bid,itemId, adpos, algName, groupId);		
+			String resultKey = Utils.getAlgKey(bid,itemId, adpos, algName, groupId);	
+			
 			Values values = new Values(bid,resultKey,otherItem,weight,algName);
 			synchronized(collector){
-				collector.emit("computer_result",values);	
+				collector.emit(Constants.alg_result_stream,values);	
 			}
 			
 			if(!groupId.equals("0")){
 				String resultKey2 = Utils.getAlgKey(bid,itemId, adpos, algName, "0");		
-				Values values2 = new Values(resultKey2,adpos,otherItem,weight,algName);
+				Values values2 = new Values(bid,resultKey2,otherItem,weight,algName);
 				synchronized(collector){
-					collector.emit("computer_result",values2);	
+					collector.emit(Constants.alg_result_stream,values2);	
 				}
 			}
 			

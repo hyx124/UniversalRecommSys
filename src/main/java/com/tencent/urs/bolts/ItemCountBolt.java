@@ -514,13 +514,11 @@ public class ItemCountBolt extends AbstractConfigUpdateBolt{
 				for(ItemInfo item:ts.getItemsList()){						
 					if(item.getItem().equals(key.getItemId())){	
 						for(ActType act: item.getActsList()){	
-							if(act.getLastUpdateTime() > (values.getTime() - dataExpireTime)){
-								Float actWeight = getWeightByType(key.getBid(),act.getActType());
-								if(actWeight > newWeight){
-									newWeight =  Math.max(newWeight,actWeight);
-									timeId = ts.getTimeId();
-									logger.info("timeId="+ts.getTimeId()+",type="+act.getActType()+",weight="+newWeight);
-								}
+							Float actWeight = getWeightByType(key.getBid(),act.getActType());
+							if(actWeight > newWeight){
+								newWeight =  Math.max(newWeight,actWeight);
+								timeId = ts.getTimeId();
+								logger.info("timeId="+ts.getTimeId()+",type="+act.getActType()+",weight="+newWeight);
 							}
 						}	
 					}					
