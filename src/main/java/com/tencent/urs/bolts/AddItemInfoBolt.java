@@ -54,27 +54,29 @@ public class AddItemInfoBolt extends AbstractConfigUpdateBolt {
 		
 		this.collector = collector;
 		this.itemCache = new DataCache<ItemDetailInfo>(conf);
-		this.mtClientList = TDEngineClientFactory.createMTClientList(conf);
-		ClientAttr clientEntry = mtClientList.get(0);		
-		TairOption opt = new TairOption(clientEntry.getTimeout(),(short)0, 24*3600);
-	
+		this.mtClientList = TDEngineClientFactory.createMTClientList(conf);	
 	} 
 	
 	@Override
 	public void updateConfig(XMLConfiguration config) {
-		nsTableId = config.getInt("item_detail_table",311);
+		nsTableId = config.getInt("item_detail_table",521);
 		cacheExpireTime = config.getInt("cache_expiretime",24*3600);
 		debug = config.getBoolean("debug",false);
 	}
 
 	@Override
 	public void processEvent(String sid, Tuple tuple) {
-		String bid = tuple.getStringByField("bid");
-		String itemId = tuple.getStringByField("item_id");	
-		
-		if(Utils.isBidValid(bid) && Utils.isItemIdValid(itemId)){
-			new GetItemInfoCallBack(sid, bid, itemId,tuple).excute();
-		}		
+		try{
+			String bid = tuple.getStringByField("bid");
+			String itemId = tuple.getStringByField("item_id");	
+			
+			if(Utils.isBidValid(bid) && Utils.isItemIdValid(itemId)){
+				new GetItemInfoCallBack(sid, bid, itemId,tuple).excute();
+			}	
+		}catch(Exception e){
+			logger.error(e.getMessage(), e);
+		}
+	
 	}
 	
 	public class GetItemInfoCallBack implements MutiClientCallBack{
@@ -106,9 +108,7 @@ public class AddItemInfoBolt extends AbstractConfigUpdateBolt {
 			emitData(itemInfo);
 		}
 
-		private void emitData(ItemDetailInfo itemInfo){
-			
-			logger.info("get data,"+sid+",key="+cacheKey);
+		private void emitData(ItemDetailInfo itemInfo){	
 			Values value = null;
 			String streamId = null;
 			if(sid.equals(Constants.actions_stream)){
@@ -126,23 +126,27 @@ public class AddItemInfoBolt extends AbstractConfigUpdateBolt {
 			}else if(sid.equals(Constants.alg_result_stream)){
 				String algName = this.tuple.getStringByField("alg_name");	
 				String key = tuple.getStringByField("key");
-				String itemId = tuple.getStringByField("itemId");
+				String itemId = tuple.getStringByField("item_id");
 				double weight = tuple.getDoubleByField("weight");
 				
 				if(algName.equals(Constants.cate_alg_name)){
-					if(key.indexOf("Big-Type") > 0){
-						key = key.replace("Mid-Type", String.valueOf(itemInfo.getBigType()));
-					}else if(key.indexOf("Mid-Type") > 0){
+					if(key.indexOf("Big-Type") > 0 && itemInfo.getBigType() > 0){
+						key = key.replace("Big-Type", String.valueOf(itemInfo.getBigType()));
+					}else if(key.indexOf("Mid-Type") > 0 && itemInfo.getMiddleType() > 0){
 						key = key.replace("Mid-Type", String.valueOf(itemInfo.getMiddleType()));
-					}else if(key.indexOf("Small-Type") > 0){
-						key = key.replace("Small-Type", String.valueOf(itemInfo.getSmallType()));
+					}else if(key.indexOf("Small-Type") > 0 && itemInfo.getMiddleType() > 0){
+						key = key.replace("Small-Type", String.valueOf(itemInfo.getMiddleType()));
+					}else{
+						if(debug){
+							logger.info("key="+key+",itemId="+itemId+",itemInfo.bigType="+itemInfo.getBigType());
+						}
+						return;
 					}
 				}
 	
 				streamId = Constants.alg_result_stream;
 				value = new Values(bid,key,itemId,weight,algName);
 			}else{
-				logger.info("error,sid="+sid+"--");
 				return;
 			}
 			
@@ -165,7 +169,6 @@ public class AddItemInfoBolt extends AbstractConfigUpdateBolt {
 				value.add("");
 			}
 			
-			logger.info("emit");
 			if(value!=null && streamId != null){
 				synchronized(collector){
 					collector.emit(streamId,value);	
@@ -195,7 +198,5 @@ public class AddItemInfoBolt extends AbstractConfigUpdateBolt {
 
 		}
 	}
-	
-	
 	
 }

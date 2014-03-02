@@ -81,50 +81,54 @@ public class TopActionBolt extends AbstractConfigUpdateBolt {
 	
 	@Override
 	public void updateConfig(XMLConfiguration config) {	
-		nsTableId = config.getInt("storage_table",301);
-		dataExpireTime = config.getInt("data_expiretime",1*24*3600);
+		nsTableId = config.getInt("storage_table",511);
+		dataExpireTime = config.getInt("data_expiretime",15*24*3600);
 		cacheExpireTime = config.getInt("cache_expiretime",3600);
 		topNum = config.getInt("top_num",30);
 	}
 
 	@Override
 	public void processEvent(String sid, Tuple tuple) {
-		// [1, UserAction, 389687043, 17139104, 0, 5, 1389657189, 0, , , , , 389687043, 51]
-		String bid = tuple.getStringByField("bid");
-		String qq = tuple.getStringByField("qq");
-		String itemId = tuple.getStringByField("item_id");
+		try{
+			// [1, UserAction, 389687043, 17139104, 0, 5, 1389657189, 0, , , , , 389687043, 51]
+			String bid = tuple.getStringByField("bid");
+			String qq = tuple.getStringByField("qq");
+			String itemId = tuple.getStringByField("item_id");
+			
+			if(!Utils.isItemIdValid(itemId) || !Utils.isQNumValid(qq)){
+				return;
+			}
+			
+			String actionType = tuple.getStringByField("action_type");
+			String actionTime = tuple.getStringByField("action_time");
+			String lbsInfo = tuple.getStringByField("lbs_info");
+			String platform = tuple.getStringByField("platform");
+			ActiveType actType = Utils.getActionTypeByString(actionType);
 		
-		if(!Utils.isItemIdValid(itemId) || !Utils.isQNumValid(qq)){
-			return;
-		}
-		
-		String actionType = tuple.getStringByField("action_type");
-		String actionTime = tuple.getStringByField("action_time");
-		String lbsInfo = tuple.getStringByField("lbs_info");
-		String platform = tuple.getStringByField("platform");
-		ActiveType actType = Utils.getActionTypeByString(actionType);
-	
-		Long bigType = tuple.getLongByField("big_type");
-		Long midType = tuple.getLongByField("mid_type");
-		Long smallType = tuple.getLongByField("small_type");
+			Long bigType = tuple.getLongByField("big_type");
+			Long midType = tuple.getLongByField("mid_type");
+			Long smallType = tuple.getLongByField("small_type");
 
-		String shopId = tuple.getStringByField("shop_id");
-		
-		if(actType != Recommend.ActiveType.PageView){
-			return;
-		}
-		
-		Recommend.UserActiveHistory.ActiveRecord.Builder actBuilder =
-				Recommend.UserActiveHistory.ActiveRecord.newBuilder();
-		actBuilder.setItem(itemId).setActTime(Long.valueOf(actionTime)).setActType(actType)
-					.setBigType(bigType.intValue()).setMiddleType(midType.intValue()).setSmallType(smallType.intValue())
-					.setLBSInfo(lbsInfo).setPlatForm(platform).setShopId(shopId);
+			String shopId = tuple.getStringByField("shop_id");
+			
+			if(actType != Recommend.ActiveType.PageView){
+				return;
+			}
+			
+			Recommend.UserActiveHistory.ActiveRecord.Builder actBuilder =
+					Recommend.UserActiveHistory.ActiveRecord.newBuilder();
+			actBuilder.setItem(itemId).setActTime(Long.valueOf(actionTime)).setActType(actType)
+						.setBigType(bigType.intValue()).setMiddleType(midType.intValue()).setSmallType(smallType.intValue())
+						.setLBSInfo(lbsInfo).setPlatForm(platform).setShopId(shopId);
 
-		
-		ActionCombinerValue value = new ActionCombinerValue();
-		value.init(itemId,actBuilder.build());
-		String key = bid+"#"+qq+"#"+Constants.topN_alg_name;
-		combinerKeys(key, value);	
+			
+			ActionCombinerValue value = new ActionCombinerValue();
+			value.init(itemId,actBuilder.build());
+			String key = bid+"#"+qq+"#"+Constants.topN_alg_name;
+			combinerKeys(key, value);	
+		}catch(Exception e){
+			logger.error(e.getMessage(), e);
+		}
 	}
 	
 	private void setCombinerTime(final int second) {
@@ -141,7 +145,7 @@ public class TopActionBolt extends AbstractConfigUpdateBolt {
 							try{
 								new TopActionsUpdateCallBack(key,expireValue).excute();
 							}catch(Exception e){
-								logger.info(e.toString());
+								logger.error(e.getMessage(), e);
 								//mt.addCountEntry(systemID, interfaceID, item, count)
 							}
 						}
@@ -203,12 +207,6 @@ public class TopActionBolt extends AbstractConfigUpdateBolt {
 				UserActiveHistory oldVal,
 				UserActiveHistory.Builder updatedBuilder){	
 			HashSet<String> alreadyIn = new HashSet<String>();
-
-			if(oldVal != null){
-				logger.info("new item size="+newValList.getActRecodeMap().size()+",old item size="+oldVal.getActRecordsCount());
-			}else{
-				logger.info("new item size="+newValList.getActRecodeMap().size()+",old item size=0");
-			}
 			
 			List<Map.Entry<String, UserActiveHistory.ActiveRecord>> sortList =
 				    new ArrayList<Map.Entry<String, UserActiveHistory.ActiveRecord>>(newValList.getActRecodeMap().entrySet());
@@ -259,7 +257,6 @@ public class TopActionBolt extends AbstractConfigUpdateBolt {
 			}
 			
 			for(ClientAttr clientEntry:mtClientList ){
-				logger.info("start in save,client="+clientEntry.getGroupname());
 				TairOption putopt = new TairOption(clientEntry.getTimeout(),(short)0, dataExpireTime);
 				try {
 					Future<Result<Void>> future = 

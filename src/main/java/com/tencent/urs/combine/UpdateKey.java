@@ -23,61 +23,55 @@ public class UpdateKey{
 	public String getDetailKey(){
 	
 		StringBuffer getKey = new StringBuffer(bid);		
-		getKey.append("#").append(adpos)
-				.append("#").append(uin)
+		getKey.append("#").append(uin)
 				.append("#").append("ActionDetail");
 		return getKey.toString();
 	}
 	
-	//userPairCountKey = bid#adpos#item1#uin
+	//userCountKey = bid#item1#uin
 	public String getUserCountKey(){
 		StringBuffer getKey = new StringBuffer(bid);		
-		getKey.append("#").append(adpos)
-			.append("#").append(itemId)
+		getKey.append("#").append(itemId)
 			.append("#").append(uin);
 		return getKey.toString();
 	}
 	
-	//userPairCountKey = bid#adpos#item1#item2#uin
+	//userPairKey = bid#item1#item2#uin
 	public String getUserPairKey(String otherItem){
 		StringBuffer getKey = new StringBuffer(bid);		
-		getKey.append("#").append(adpos).append("#");
 		if(itemId.compareTo(otherItem) < 0){
-			getKey.append(itemId).append("#").append(otherItem);
+			getKey.append("#").append(itemId).append("#").append(otherItem);
 			
 		}else{
-			getKey.append(otherItem).append("#").append(itemId);
+			getKey.append("#").append(otherItem).append("#").append(itemId);
 		}
 		
 		getKey.append("#").append(uin);
 		return getKey.toString();
 	}
 
-	//GroupCountKey = bid#adpos#item1#groupId
+	//GroupCountKey = bid#item1#groupId
 	public String getGroupCountKey(){
 		StringBuffer getKey = new StringBuffer(bid);		
-		getKey.append("#").append(adpos)
-			.append("#").append(itemId)
+		getKey.append("#").append(itemId)
 			.append("#").append(groupId);
 		return getKey.toString();
 	}
 	
 	public String getOtherGroupCountKey(String otherItemId){
 		StringBuffer getKey = new StringBuffer(bid);		
-		getKey.append("#").append(adpos)
-			.append("#").append(otherItemId)
+		getKey.append("#").append(otherItemId)
 			.append("#").append(groupId);
 		return getKey.toString();
 	}
 	
 	public String getGroupPairKey(String otherItem){
 		StringBuffer getKey = new StringBuffer(bid);		
-		getKey.append("#").append(adpos).append("#");	
 		if(itemId.compareTo(otherItem) < 0){
-			getKey.append(itemId).append("#").append(otherItem);
+			getKey.append("#").append(itemId).append("#").append(otherItem);
 			
 		}else{
-			getKey.append(otherItem).append("#").append(itemId);
+			getKey.append("#").append(otherItem).append("#").append(itemId);
 		}
 		
 		getKey.append("#").append(groupId);

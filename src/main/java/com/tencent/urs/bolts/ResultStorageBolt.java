@@ -56,7 +56,7 @@ public class ResultStorageBolt extends AbstractConfigUpdateBolt {
 
 	@Override
 	public void updateConfig(XMLConfiguration config) {
-		nsTableId = config.getInt("storage_table",310);
+		nsTableId = config.getInt("storage_table",520);
 		dataExpireTime = config.getInt("data_expiretime",10*24*3600);
 		cacheExpireTime = config.getInt("cache_expiretime",3600);
 		topNum = config.getInt("top_num",100);
@@ -65,31 +65,38 @@ public class ResultStorageBolt extends AbstractConfigUpdateBolt {
 	@Override
 	public void processEvent(String sid, Tuple tuple) {		
 		//bid,key,item_id,weight,alg_name,big_type,mid_type,small_type,free,price
-		
-		String algName = tuple.getStringByField("alg_name");
-		String key = tuple.getStringByField("key");			
-		String itemId = tuple.getStringByField("item_id");
-		Double weight = tuple.getDoubleByField("weight");
-		
-		Long bigType = tuple.getLongByField("big_type");
-		Long midType = tuple.getLongByField("mid_type");
-		Long smallType = tuple.getLongByField("small_type");
+		try{
+			String algName = tuple.getStringByField("alg_name");
+			String key = tuple.getStringByField("key");			
+			String itemId = tuple.getStringByField("item_id");
+			Double weight = tuple.getDoubleByField("weight");
 			
-		Recommend.ChargeType charType = (Recommend.ChargeType) tuple.getValueByField("free");
-		Long price = tuple.getLongByField("price");
-		String shopId = tuple.getStringByField("shop_id");
+			if(weight <= 0){
+				return;
+			}
 			
-		logger.info("enter ,key="+key);
-		Recommend.RecommendResult.Result.Builder value =
-				Recommend.RecommendResult.Result.newBuilder();
-		value.setBigType(bigType.intValue())
-				.setMiddleType(midType.intValue())
-				.setSmallType(smallType.intValue())
-				.setPrice(price)
-				.setItem(itemId).setWeight(weight).setFreeFlag(charType)
-				.setUpdateTime(System.currentTimeMillis()/1000L)
-				.setShopId(shopId);
-		new putToTDEUpdateCallBack(key,value.build(),algName).excute();	
+			Long bigType = tuple.getLongByField("big_type");
+			Long midType = tuple.getLongByField("mid_type");
+			Long smallType = tuple.getLongByField("small_type");
+				
+			Recommend.ChargeType charType = (Recommend.ChargeType) tuple.getValueByField("free");
+			Long price = tuple.getLongByField("price");
+			String shopId = tuple.getStringByField("shop_id");
+				
+			Recommend.RecommendResult.Result.Builder value =
+					Recommend.RecommendResult.Result.newBuilder();
+			value.setBigType(bigType.intValue())
+					.setMiddleType(midType.intValue())
+					.setSmallType(smallType.intValue())
+					.setPrice(price)
+					.setItem(itemId).setWeight(weight).setFreeFlag(charType)
+					.setUpdateTime(System.currentTimeMillis()/1000L)
+					.setShopId(shopId);
+			new putToTDEUpdateCallBack(key,value.build(),algName).excute();	
+		}catch(Exception e){
+			logger.error(e.getMessage(), e);
+		}
+		
 	}
 	
 	@Override
@@ -165,15 +172,19 @@ public class ResultStorageBolt extends AbstractConfigUpdateBolt {
 					if(mergeValueBuilder.getResultsCount() > topNum){
 						break;
 					}
-									
+														
 					if(!alreadyIn.contains(value.getItem()) && value.getWeight() >= eachItem.getWeight()){
 						mergeValueBuilder.addResults(value);
 						alreadyIn.add(value.getItem());
 					}
 					
-					if(!alreadyIn.contains(eachItem.getItem()) && (eachItem.getUpdateTime() - value.getUpdateTime() ) < dataExpireTime){
-						mergeValueBuilder.addResults(eachItem);
-						alreadyIn.add(eachItem.getItem());
+					if(!alreadyIn.contains(eachItem.getItem()) 
+							&& !eachItem.getItem().equals(value.getItem())
+							&& (eachItem.getUpdateTime() - value.getUpdateTime()) < dataExpireTime
+							&& eachItem.getWeight() > 0){
+
+							mergeValueBuilder.addResults(eachItem);
+							alreadyIn.add(eachItem.getItem());
 					}
 				}
 			}
@@ -183,7 +194,7 @@ public class ResultStorageBolt extends AbstractConfigUpdateBolt {
 				mergeValueBuilder.addResults(value);
 				alreadyIn.add(value.getItem());
 			}	
-			logger.info("merge success ,count="+mergeValueBuilder.getResultsCount());		
+			//logger.info("merge success ,count="+mergeValueBuilder.getResultsCount());		
 			SaveValues(key,mergeValueBuilder);
 		}
 

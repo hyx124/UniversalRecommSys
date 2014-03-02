@@ -10,7 +10,8 @@ import com.tencent.urs.protobuf.Recommend.UserActiveDetail.TimeSegment.ItemInfo.
 import com.tencent.urs.protobuf.Recommend.UserCountInfo;
 
 import java.lang.ref.SoftReference;
-import java.text.SimpleDateFormat;
+import java.util.HashMap;
+import java.util.HashSet;
 import java.util.List;
 import java.util.Map;
 import java.util.Set;
@@ -31,9 +32,6 @@ import com.tencent.streaming.commons.bolts.config.AbstractConfigUpdateBolt;
 import com.tencent.streaming.commons.spouts.tdbank.Output;
 import com.tencent.tde.client.Result;
 import com.tencent.tde.client.TairClient.TairOption;
-import com.tencent.tde.client.error.TairFlowLimit;
-import com.tencent.tde.client.error.TairQueueOverflow;
-import com.tencent.tde.client.error.TairRpcError;
 import com.tencent.tde.client.impl.MutiThreadCallbackClient;
 import com.tencent.tde.client.impl.MutiThreadCallbackClient.MutiClientCallBack;
 import com.tencent.urs.asyncupdate.UpdateCallBack;
@@ -91,12 +89,12 @@ public class ItemCountBolt extends AbstractConfigUpdateBolt{
 
 	@Override
 	public void updateConfig(XMLConfiguration config) {
-		nsUserCountTableId = config.getInt("user_count_table",303);
-		nsGroupCountTableId = config.getInt("group_count_table",304);
-		nsDetailTableId = config.getInt("dependent_table",302);
+		nsUserCountTableId = config.getInt("user_count_table",513);
+		nsGroupCountTableId = config.getInt("group_count_table",514);
+		nsDetailTableId = config.getInt("dependent_table",512);
 		
-		nsActWeightTableId = config.getInt("act_weight_table",314);
-		dataExpireTime = config.getInt("data_expiretime",1*24*3600);
+		nsActWeightTableId = config.getInt("act_weight_table",524);
+		dataExpireTime = config.getInt("data_expiretime",7*24*3600);
 		cacheExpireTime = config.getInt("cache_expiretime",3600);
 		debug = config.getBoolean("debug",false);
 	}
@@ -140,24 +138,30 @@ public class ItemCountBolt extends AbstractConfigUpdateBolt{
 
 	@Override
 	public void processEvent(String sid, Tuple tuple) {	
-		String bid = tuple.getStringByField("bid");
-		String qq = tuple.getStringByField("qq");
-		String groupId = tuple.getStringByField("group_id");
-		String adpos = tuple.getStringByField("adpos");
-		String itemId = tuple.getStringByField("item_id");
+		try{
+			
+			String bid = tuple.getStringByField("bid");
+			String qq = tuple.getStringByField("qq");
+			String groupId = tuple.getStringByField("group_id");
+			String adpos = "0";
+			String itemId = tuple.getStringByField("item_id");
+			
+			String actionType = tuple.getStringByField("action_type");
+			String actionTime = tuple.getStringByField("action_time");
 		
-		String actionType = tuple.getStringByField("action_type");
-		String actionTime = tuple.getStringByField("action_time");
-	
-		ActiveType actType = Utils.getActionTypeByString(actionType);
-		
-		if(!Utils.isBidValid(bid) || !Utils.isQNumValid(qq) || !Utils.isGroupIdVaild(groupId) || !Utils.isItemIdValid(itemId)){
-			return;
+			ActiveType actType = Utils.getActionTypeByString(actionType);
+			
+			if(!Utils.isBidValid(bid) || !Utils.isQNumValid(qq) || !Utils.isGroupIdVaild(groupId) || !Utils.isItemIdValid(itemId)){
+				return;
+			}
+			
+			GroupActionCombinerValue value = new GroupActionCombinerValue(actType,Long.valueOf(actionTime));
+			UpdateKey key = new UpdateKey(bid,Long.valueOf(qq),Integer.valueOf(groupId),adpos,itemId);
+			combinerKeys(key,value);
+		}catch(Exception e){
+			logger.error(e.getMessage(), e);
 		}
-		
-		GroupActionCombinerValue value = new GroupActionCombinerValue(actType,Long.valueOf(actionTime));
-		UpdateKey key = new UpdateKey(bid,Long.valueOf(qq),Integer.valueOf(groupId),adpos,itemId);
-		combinerKeys(key,value);
+
 	}
 	
 	private static Logger logger = LoggerFactory
@@ -236,12 +240,14 @@ public class ItemCountBolt extends AbstractConfigUpdateBolt{
 	}
 
 	private class GroupCountUpdateCallback implements MutiClientCallBack{
-		private final MidInfo weightInfo;
+		private final HashMap<Long,MidInfo> weightInfoMap;
 		private final String groupCountKey;
+		private final UpdateKey inKey;
 
-		public GroupCountUpdateCallback(UpdateKey key, MidInfo weightInfo) {
-			this.weightInfo = weightInfo;		
+		public GroupCountUpdateCallback(UpdateKey key, HashMap<Long,MidInfo> weightInfoMap) {
+			this.weightInfoMap = weightInfoMap;		
 			this.groupCountKey = key.getGroupCountKey();
+			this.inKey = key;
 		}
 		
 		public void excute() {
@@ -270,8 +276,11 @@ public class ItemCountBolt extends AbstractConfigUpdateBolt{
 			synchronized(groupCountCache){
 				groupCountCache.set(key, new SoftReference<GroupCountInfo>(value), cacheExpireTime);
 			}
-			
-			logger.info("step3 save pair count,key="+key+",value="+value.getTsegsCount());
+			if(debug){
+				for(GroupCountInfo.TimeSegment ts:value.getTsegsList()){
+					logger.info("step3,save loop,key="+groupCountKey+",date="+ts.getTimeId()+",save Weight="+ts.getCount());
+				}				
+			}
 			Future<Result<Void>> future = null;
 			for(ClientAttr clientEntry:mtClientList ){
 				TairOption putopt = new TairOption(clientEntry.getTimeout(),(short)0, dataExpireTime);
@@ -315,31 +324,54 @@ public class ItemCountBolt extends AbstractConfigUpdateBolt{
 			
 			GroupCountInfo.Builder newGroupInfoBuiler = GroupCountInfo.newBuilder();
 			boolean isAdded = false;
+			HashSet<Long> alreadyIn = new HashSet<Long>();
+			Long now = System.currentTimeMillis()/1000;
 			if(oldWeightInfo != null){
 				for(GroupCountInfo.TimeSegment ts:oldWeightInfo.getTsegsList()){
-					if(ts.getTimeId() < weightInfo.getTimeId() - 7){
+					if(ts.getTimeId() < Utils.getDateByTime( now - dataExpireTime)){
 						continue;
 					}
 					
 					Float newCount = 0F;
-					if(ts.getTimeId() == weightInfo.getTimeId()){
-						newCount = ts.getCount() + weightInfo.getWeight();	
+					if(weightInfoMap.containsKey(ts.getTimeId())){
+						newCount = ts.getCount() + weightInfoMap.get(ts.getTimeId()).getWeight();
+						if(debug){
+							logger.info("step3,add changes to group,item="+inKey.getItemId()+",date="+ts.getTimeId()+",oldWeight="+ts.getCount()+",change="+weightInfoMap.get(ts.getTimeId()).getWeight()+",newWeight="+newCount);
+						}
 						
 						GroupCountInfo.TimeSegment.Builder tsBuilder = GroupCountInfo.TimeSegment.newBuilder();
 						tsBuilder.setTimeId(ts.getTimeId()).setCount(newCount);
 						newGroupInfoBuiler.addTsegs(tsBuilder.build());
 						isAdded = true;
-					}else {
+					}else{
+						if(debug){
+							logger.info("step3 ,not found group new count,item="+inKey.getItemId()+",date="+ts.getTimeId()+",oldWeight="+ts.getCount());
+						}
 						newGroupInfoBuiler.addTsegs(ts);
 					}
+					
+					alreadyIn.add(ts.getTimeId());
+				}
+			}else{
+				if(debug){
+					logger.info("step3 ,old heap is null");
 				}
 			}
 			
-			if(!isAdded){
-				GroupCountInfo.TimeSegment.Builder tsBuilder = GroupCountInfo.TimeSegment.newBuilder();
-				tsBuilder.setTimeId(weightInfo.getTimeId()).setCount(weightInfo.getWeight());
-				newGroupInfoBuiler.addTsegs(tsBuilder.build());
+			for(Long key: weightInfoMap.keySet()){
+				if(!alreadyIn.contains(key)){
+					GroupCountInfo.TimeSegment.Builder tsBuilder = GroupCountInfo.TimeSegment.newBuilder();
+					tsBuilder.setTimeId(key).setCount(weightInfoMap.get(key).getWeight());
+					
+					if(debug){
+						logger.info("step3,not found old ,addd new,item="+inKey.getItemId() +",date="+key+",weight="+weightInfoMap.get(key).getWeight());
+					}
+					
+					newGroupInfoBuiler.addTsegs(0,tsBuilder.build());
+					alreadyIn.add(key);
+				}
 			}
+			
 
 			save(groupCountKey,newGroupInfoBuiler.build());
 		
@@ -385,10 +417,18 @@ public class ItemCountBolt extends AbstractConfigUpdateBolt{
 			//logger.info("get step2 key="+userCountKey+",old count="+oldCount+",new count="+count);
 			
 			UserCountInfo.Builder newUserInfoBuiler = UserCountInfo.newBuilder();
+			HashMap<Long,MidInfo> midInfoMap = new HashMap<Long,MidInfo>();
 			boolean isAdded = false;
 			if(oldWeightInfo != null){
+				if(debug){
+					for(UserCountInfo.TimeSegment ts:oldWeightInfo.getTsegsList()){
+						logger.info("step2,loop,itemId="+key.getItemId()+",qq="+key.getUin()+",date="+ts.getTimeId()+",old="+ts.getCount());
+					}
+				}
+				
+				
 				for(UserCountInfo.TimeSegment ts:oldWeightInfo.getTsegsList()){
-					if(ts.getTimeId() < weightInfo.getTimeId() - 7){
+					if(ts.getTimeId() < weightInfo.getTimeId() - dataExpireTime/24/3600){
 						continue;
 					}
 					
@@ -396,22 +436,30 @@ public class ItemCountBolt extends AbstractConfigUpdateBolt{
 					if(ts.getTimeId() == weightInfo.getTimeId()){
 						Float changeWeight = weightInfo.getWeight()-ts.getCount();
 						MidInfo newMidInfo = new MidInfo(ts.getTimeId(), changeWeight);
-						new GroupCountUpdateCallback(key,newMidInfo).excute();
 						
-						UpdateKey noGroupKey = new UpdateKey(key.getBid(),key.getUin(),0,key.getAdpos(),key.getItemId());
-						new GroupCountUpdateCallback(noGroupKey,newMidInfo).excute();
+						if(debug){
+							logger.info("step2,same date,itemId="+key.getItemId()+",qq="+key.getUin()+",date="+newMidInfo.getTimeId()+",changeWeight="+newMidInfo.getWeight());
+						}
 						
-						newCount = ts.getCount();
+						if(changeWeight != 0){
+							midInfoMap.put(ts.getTimeId(),newMidInfo);
+						}
 						
+						newCount = weightInfo.getWeight();
 						isAdded = true;
 					}else if(ts.getCount() >= 0){
 						Float changeWeight = 0 - ts.getCount();
 						MidInfo newMidInfo = new MidInfo(ts.getTimeId(), changeWeight);
 						
-						new GroupCountUpdateCallback(key,newMidInfo).excute();
-							
-						UpdateKey noGroupKey = new UpdateKey(key.getBid(),key.getUin(),0,key.getAdpos(),key.getItemId());
-						new GroupCountUpdateCallback(noGroupKey,newMidInfo).excute();
+						if(debug){
+							logger.info("step2,other date,itemId="+key.getItemId()+",qq="+key.getUin()+",date="+newMidInfo.getTimeId()+",changeWeight="+newMidInfo.getWeight());
+						}
+						
+						if(changeWeight != 0){
+							midInfoMap.put(ts.getTimeId(),newMidInfo);
+						}
+						
+						newCount = 0F;
 					}
 					
 					UserCountInfo.TimeSegment.Builder tsBuilder = UserCountInfo.TimeSegment.newBuilder();
@@ -421,12 +469,32 @@ public class ItemCountBolt extends AbstractConfigUpdateBolt{
 			}
 			
 			if(!isAdded){
+				Float changeWeight = weightInfo.getWeight();
+				MidInfo newMidInfo = new MidInfo(weightInfo.getTimeId(), changeWeight);
+				
+				if(debug){
+					logger.info("step2, not found old date,add new ,itemId="+key.getItemId()+",qq="+key.getUin());
+				}
+				
+				if(changeWeight != 0){
+					midInfoMap.put(weightInfo.getTimeId(),newMidInfo);
+				}
+				
 				UserCountInfo.TimeSegment.Builder tsBuilder = UserCountInfo.TimeSegment.newBuilder();
-				tsBuilder.setTimeId(weightInfo.getTimeId()).setCount(weightInfo.getWeight());
-				newUserInfoBuiler.addTsegs(tsBuilder.build());
+				tsBuilder.setTimeId(newMidInfo.getTimeId()).setCount(newMidInfo.getWeight());
+				newUserInfoBuiler.addTsegs(0,tsBuilder.build());
+								
+				isAdded = true;
 			}
 
-			save(userCountKey,newUserInfoBuiler.build());		
+			save(userCountKey,newUserInfoBuiler.build());	
+			
+			new GroupCountUpdateCallback(key,midInfoMap).excute();
+			
+			if(key.getGroupId() != 0){
+				UpdateKey noGroupKey = new UpdateKey(key.getBid(),key.getUin(),0,key.getAdpos(),key.getItemId());
+				new GroupCountUpdateCallback(noGroupKey,midInfoMap).excute();
+			}
 		}
 		
 		private void save(String userCountKey,UserCountInfo newWeightInfo){
@@ -434,8 +502,11 @@ public class ItemCountBolt extends AbstractConfigUpdateBolt{
 			synchronized(userCountCache){
 				userCountCache.set(userCountKey, new SoftReference<UserCountInfo>(newWeightInfo), cacheExpireTime);
 			}
-			
-			logger.info("step2,save usercount,key="+userCountKey+",value=");
+			if(debug){
+				for(UserCountInfo.TimeSegment ts:newWeightInfo.getTsegsList()){
+					logger.info("step2,save loop,itemId="+key.getItemId()+",qq="+key.getUin()+",date="+ts.getTimeId()+",old="+ts.getCount());
+				}
+			}
 			for(ClientAttr clientEntry:mtClientList ){
 				TairOption putopt = new TairOption(clientEntry.getTimeout(),(short)0, dataExpireTime);
 				try {
@@ -487,9 +558,7 @@ public class ItemCountBolt extends AbstractConfigUpdateBolt{
 		}
 
 		public void next(MidInfo weightInfo){
-			if(weightInfo.getWeight() > 0){
-				new UserCountUpdateCallBack(key,weightInfo).excute();
-			}
+			new UserCountUpdateCallBack(key,weightInfo).excute();
 		}
 		
 		public void excute() {
@@ -518,13 +587,14 @@ public class ItemCountBolt extends AbstractConfigUpdateBolt{
 							if(actWeight > newWeight){
 								newWeight =  Math.max(newWeight,actWeight);
 								timeId = ts.getTimeId();
-								logger.info("timeId="+ts.getTimeId()+",type="+act.getActType()+",weight="+newWeight);
 							}
 						}	
 					}					
 				}
 			}
-			logger.info("item="+key.getItemId()+",final weight="+newWeight);
+			if(debug){
+				logger.info("step1,item="+key.getItemId()+",qq="+key.getUin()+",final weight="+newWeight);
+			}
 			return new MidInfo(timeId,newWeight);
 		}
 		

@@ -21,14 +21,15 @@ import backtype.storm.task.TopologyContext;
 
 import backtype.storm.tuple.Values;
 
+import com.tencent.urs.protobuf.Recommend;
 import com.tencent.urs.utils.Constants;
 import com.tencent.urs.utils.Utils;
 
-public class UserActionSpout2 extends TdbankSpout {
+public class UrsInputSpout extends TdbankSpout {
 	
 	private static final long serialVersionUID = -779488162448649143L;
 	private static Logger logger = LoggerFactory
-			.getLogger(UserActionSpout2.class);
+			.getLogger(UrsInputSpout.class);
 	public static byte SPEARATOR = (byte) 0xe0;
 
 	protected SpoutOutputCollector collector;
@@ -37,7 +38,7 @@ public class UserActionSpout2 extends TdbankSpout {
 	private String topic;
 	private HashSet<String> cateIDSet;
 
-	public UserActionSpout2(String config, ImmutableList<Output> outputField) {
+	public UrsInputSpout(String config, ImmutableList<Output> outputField) {
 		super(config, outputField);
 	}
 
@@ -55,7 +56,7 @@ public class UserActionSpout2 extends TdbankSpout {
 	public void processMessage(byte[] message){	
 		int length = message.length;
 		if (length <= 0) {
-			logger.info("Msg message length is <0:");
+			logger.error("Msg message length is <0:");
 			return ;
 		} 
 
@@ -77,22 +78,35 @@ public class UserActionSpout2 extends TdbankSpout {
 		}
 		
 		String event = new String(eventByte);
+		String[] event_array = event.split(",",-1);		
 		
-		String[] dealMsg = null;
-		String[] itemDetailMsg = null;
-		if(true){
-			dealMsg = genPPMsg(categoryId,event);
-			itemDetailMsg = genItemDetailMsg(categoryId,event);
-		}else{
-			//dealMsg = event.split(",",-1);
+		if(categoryId.equals("pppv")){
+			String[] itemDetailMsg = genItemDetailMsg(categoryId,event);
+			if(itemDetailMsg != null && itemDetailMsg.length >= 17){
+				dealItemDetailMsgByConfig(itemDetailMsg);
+			}
 		}
 		
-		if(itemDetailMsg != null && itemDetailMsg.length >= 17){
-			dealItemDetailMsgByConfig(itemDetailMsg);
+		if(categoryId.equals("pppv") || categoryId.equals("ppclick") 
+				|| categoryId.equals("commoditypv") || categoryId.equals("ppdeal")){
+			event_array = genPPMsg(categoryId,event);
+			if(event_array == null || event_array.length <= 15){
+				this.collector.emit(categoryId,new Values(""));
+				return;
+			}
+			categoryId = Constants.actions_stream;
 		}
 		
-		if(dealMsg != null && dealMsg.length >= 16){
-			dealActionMsgByConfig(dealMsg);
+		if(categoryId.equals(Constants.actions_stream) && event_array.length >= 16){
+			dealActionMsgByConfig(event_array);
+		}else if (categoryId.equals(Constants.item_info_stream) && event_array.length >= 17) {	
+			dealItemDetailMsgByConfig(event_array);
+		}else if (categoryId.equals(Constants.user_info_stream) && event_array.length >= 9) {	
+			dealUserDetailMsgByConfig(event_array);
+		}else if (categoryId.equals(Constants.action_weight_stream) && event_array.length >= 4) {	
+			dealActionWeightMsgByConfig(event_array);
+		}else if(categoryId.equals(Constants.category_level_stream) && event_array.length >= 6){
+			dealCategoryLevelMsgByConfig(event_array);
 		}else{
 			this.collector.emit(categoryId,new Values(""));
 		}
@@ -153,7 +167,7 @@ public class UserActionSpout2 extends TdbankSpout {
 	
 	private String[] genPPMsg(String categoryId, String event){
 		String impDate = "";
-		String bid = "2";
+		String bid = "10070002";
 		String weixin_no = "";
 		String qq =  "0";
 		String actionDate = "0";
@@ -174,7 +188,6 @@ public class UserActionSpout2 extends TdbankSpout {
 		if (categoryId.equals("pppv") && event_array.length > 15) {	
 			qq =  event_array[2];
 			actionTime = event_array[4];
-			adpos = event_array[15];
 			actType = "3";
 			itemId = event_array[6];
 		}else if (categoryId.equals("ppclick") && event_array.length > 16) {	
@@ -230,9 +243,14 @@ public class UserActionSpout2 extends TdbankSpout {
 			return;
 		}
 		
-		if(!actType.equals("1") && Utils.isItemIdValid(itemId)){
-			this.collector.emit("error_data",new Values());
-			return;
+		Recommend.ActiveType actTypeValue = Utils.getActionTypeByString(actType);
+		
+		if(actTypeValue != Recommend.ActiveType.Impress 
+				&& actTypeValue != Recommend.ActiveType.Click){
+			if(!Utils.isItemIdValid(itemId)){
+				this.collector.emit("error_data",new Values());
+				return;
+			}
 		}
 
 		Values outputValues = new Values();
@@ -249,19 +267,97 @@ public class UserActionSpout2 extends TdbankSpout {
 		outputValues.add(imei);
 		outputValues.add(platform);
 		outputValues.add(lbsInfo);
-		
+
 		this.collector.emit(Constants.actions_stream,outputValues);	
 	}
 
-	private void dealItemDetailMsgByConfig(String[] msg_array){			
+	private void dealItemDetailMsgByConfig(String[] event_array){	
+		String impDate = event_array[0];
+		String bid = event_array[1];
+		String itemId = event_array[2];
+		String categoryId1 = event_array[3];
+		String categoryId2 = event_array[4];
+		String categoryId3 = event_array[5];
+		String categoryName1 = event_array[6];
+		String categoryName2 = event_array[7];
+		String categoryName3 = event_array[8];
+		String free = event_array[9];
+		String publish = event_array[10];
+		String price = event_array[11];
+		
+		String text = event_array[12];
+		String itemTime = event_array[13];
+		String expireTime = event_array[14];
+		String platForm = event_array[15];
+		String score = event_array[16];
+		
+		String shopId = event_array[17];
+				
+
+		String[] dealMsg ={itemId,Constants.item_info_stream,bid,impDate,itemId,categoryId1,categoryId2,categoryId3,
+					categoryName1,categoryName2,categoryName3,free,publish,price,text,itemTime,expireTime,platForm,score,shopId}; 
+
 		Values outputValues = new Values();
-		for(String value: msg_array){
+		for(String value: dealMsg){
 			outputValues.add(value);
 		}
-		this.collector.emit(Constants.item_info_stream,outputValues);		
-		
+		this.collector.emit(Constants.item_info_stream,outputValues);
 	}
+	
+	private void dealUserDetailMsgByConfig(String[] event_array){
+		String impDate = event_array[0];
+		String bid = event_array[1];
+		String qq = event_array[2];
+		String imei = event_array[4];
+		String uid = event_array[5];
+		String level = event_array[6];
+		String regDate = event_array[7];
+		String regTime = event_array[8];
+				
+		//hash_key,topic,bid,imp_date,qq,imei,uid,level,reg_date, reg_time
+		String[] dealMsg ={qq,Constants.user_info_stream,bid,impDate,qq,imei,uid,level,regDate,regTime};
 		
+		Values outputValues = new Values();
+		for(String value: dealMsg){
+			outputValues.add(value);
+		}
+		this.collector.emit(Constants.user_info_stream,outputValues);				
+	}
+	
+	private void dealActionWeightMsgByConfig(String[] event_array){
+		String impDate = event_array[0];
+		String bid = event_array[1];
+		String actType = event_array[2];
+		String weight = event_array[3];
+		
+		//hash_key,topic,bid,imp_date,type_id,weight
+		String[] dealMsg ={actType,Constants.action_weight_stream,bid,impDate,actType,weight};
+		
+		Values outputValues = new Values();
+		for(String value: dealMsg){
+			outputValues.add(value);
+		}
+		this.collector.emit(Constants.user_info_stream,outputValues);	
+	}
+	
+	private void dealCategoryLevelMsgByConfig(String[] event_array){
+		String impDate = event_array[0];
+		String bid = event_array[1];
+		String cateId = event_array[2];
+		String cateName = event_array[3];
+		String level = event_array[4];
+		String fatherId = event_array[5];
+		
+		//hash_key,topic,bid,imp_date,cate_id,cate_name,level,father_id
+		String[] dealMsg ={cateId,Constants.category_level_stream,bid,impDate,cateId,cateName,level,fatherId};
+		
+		Values outputValues = new Values();
+		for(String value: dealMsg){
+			outputValues.add(value);
+		}
+		this.collector.emit(Constants.category_level_stream,outputValues);	
+	}
+	
 	private int searchIndex(byte[] bytes, byte key) {
 		int length = bytes.length;
 		for (int i = length - 1; i >= 0; i--) {
@@ -271,5 +367,5 @@ public class UserActionSpout2 extends TdbankSpout {
 		}
 		return -1;
 	}
-
+	
 }

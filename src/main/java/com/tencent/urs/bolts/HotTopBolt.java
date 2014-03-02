@@ -55,9 +55,10 @@ public class HotTopBolt extends AbstractConfigUpdateBolt{
 
 	@Override
 	public void updateConfig(XMLConfiguration config) {
-		nsGroupCountTableId = config.getInt("item_count_table",304);
+		nsGroupCountTableId = config.getInt("item_count_table",514);
 		categoryType = config.getString("category_type","Small-Type");
-		dataExpireTime = config.getInt("data_expiretime",1*24*3600);
+		dataExpireTime = config.getInt("data_expiretime",7*24*3600);
+		categoryType = config.getString("category_type","Big-Type");
 		//cacheExpireTime = config.getInt("cache_expiretime",3600);
 	}
 	
@@ -71,30 +72,35 @@ public class HotTopBolt extends AbstractConfigUpdateBolt{
 		this.mt = MonitorTools.getMonitorInstance(conf);
 		this.combinerMap = new ConcurrentHashMap<UpdateKey,GroupActionCombinerValue>(1024);
 			
-		this.combinerExpireTime = Utils.getInt(conf, "combiner.expireTime",5);
+		this.combinerExpireTime = Utils.getInt(conf, "combiner.expireTime",5)+3;
 		setCombinerTime(combinerExpireTime);
 	}
 
 	@Override
-	public void processEvent(String sid, Tuple tuple) {			
-		String bid = tuple.getStringByField("bid");
-		String qq = tuple.getStringByField("qq");
-		String groupId = tuple.getStringByField("group_id");
-		String adpos = tuple.getStringByField("adpos");
-		String itemId = tuple.getStringByField("item_id");
+	public void processEvent(String sid, Tuple tuple) {		
+		try{
+			String bid = tuple.getStringByField("bid");
+			String qq = tuple.getStringByField("qq");
+			String groupId = tuple.getStringByField("group_id");
+			String adpos = "0";
+			String itemId = tuple.getStringByField("item_id");
+			
+			String actionType = tuple.getStringByField("action_type");
+			String actionTime = tuple.getStringByField("action_time");
 		
-		String actionType = tuple.getStringByField("action_type");
-		String actionTime = tuple.getStringByField("action_time");
-	
-		ActiveType actType = Utils.getActionTypeByString(actionType);
-		
-		if(!Utils.isBidValid(bid) || !Utils.isQNumValid(qq) || !Utils.isGroupIdVaild(groupId) || !Utils.isItemIdValid(itemId)){
-			return;
+			ActiveType actType = Utils.getActionTypeByString(actionType);
+			
+			if(!Utils.isBidValid(bid) || !Utils.isQNumValid(qq) || !Utils.isGroupIdVaild(groupId) || !Utils.isItemIdValid(itemId)){
+				return;
+			}
+			
+			GroupActionCombinerValue value = new GroupActionCombinerValue(actType,Long.valueOf(actionTime));
+			UpdateKey key = new UpdateKey(bid,Long.valueOf(qq),Integer.valueOf(groupId),adpos,itemId);
+			combinerKeys(key,value);	
+		}catch(Exception e){
+			logger.error(e.getMessage(), e);
 		}
-		
-		GroupActionCombinerValue value = new GroupActionCombinerValue(actType,Long.valueOf(actionTime));
-		UpdateKey key = new UpdateKey(bid,Long.valueOf(qq),Integer.valueOf(groupId),adpos,itemId);
-		combinerKeys(key,value);		
+			
 	}
 	
 	private void setCombinerTime(final int second) {
@@ -166,14 +172,15 @@ public class HotTopBolt extends AbstractConfigUpdateBolt{
 					Double weight = getWeight(weightInfo);
 					
 					String algKey1 = key.getBid()+"#0#"+key.getAdpos()+"#"+Constants.ht_alg_name+"#"+key.getGroupId();
-					String algKey2 = key.getBid()+"#0#"+key.getAdpos()+"#"+Constants.cate_alg_name+"#"+key.getGroupId();
+					String algKey2 = key.getBid()+"#"+categoryType+"#"+key.getAdpos()+"#"+Constants.cate_alg_name+"#"+key.getGroupId();
 					synchronized(collector){
 						collector.emit(Constants.alg_result_stream,new Values(key.getBid(),algKey1,key.getItemId(),weight,Constants.ht_alg_name));
 						collector.emit(Constants.alg_result_stream,new Values(key.getBid(),algKey2,key.getItemId(),weight,Constants.cate_alg_name));
 					}
-					if(!key.getGroupId().equals("0")){
+					
+					if(key.getGroupId() != 0){
 						String algKey3 =  key.getBid()+"#0#"+key.getAdpos()+"#"+Constants.ht_alg_name+"#0";
-						String algKey4 =  key.getBid()+"#0#"+key.getAdpos()+"#"+Constants.cate_alg_name+"#0";
+						String algKey4 =  key.getBid()+"#"+categoryType+"#"+key.getAdpos()+"#"+Constants.cate_alg_name+"#0";
 						synchronized(collector){
 							collector.emit(Constants.alg_result_stream,new Values(key.getBid(),algKey3,key.getItemId(),weight,Constants.ht_alg_name));
 							collector.emit(Constants.alg_result_stream,new Values(key.getBid(),algKey4,key.getItemId(),weight,Constants.cate_alg_name));
@@ -187,11 +194,12 @@ public class HotTopBolt extends AbstractConfigUpdateBolt{
 		
 		private Double getWeight(GroupCountInfo weightInfo){
 			Double sumCount = 0D;
+			Long now = System.currentTimeMillis()/1000 ;
 			if(weightInfo == null){
 				return sumCount;
 			}
 			for(GroupCountInfo.TimeSegment ts: weightInfo.getTsegsList()){
-				if(ts.getTimeId() > Utils.getDateByTime(System.currentTimeMillis() - dataExpireTime)){
+				if(ts.getTimeId() > Utils.getDateByTime(now - dataExpireTime)){
 					sumCount += ts.getCount();
 				}
 			}

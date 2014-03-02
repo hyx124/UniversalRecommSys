@@ -18,14 +18,10 @@ import com.tencent.streaming.commons.bolts.config.AbstractConfigUpdateBolt;
 import com.tencent.streaming.commons.spouts.tdbank.Output;
 import com.tencent.tde.client.Result;
 import com.tencent.tde.client.TairClient.TairOption;
-import com.tencent.tde.client.error.TairFlowLimit;
-import com.tencent.tde.client.error.TairQueueOverflow;
-import com.tencent.tde.client.error.TairRpcError;
 import com.tencent.tde.client.impl.MutiThreadCallbackClient.MutiClientCallBack;
 import com.tencent.urs.asyncupdate.UpdateCallBack;
 import com.tencent.urs.asyncupdate.UpdateCallBackContext;
 
-import com.tencent.urs.protobuf.Recommend;
 import com.tencent.urs.protobuf.Recommend.ActiveType;
 import com.tencent.urs.protobuf.Recommend.CtrInfo;
 import com.tencent.urs.tdengine.TDEngineClientFactory;
@@ -95,8 +91,8 @@ public class CtrStorBolt extends AbstractConfigUpdateBolt{
 
 	@Override
 	public void updateConfig(XMLConfiguration config) {
-		nsTableId = config.getInt("storage_table",307);
-		dataExpireTime = config.getInt("data_expiretime",1*24*3600);
+		nsTableId = config.getInt("storage_table",517);
+		dataExpireTime = config.getInt("data_expiretime",7*24*3600);
 		cacheExpireTime = config.getInt("cache_expiretime",3600);
 		//topNum = config.getInt("topNum",30);
 	}
@@ -118,39 +114,43 @@ public class CtrStorBolt extends AbstractConfigUpdateBolt{
 
 	@Override
 	public void processEvent(String sid, Tuple tuple) {
-		String bid = tuple.getStringByField("bid");
-		String qq = tuple.getStringByField("qq");
-		String adpos = tuple.getStringByField("adpos");
+		try{
+			String bid = tuple.getStringByField("bid");
+			String qq = tuple.getStringByField("qq");
+			String adpos = tuple.getStringByField("adpos");
+			
+			
+			String actionType = tuple.getStringByField("action_type");
+			String actionTime = tuple.getStringByField("action_time");
 		
-		
-		String actionType = tuple.getStringByField("action_type");
-		String actionTime = tuple.getStringByField("action_time");
-	
-		ActiveType actType = Utils.getActionTypeByString(actionType);
-		
-		if(!Utils.isBidValid(bid) || !Utils.isQNumValid(qq)){
-			return;
-		}
-		
-		if(actType != ActiveType.Click || actType != ActiveType.Impress){
-			return;
-		}
-		
-		String pageId = tuple.getStringByField("item_id");
-		String actionResult = tuple.getStringByField("action_result");
-		String[] items = actionResult.split(";",-1);
-		
-		if(Utils.isItemIdValid(pageId)){
-			for(String eachItem: items){
-				if(Utils.isItemIdValid(eachItem)){						
-					StringBuffer getKey = new StringBuffer(bid);		
-					getKey.append("#").append(adpos).append("#").append(pageId).append("#").append(eachItem);	
-					
-					CtrCombinerValue vlaue = new CtrCombinerValue(actType,1L, Long.valueOf(actionTime));
-					combinerKeys(getKey.toString(),vlaue);
+			ActiveType actType = Utils.getActionTypeByString(actionType);
+			
+			if(!Utils.isBidValid(bid) || !Utils.isQNumValid(qq)){
+				return;
+			}
+			
+			if(actType == ActiveType.Click || actType == ActiveType.Impress){
+				String pageId = tuple.getStringByField("item_id");
+				String actionResult = tuple.getStringByField("action_result");
+				String[] items = actionResult.split(";",-1);
+				
+				if(Utils.isPageIdValid(pageId)){
+					for(String eachItem: items){
+						if(Utils.isItemIdValid(eachItem)){						
+							StringBuffer getKey = new StringBuffer(bid);		
+							getKey.append("#").append(adpos).append("#").append(pageId).append("#").append(eachItem);	
+
+							//logger.info("add items ,getKey = "+getKey.toString()+",value="+actionType+",time="+actionTime);
+							CtrCombinerValue vlaue = new CtrCombinerValue(actType,1L, Long.valueOf(actionTime));
+							combinerKeys(getKey.toString(),vlaue);
+						}
+					}
 				}
 			}
+		}catch(Exception e){
+			logger.error(e.getMessage(), e);
 		}
+		
 	}
 
 	private void setCombinerTime(final int second) {
@@ -220,20 +220,15 @@ public class CtrStorBolt extends AbstractConfigUpdateBolt{
 			}
 		}
 					
-		private Long getWinIdByTime(Long time){	
-			String expireId = new SimpleDateFormat("yyyyMMdd").format(time*1000L);
-			return Long.valueOf(expireId);
-		}
-		
 		@Override
 		public void handle(Future<?> future, Object context) {			
 			@SuppressWarnings("unchecked")
 			Future<Result<byte[]>> afuture = (Future<Result<byte[]>>) future;
-			CtrInfo oldCtr = Recommend.CtrInfo.newBuilder().build();
+			CtrInfo oldCtr = null;
 			try {
 				Result<byte[]> res = afuture.get();
 				if(res.isSuccess() && res.getResult() !=null){
-					oldCtr = Recommend.CtrInfo.parseFrom(res.getResult());		
+					oldCtr = CtrInfo.parseFrom(res.getResult());		
 				}
 			} catch (Exception e) {
 				logger.error(e.getMessage(), e);
@@ -242,40 +237,40 @@ public class CtrStorBolt extends AbstractConfigUpdateBolt{
 		}
 
 		private void mergeHeap(CtrInfo oldCtr) {
-			Recommend.CtrInfo.Builder mergeBuilder = Recommend.CtrInfo.newBuilder();
-			Recommend.CtrInfo.TimeSegment.Builder newValueBuilder  = Recommend.CtrInfo.TimeSegment.newBuilder();
+			CtrInfo.Builder mergeBuilder = CtrInfo.newBuilder();
+			CtrInfo.TimeSegment.Builder newValueBuilder  = CtrInfo.TimeSegment.newBuilder();
 			newValueBuilder.setClick(values.getClick()).setImpress(values.getImpress());
 			
 			boolean insert_flag = false;
-			for(CtrInfo.TimeSegment ts:oldCtr.getTsegsList()){
-				if(ts.getTimeId() == getWinIdByTime(values.getTime())){
-					newValueBuilder.setTimeId(ts.getTimeId());
-					newValueBuilder.setClick(values.getClick()+ts.getClick()).setImpress(values.getImpress()+ts.getImpress());
-					mergeBuilder.addTsegs(newValueBuilder.build());
-					insert_flag = true;
-				}else if(ts.getTimeId() >= getWinIdByTime(values.getTime() - dataExpireTime)){
-					mergeBuilder.addTsegs(ts);
-				}else{
-					continue;
+			if(oldCtr != null){
+				for(CtrInfo.TimeSegment ts:oldCtr.getTsegsList()){
+					if(ts.getTimeId() == Utils.getDateByTime(values.getTime())){
+						newValueBuilder.setTimeId(ts.getTimeId());
+						newValueBuilder.setClick(values.getClick()+ts.getClick()).setImpress(values.getImpress()+ts.getImpress());
+						mergeBuilder.addTsegs(newValueBuilder.build());
+						insert_flag = true;
+					}else if(ts.getTimeId() >= Utils.getDateByTime(values.getTime() - dataExpireTime)){
+						mergeBuilder.addTsegs(ts);
+					}
 				}
 			}
-			
+
 			if(!insert_flag){
-				newValueBuilder.setTimeId(getWinIdByTime(values.getTime()));
+				newValueBuilder.setTimeId(Utils.getDateByTime(values.getTime()));
 				mergeBuilder.addTsegs(newValueBuilder.build());
 			}
-			
 			Save(mergeBuilder.build());
 		}
 		
-		private void Save(Recommend.CtrInfo value){	
+		private void Save(CtrInfo value){	
 			synchronized(ctrCache){
-				ctrCache.set(key, new SoftReference<Recommend.CtrInfo>(value), cacheExpireTime);
+				ctrCache.set(key, new SoftReference<CtrInfo>(value), cacheExpireTime);
 			}
 			
-			for(com.tencent.urs.protobuf.Recommend.CtrInfo.TimeSegment ts: value.getTsegsList()){
+			/*
+			for(CtrInfo.TimeSegment ts: value.getTsegsList()){
 				logger.info("result,key="+key+",time="+ts.getTimeId()+",click="+ts.getClick()+",impress="+ts.getImpress()+",tableId="+nsTableId);
-			}
+			}*/
 				
 			
 			Future<Result<Void>> future = null;

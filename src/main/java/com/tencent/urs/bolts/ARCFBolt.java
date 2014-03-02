@@ -48,6 +48,7 @@ public class ARCFBolt extends AbstractConfigUpdateBolt{
 	private int nsGroupCountTableId;
 	private int nsDetailTableId;
 	private int dataExpireTime;
+	private boolean debug;
 	
 	private static Logger logger = LoggerFactory.getLogger(ARCFBolt.class);
 
@@ -66,17 +67,20 @@ public class ARCFBolt extends AbstractConfigUpdateBolt{
 		this.mt = MonitorTools.getMonitorInstance(conf);
 		this.combinerMap = new ConcurrentHashMap<UpdateKey,GroupActionCombinerValue>(1024);
 
-		int combinerExpireTime = Utils.getInt(conf, "combiner.expireTime",5);
+		int combinerExpireTime = Utils.getInt(conf, "combiner.expireTime",5)+3;
 		setCombinerTime(combinerExpireTime);
 	} 
 	
 	@Override
 	public void updateConfig(XMLConfiguration config) {
-		nsGroupCountTableId = config.getInt("group_count_table",304);
-		nsGroupPairTableId = config.getInt("group_pair_table",306);
-		nsDetailTableId = config.getInt("dependent_table",302);
-		dataExpireTime = config.getInt("data_expiretime",1*24*3600);
+		nsGroupCountTableId = config.getInt("group_count_table",514);
+		nsGroupPairTableId = config.getInt("group_pair_table",516);
+		nsDetailTableId = config.getInt("dependent_table",512);
+		dataExpireTime = config.getInt("data_expiretime",7*24*3600);
 		//cacheExpireTime = config.getInt("cache_expiretime",3600);
+		
+		debug = config.getBoolean("debug",false);
+		logger.info("init ,debug="+debug);
 	}
 
 	@Override
@@ -86,7 +90,7 @@ public class ARCFBolt extends AbstractConfigUpdateBolt{
 			String qq = tuple.getStringByField("qq");
 			String groupId = tuple.getStringByField("group_id");
 			String itemId = tuple.getStringByField("item_id");
-			String adpos = tuple.getStringByField("adpos");
+			String adpos = "0";
 			
 			String actionType = tuple.getStringByField("action_type");
 			String actionTime = tuple.getStringByField("action_time");
@@ -153,7 +157,7 @@ public class ARCFBolt extends AbstractConfigUpdateBolt{
 				ClientAttr clientEntry = mtClientList.get(0);		
 				TairOption opt = new TairOption(clientEntry.getTimeout());
 				Future<Result<byte[]>> future = clientEntry.getClient().getAsync((short)nsGroupPairTableId,getKey.toString().getBytes(),opt);
-				clientEntry.getClient().notifyFuture(future, this,clientEntry);			
+				clientEntry.getClient().notifyFuture(future, this, clientEntry);			
 			} catch (Exception e){
 				logger.error(e.getMessage(), e);
 			}
@@ -161,13 +165,21 @@ public class ARCFBolt extends AbstractConfigUpdateBolt{
 
 		public Double computeARWeight(Float itemCount1, Float itemCount2,
 				Float pairCount) {	
-			Double simAR = (double) (pairCount/itemCount1);
+			if(itemCount2 == 0 || pairCount == 0){
+				return 0D;
+			}
+			
+			Double simAR = (double) (pairCount/itemCount2);
 			return simAR;
 		}
 		
 		public Double computeCFWeight(Float itemCount1, Float itemCount2,
 				Float pairCount) {	
 			//CF
+			if(itemCount1 == 0 || itemCount2 == 0 || pairCount == 0){
+				return 0D;
+			}
+			
 			Double simCF = (double) (pairCount/(Math.sqrt(itemCount1) * Math.sqrt(itemCount2)));
 			return simCF;
 		}
@@ -176,7 +188,6 @@ public class ARCFBolt extends AbstractConfigUpdateBolt{
 		public void handle(Future<?> future, Object context) {			
 			@SuppressWarnings("unchecked")
 			Future<Result<byte[]>> afuture = (Future<Result<byte[]>>) future;
-			logger.info("enter step3");
 			GroupPairInfo weightInfo = null;
 			try {
 				Result<byte[]> res = afuture.get();	
@@ -187,8 +198,10 @@ public class ARCFBolt extends AbstractConfigUpdateBolt{
 				logger.error(e.getMessage(), e);
 			}
 			Float pairCount = getWeight(weightInfo);
-			//logger.info("item1="+key.getItemId()+",item2="+otherItem+"itemcount1="+itemCount1+",itemcount2="+itemCount2+",paircount="+pairCount);
 			
+			if(debug){
+				logger.info("step3,key"+getKey+"item1="+key.getItemId()+",item2="+otherItem+"itemcount1="+itemCount1+",itemcount2="+itemCount2+",paircount="+pairCount);
+			}
 			Double cf12Weight = computeCFWeight(itemCount1,itemCount2,pairCount);
 			Double cf21Weight = computeCFWeight(itemCount2,itemCount1,pairCount);
 			Double ar12Weight = computeARWeight(itemCount1,itemCount2,pairCount);
@@ -202,23 +215,31 @@ public class ARCFBolt extends AbstractConfigUpdateBolt{
 		
 		private Float getWeight(GroupPairInfo weightInfo){
 			Float sumCount = 0F;
-			if(weightInfo == null){
-				return sumCount;
-			}
-			
-			for(GroupPairInfo.TimeSegment ts: weightInfo.getTsegsList()){
-				if(ts.getTimeId() > Utils.getDateByTime(System.currentTimeMillis() - dataExpireTime)){
-					sumCount += ts.getCount();
+			Long now = System.currentTimeMillis()/1000;
+			if(weightInfo != null){
+				for(GroupPairInfo.TimeSegment ts: weightInfo.getTsegsList()){
+					if(ts.getTimeId() > Utils.getDateByTime(now - dataExpireTime)){
+						sumCount += ts.getCount();
+					}
 				}
 			}
-			
+
 			return sumCount;
 		}
 		
 		private void doEmit(String bid,String itemId,String adpos,String otherItem,  String algName, String groupId, double weight){
-			String resultKey = Utils.getAlgKey(bid,itemId, adpos, algName, groupId);	
 			
+			if(weight <= 0){
+				return;
+			}
+			
+			
+			String resultKey = Utils.getAlgKey(bid,itemId, adpos, algName, groupId);	
 			Values values = new Values(bid,resultKey,otherItem,weight,algName);
+			if(debug){
+				logger.info("step3,output result,key"+resultKey+",otherItem="+otherItem+",weight="+weight);
+			}
+			
 			synchronized(collector){
 				collector.emit(Constants.alg_result_stream,values);	
 			}
@@ -285,26 +306,36 @@ public class ARCFBolt extends AbstractConfigUpdateBolt{
 			
 			if(step == 1){
 				new GetItemCountCallBack(key,otherItem,count,2).excute();
-				//logger.info("step2,item1="+key.getItemId()+", count="+count);
+				if(debug){
+					logger.info("step2,send to self,key="+key.getGroupCountKey()+", count="+count);
+				}
 			}else if(step == 2){
 				new GetPairsCountCallBack(key,otherItem,itemCount,count).excute();
-				//logger.info("step2,itesm2"+otherItem+", count="+count);
+				if(debug && itemCount>0 && count>0){
+					logger.info("step2,send to next,key="+key.getOtherGroupCountKey(otherItem)+", count="+count);
+				}		
 			}
-			
-			
 		}
 		
 		private Float getWeight(GroupCountInfo weightInfo){
 			Float sumCount = 0F;
-			if(weightInfo == null){
-				return sumCount;
-			}
-			for(GroupCountInfo.TimeSegment ts: weightInfo.getTsegsList()){
-				if(ts.getTimeId() > Utils.getDateByTime(System.currentTimeMillis() - dataExpireTime)){
-					sumCount += ts.getCount();
+			Long now = System.currentTimeMillis()/1000;
+			if(weightInfo != null){
+				
+				for(GroupCountInfo.TimeSegment ts: weightInfo.getTsegsList()){
+					if(ts.getTimeId() > Utils.getDateByTime(now - dataExpireTime)){
+						sumCount += ts.getCount();
+					}
+					
+					if(debug){
+						logger.info("---------------------step2,weightInfo,date="+ts.getTimeId()+",weight="+ts.getCount());
+					}
+				}
+			}else{
+				if(debug){
+					logger.info("step2,weightInfo is null,user 0 for default,key="+key.getOtherGroupCountKey(otherItem));
 				}
 			}
-			
 			return sumCount;
 		}
 	}
@@ -356,9 +387,12 @@ public class ARCFBolt extends AbstractConfigUpdateBolt{
 				if(result.isSuccess() && result.getResult()!=null){
 					UserActiveDetail oldValueHeap = UserActiveDetail.parseFrom(result.getResult());
 					HashSet<String> itemSet = getPairItems(oldValueHeap,key.getItemId());
+
 					for(String otherItem:itemSet){
 						new GetItemCountCallBack(key,otherItem, 0F,1).excute();
-						//logger.info("step1,emit to step2 "+key.getItemId()+" with item ="+otherItem);
+						if(debug){
+							logger.info("step1,emit to step2 "+key.getItemId()+" with item ="+otherItem+",uin="+key.getUin());
+						}
 					}					
 				}
 			} catch (Exception e) {

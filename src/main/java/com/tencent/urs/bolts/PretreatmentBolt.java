@@ -1,34 +1,21 @@
 package com.tencent.urs.bolts;
 
 import java.lang.ref.SoftReference;
-import java.util.ArrayList;
 import java.util.List;
 import java.util.Map;
-import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.Future;
 
-import org.apache.commons.configuration.ConfigurationException;
 import org.apache.commons.configuration.XMLConfiguration;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
 import com.google.common.collect.ImmutableList;
-import com.tencent.monitor.MonitorTools;
 import com.tencent.streaming.commons.bolts.config.AbstractConfigUpdateBolt;
 import com.tencent.streaming.commons.spouts.tdbank.Output;
 import com.tencent.tde.client.Result;
-import com.tencent.tde.client.Result.ResultCode;
 import com.tencent.tde.client.TairClient.TairOption;
-import com.tencent.tde.client.error.TairFlowLimit;
-import com.tencent.tde.client.error.TairRpcError;
-import com.tencent.tde.client.error.TairTimeout;
-import com.tencent.tde.client.impl.MutiThreadCallbackClient;
 import com.tencent.tde.client.impl.MutiThreadCallbackClient.MutiClientCallBack;
-import com.tencent.urs.combine.ActionCombinerValue;
-import com.tencent.urs.combine.UpdateKey;
-import com.tencent.urs.conf.DataFilterConf;
 import com.tencent.urs.protobuf.Recommend;
-import com.tencent.urs.protobuf.Recommend.ActionWeightInfo;
 import com.tencent.urs.protobuf.Recommend.ActiveType;
 import com.tencent.urs.tdengine.TDEngineClientFactory;
 import com.tencent.urs.tdengine.TDEngineClientFactory.ClientAttr;
@@ -38,9 +25,6 @@ import com.tencent.urs.utils.Utils;
 
 import backtype.storm.task.OutputCollector;
 import backtype.storm.task.TopologyContext;
-import backtype.storm.topology.IRichBolt;
-import backtype.storm.topology.OutputFieldsDeclarer;
-import backtype.storm.tuple.Fields;
 import backtype.storm.tuple.Tuple;
 import backtype.storm.tuple.Values;
 
@@ -74,61 +58,61 @@ public class PretreatmentBolt extends AbstractConfigUpdateBolt {
 		this.collector = collector;
 
 		this.mtClientList = TDEngineClientFactory.createMTClientList(conf);
-		ClientAttr clientEntry = mtClientList.get(0);		
-		TairOption opt = new TairOption(clientEntry.getTimeout(),(short)0, 24*3600);
-		try {
-			clientEntry.getClient().put((short) nsTableUin, "17139104".getBytes(), "389687043".getBytes(), opt);
-			clientEntry.getClient().put((short) nsTableGroup, "389687043".getBytes(), "1,51|2,52|3,53".getBytes(), opt);
-			logger.info("init tde ");
-		} catch (Exception e){
-			logger.error(e.getMessage(), e);
-		}
 	} 
 	
 	@Override
 	public void updateConfig(XMLConfiguration config) {		
-		nsTableGroup = config.getInt("tdengine.table.group", 319);
-		nsTableUin = config.getInt("tdengine.table.uin", 320);		
+		nsTableGroup = config.getInt("tdengine.table.group", 51);
+		nsTableUin = config.getInt("tdengine.table.uin", 522);		
 		cacheExpireTime = config.getInt("cache_expiretime",24*3600);
 	}
 
 	@Override
 	public void processEvent(String sid, Tuple tuple) {
-		//hashkey,bid,topic,qq,uid,adpos,action_type,action_time,item_id,
-		//action_result,imei,platform,lbs_info</fields>
-		String bid = tuple.getStringByField("bid");	
-		String topic = tuple.getStringByField("topic");	
-		String qq = tuple.getStringByField("qq");
-		String uid = tuple.getStringByField("uid");	
 		
-		String actTypeStr = tuple.getStringByField("action_type");
-		this.actType = Utils.getActionTypeByString(actTypeStr);
-		if(!topic.equals(Constants.actions_stream) || actType == Recommend.ActiveType.Unknown){
-			return ;
-		}
-		
-		Values outputValues = new Values();		
-		outputValues.add(bid);
-		outputValues.add(topic);
-		outputValues.add("0");//adpos = 0 ,表示行为不区分广告位
-		outputValues.add(actTypeStr);
-		outputValues.add(tuple.getStringByField("action_time"));
-		outputValues.add(tuple.getStringByField("item_id"));
-		outputValues.add(tuple.getStringByField("action_result"));	
-		outputValues.add(tuple.getStringByField("imei"));	
-		outputValues.add(tuple.getStringByField("platform"));	
-		outputValues.add(tuple.getStringByField("lbs_info"));	
-		
-		if(!Utils.isQNumValid(qq)){
-			if(!uid.equals("0") && uid.matches("[0-9]+")){
-				new GetQQUpdateCallBack(uid,actType,outputValues).excute();				
-			}else{
-				return;
+		try{
+			//hashkey,bid,topic,qq,uid,adpos,action_type,action_time,item_id,
+			//action_result,imei,platform,lbs_info</fields>
+	
+			String bid = tuple.getStringByField("bid");	
+			String topic = tuple.getStringByField("topic");	
+			String qq = tuple.getStringByField("qq");
+			String uid = tuple.getStringByField("uid");	
+			String adpos = tuple.getStringByField("adpos");	
+			
+			String actTypeStr = tuple.getStringByField("action_type");
+			this.actType = Utils.getActionTypeByString(actTypeStr);
+
+			if(!topic.equals(Constants.actions_stream) || actType == Recommend.ActiveType.Unknown){
+				return ;
 			}
-		}else{
-			outputValues.add(qq);
-			new GetGroupIdUpdateCallBack(qq,actType,outputValues).excute();
-		}						
+			
+			Values outputValues = new Values();		
+			outputValues.add(bid);
+			outputValues.add(topic);
+			outputValues.add(adpos);//adpos = 0 ,表示行为不区分广告位
+			outputValues.add(actTypeStr);
+			outputValues.add(tuple.getStringByField("action_time"));
+			outputValues.add(tuple.getStringByField("item_id"));
+			outputValues.add(tuple.getStringByField("action_result"));	
+			outputValues.add(tuple.getStringByField("imei"));	
+			outputValues.add(tuple.getStringByField("platform"));	
+			outputValues.add(tuple.getStringByField("lbs_info"));	
+			
+			if(!Utils.isQNumValid(qq)){
+				if(!uid.equals("0") && uid.matches("[0-9]+")){
+					new GetQQUpdateCallBack(uid,actType,outputValues).excute();				
+				}else{
+					return;
+				}
+			}else{
+				outputValues.add(qq);
+				new GetGroupIdUpdateCallBack(qq,actType,outputValues).excute();
+			}					
+		}catch(Exception e){
+			logger.error(e.getMessage(), e);
+		}
+			
 	}
 	
 	public class GetQQUpdateCallBack implements MutiClientCallBack{

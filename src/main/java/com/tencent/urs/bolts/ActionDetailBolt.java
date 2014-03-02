@@ -71,8 +71,8 @@ public class ActionDetailBolt extends AbstractConfigUpdateBolt{
 
 	@Override
 	public void updateConfig(XMLConfiguration config) {
-		nsTableId = config.getInt("storage_table",302);
-		dataExpireTime = config.getInt("data_expiretime",1*24*3600);
+		nsTableId = config.getInt("storage_table",512);
+		dataExpireTime = config.getInt("data_expiretime",7*24*3600);
 		cacheExpireTime = config.getInt("cache_expiretime",3600);
 		topNum = config.getInt("topNum",100);
 		debug = config.getBoolean("debug",false);
@@ -96,32 +96,39 @@ public class ActionDetailBolt extends AbstractConfigUpdateBolt{
 
 	@Override
 	public void processEvent(String sid, Tuple tuple) {
-		String bid = tuple.getStringByField("bid");
-		String adpos = tuple.getStringByField("adpos");
-		String qq = tuple.getStringByField("qq");
-		String itemId = tuple.getStringByField("item_id");
-		
-		if(!Utils.isItemIdValid(itemId) || !Utils.isQNumValid(qq)){
-			return;
+		try{
+			//bid,topic,adpos,action_type,action_time,item_id,action_result,imei,platform,lbs_info,qq,group_id
+			//[2, user_action, 0, 3, 1393389425, 0, , , , , 191069, 61]
+			String bid = tuple.getStringByField("bid");
+			String adpos = tuple.getStringByField("adpos");
+			String qq = tuple.getStringByField("qq");
+			String itemId = tuple.getStringByField("item_id");
+			
+			if(!Utils.isItemIdValid(itemId) || !Utils.isQNumValid(qq)){
+				return;
+			}
+			
+			String actionType = tuple.getStringByField("action_type");
+			String actionTime = tuple.getStringByField("action_time");
+			String lbsInfo = tuple.getStringByField("lbs_info");
+			String platform = tuple.getStringByField("platform");
+			
+			ActiveType actType = Utils.getActionTypeByString(actionType);
+			
+			Recommend.UserActiveHistory.ActiveRecord.Builder actBuilder =
+					Recommend.UserActiveHistory.ActiveRecord.newBuilder();
+			actBuilder.setItem(itemId).setActTime(Long.valueOf(actionTime)).setActType(actType)
+						.setLBSInfo(lbsInfo).setPlatForm(platform);
+
+			ActionCombinerValue value = new ActionCombinerValue();
+			value.init(itemId,actBuilder.build());
+			UpdateKey key = new UpdateKey(bid, Long.valueOf(qq), 0, adpos, itemId);
+			
+			combinerKeys(key.getDetailKey(),value);	
+		}catch(Exception e){
+			logger.error(e.getMessage(), e);
 		}
 		
-		String actionType = tuple.getStringByField("action_type");
-		String actionTime = tuple.getStringByField("action_time");
-		String lbsInfo = tuple.getStringByField("lbs_info");
-		String platform = tuple.getStringByField("platform");
-		
-		ActiveType actType = Utils.getActionTypeByString(actionType);
-		
-		Recommend.UserActiveHistory.ActiveRecord.Builder actBuilder =
-				Recommend.UserActiveHistory.ActiveRecord.newBuilder();
-		actBuilder.setItem(itemId).setActTime(Long.valueOf(actionTime)).setActType(actType)
-					.setLBSInfo(lbsInfo).setPlatForm(platform);
-
-		ActionCombinerValue value = new ActionCombinerValue();
-		value.init(itemId,actBuilder.build());
-		UpdateKey key = new UpdateKey(bid, Long.valueOf(qq), 0, adpos, itemId);
-		
-		combinerKeys(key.getDetailKey(),value);	
 	}
 	
 	private void setCombinerTime(final int second) {
@@ -300,9 +307,7 @@ public class ActionDetailBolt extends AbstractConfigUpdateBolt{
 			}	
 			changeMapToPB(detailMap,mergeValueBuilder);
 		}
-		
-		
-		
+				
 		private void changeMapToPB(
 				HashMap<Long, HashMap<String, HashMap<ActiveType, ActType>>> detailMap,
 				Builder mergeValueBuilder) {

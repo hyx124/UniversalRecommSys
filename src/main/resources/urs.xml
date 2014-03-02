@@ -1,7 +1,7 @@
 <?xml version="1.0" encoding="UTF-8" ?>
 <topology name="urs-topology" works="20" ackers="0" debug="false">	
 	<spouts>
-		<spout name="UserActionSpout" class="com.tencent.urs.spouts.UserActionSpout2" parallelism="1">
+		<spout name="UrsInputSpout" class="com.tencent.urs.spouts.UrsInputSpout" parallelism="1">
 			<tdbank_zookeeper_address>sk-zk-td1:2181,sk-zk-td2:2181,sk-zk-td3:2181,sk-zk-td4:2181,sk-zk-td5:2181</tdbank_zookeeper_address>
 			<tdbank_zookeeper_timeout>10000</tdbank_zookeeper_timeout>
 			<tdbank_zookeeper_connecttimeout>30000</tdbank_zookeeper_connecttimeout>
@@ -22,24 +22,6 @@
 				<fields>hash_key,topic,bid,imp_date,item_id,cate_id1,cate_id2,cate_id3,cate_name1,cate_name2,cate_name3,free,publish,price,text,item_time,expire_time,plat_form,score,shop_id</fields>
 			</output_fields>
 			
-		</spout>
-
-		<spout name="BaseInfoSpout" class="com.tencent.urs.spouts.BaseInfoSpout" parallelism="1">
-			<tdbank_zookeeper_address>sk-zk-td1:2181,sk-zk-td2:2181,sk-zk-td3:2181,sk-zk-td4:2181,sk-zk-td5:2181</tdbank_zookeeper_address>
-			<tdbank_zookeeper_timeout>10000</tdbank_zookeeper_timeout>
-			<tdbank_zookeeper_connecttimeout>30000</tdbank_zookeeper_connecttimeout>
-			<tdbank_zookeeper_synctime>5000</tdbank_zookeeper_synctime>
-			<tdbank_zookeeper_metaroot>/meta</tdbank_zookeeper_metaroot>
-			<tdbank_queue_size>100000</tdbank_queue_size>
-			<tdbank_topic>ecc_51buy_real</tdbank_topic>
-			<tdbank_group>urs-group-test1</tdbank_group>
-			<tdbank_maxoffset>true</tdbank_maxoffset>
-			
-			<output_fields>
-				<stream_id>item_detail_info</stream_id>
-				<fields>hash_key,topic,bid,imp_date,item_id,cate_id1,cate_id2,cate_id3,cate_name1,cate_name2,cate_name3,free,publish,price,text,item_time,expire_time,plat_form,score,shop_id</fields>
-			</output_fields>
-			
 			<output_fields>
 				<stream_id>user_detail_info</stream_id>
 				<fields>hash_key,topic,bid,imp_date,qq,imei,uid,level,reg_date, reg_time</fields>
@@ -54,6 +36,7 @@
 				<stream_id>category_level_info</stream_id>
 				<fields>hash_key,topic,bid,imp_date,cate_id,cate_name,level,father_id</fields>
 			</output_fields>
+			
 		</spout>
 	</spouts>
 	
@@ -61,48 +44,42 @@
 		<bolt name="BaseInfo" class="com.tencent.urs.bolts.BaseInfoBolt" parallelsim="1">
 			<grouping type="field">
 				<fields>hash_key</fields>
-				<component>BaseInfoSpout</component>
-				<streaming_ids>item_detail_info</streaming_ids>
-			</grouping>
-						
-			<grouping type="field">
-				<fields>hash_key</fields>
-				<component>UserActionSpout</component>
+				<component>UrsInputSpout</component>
 				<streaming_ids>item_detail_info</streaming_ids>
 			</grouping>
 			
 			<grouping type="field">
 				<fields>hash_key</fields>
-				<component>BaseInfoSpout</component>
+				<component>UrsInputSpout</component>
 				<streaming_ids>user_detail_info</streaming_ids>
 			</grouping>
 			
 			<grouping type="field">
 				<fields>hash_key</fields>
-				<component>BaseInfoSpout</component>
+				<component>UrsInputSpout</component>
 				<streaming_ids>action_weight_info</streaming_ids>
 			</grouping>
 			
 			<grouping type="field">
 				<fields>hash_key</fields>
-				<component>BaseInfoSpout</component>
+				<component>UrsInputSpout</component>
 				<streaming_ids>category_level_info</streaming_ids>
 			</grouping>
-			
-			<debug>true</debug>
+						
+			<debug>false</debug>
 			<item_detail_table>521</item_detail_table>
 			<user_detail_table>522</user_detail_table>
 			<action_weight_table>523</action_weight_table>
 			<category_level_table>524</category_level_table>
 			
-			<data_expiretime>259200</data_expiretime>
+			<data_expiretime>2592000</data_expiretime>
 			<cache_expiretime>3600</cache_expiretime>		
 		</bolt>
 	 	
-		<bolt name="PretreatmentBolt" class="com.tencent.urs.bolts.PretreatmentBolt" parallelsim="1">
+		<bolt name="PretreatmentBolt" class="com.tencent.urs.bolts.PretreatmentBolt" parallelsim="2">
 			<grouping type="field">
 				<fields>hash_key</fields>
-				<component>UserActionSpout</component>
+				<component>UrsInputSpout</component>
 				<streaming_ids>user_action</streaming_ids>
 			</grouping>
 			
@@ -116,89 +93,75 @@
 				<fields>bid,topic,adpos,action_type,action_time,item_id,action_result,imei,platform,lbs_info,qq,group_id</fields>
 			</output_fields>
 		</bolt>
-
-		<bolt name="TopActionBolt" class="com.tencent.urs.bolts.TopActionBolt" parallelsim="1">
-			<grouping type="field">
-				<fields>qq</fields>
-				<component>PretreatmentBolt</component>
-				<streaming_ids>user_action</streaming_ids>
-			</grouping>
-			
-			<debug>true</debug>
-			<topNum>30</topNum>>
-			<storage_table>511</storage_table>
-			<data_expiretime>259200</data_expiretime>
-			<cache_expiretime>3600</cache_expiretime>
-		</bolt>
 						
-		<bolt name="ActionDetailBolt" class="com.tencent.urs.bolts.ActionDetailBolt" parallelsim="1">
+		<bolt name="ActionDetailBolt" class="com.tencent.urs.bolts.ActionDetailBolt" parallelsim="2">
 			<grouping type="field">
 				<fields>qq</fields>
 				<component>PretreatmentBolt</component>
 				<streaming_ids>user_action</streaming_ids>
 			</grouping>
 		
-			<debug>true</debug>
+			<debug>false</debug>
 			<storage_table>512</storage_table>
-			<data_expiretime>259200</data_expiretime>
+			<data_expiretime>604800</data_expiretime>
 			<cache_expiretime>3600</cache_expiretime>
 		</bolt>
 		
-		<bolt name="ItemCountBolt" class="com.tencent.urs.bolts.ItemCountBolt" parallelsim="1">
+		<bolt name="ItemCountBolt" class="com.tencent.urs.bolts.ItemCountBolt" parallelsim="2">
 			<grouping type="field">
 				<fields>qq</fields>
 				<component>PretreatmentBolt</component>
 				<streaming_ids>user_action</streaming_ids>
 			</grouping>
 		
-			<debug>true</debug>
+			<debug>false</debug>
 			<user_count_table>513</user_count_table>
 			<group_count_table>514</group_count_table>
 			<dependent_table>512</dependent_table>
-			<data_expiretime>259200</data_expiretime>
+			<data_expiretime>604800</data_expiretime>
 			<cache_expiretime>3600</cache_expiretime>
 		</bolt>
 		
-		<bolt name="ItemPairBolt" class="com.tencent.urs.bolts.ItemPairBolt" parallelsim="1">
+		<bolt name="ItemPairBolt" class="com.tencent.urs.bolts.ItemPairBolt" parallelsim="4">
 			<grouping type="field">
 				<fields>qq</fields>
 				<component>PretreatmentBolt</component>
 				<streaming_ids>user_action</streaming_ids>
 			</grouping>
 		
-			<debug>true</debug>
+			<debug>false</debug>
 			<user_pair_table>515</user_pair_table>
 			<group_pair_table>516</group_pair_table>
 			<dependent_table>512</dependent_table>
-			<data_expiretime>259200</data_expiretime>
+			<data_expiretime>604800</data_expiretime>
 			<cache_expiretime>3600</cache_expiretime>
 		</bolt>
 		
-		<bolt name="CtrStorBolt" class="com.tencent.urs.bolts.CtrStorBolt" parallelsim="1">
+		<bolt name="CtrStorBolt" class="com.tencent.urs.bolts.CtrStorBolt" parallelsim="4">
 			<grouping type="field">
 				<fields>qq</fields>
 				<component>PretreatmentBolt</component>
 				<streaming_ids>recommend_action</streaming_ids>
 			</grouping>
 			
-			<debug>true</debug>
+			<debug>false</debug>
 			<storage_table>517</storage_table>
-			<data_expiretime>259200</data_expiretime>
+			<data_expiretime>604800</data_expiretime>
 			<cache_expiretime>3600</cache_expiretime>
 		</bolt>
 		
-		<bolt name="ARCFBolt" class="com.tencent.urs.bolts.ARCFBolt" parallelsim="1">
+		<bolt name="ARCFBolt" class="com.tencent.urs.bolts.ARCFBolt" parallelsim="4">
 			<grouping type="field">
 				<fields>qq</fields>
 				<component>PretreatmentBolt</component>
 				<streaming_ids>user_action</streaming_ids>
 			</grouping>
 		
-			<debug>true</debug>
+			<debug>false</debug>
 			<group_count_table>514</group_count_table>
 			<group_pair_table>516</group_pair_table>
 			<dependent_table>512</dependent_table>
-			<data_expiretime>259200</data_expiretime>
+			<data_expiretime>604800</data_expiretime>
 			<cache_expiretime>3600</cache_expiretime>
 			
 			<output_fields>
@@ -207,17 +170,18 @@
 			</output_fields>
 		</bolt>
 		
-		<bolt name="HotTopBolt" class="com.tencent.urs.bolts.HotTopBolt" parallelsim="1">
+		<bolt name="HotTopBolt" class="com.tencent.urs.bolts.HotTopBolt" parallelsim="2">
 			<grouping type="field">
 				<fields>qq</fields>
 				<component>PretreatmentBolt</component>
 				<streaming_ids>user_action</streaming_ids>
 			</grouping>
 		
-			<debug>true</debug>
+			<debug>false</debug>
 			<group_count_table>514</group_count_table>
-			<data_expiretime>259200</data_expiretime>
+			<data_expiretime>604800</data_expiretime>
 			<cache_expiretime>3600</cache_expiretime>
+			<category_type>Big-Type</category_type>
 			
 			<output_fields>
 				<stream_id>computer_result</stream_id>
@@ -225,16 +189,16 @@
 			</output_fields>
 		</bolt>
 		
-		<bolt name="CtrBolt" class="com.tencent.urs.bolts.CtrBolt" parallelsim="1">
+		<bolt name="CtrBolt" class="com.tencent.urs.bolts.CtrBolt" parallelsim="3">
 			<grouping type="field">
 				<fields>qq</fields>
 				<component>PretreatmentBolt</component>
 				<streaming_ids>recommend_action</streaming_ids>
 			</grouping>
 		
-			<debug>true</debug>
+			<debug>false</debug>
 			<storage_table>517</storage_table>
-			<data_expiretime>259200</data_expiretime>
+			<data_expiretime>604800</data_expiretime>
 			<cache_expiretime>3600</cache_expiretime>
 			
 			<output_fields>
@@ -243,7 +207,13 @@
 			</output_fields>
 		</bolt>
 		
-		<bolt name="AddItemInfoBolt" class="com.tencent.urs.bolts.AddItemInfoBolt" parallelsim="1">
+		<bolt name="AddItemInfoBolt" class="com.tencent.urs.bolts.AddItemInfoBolt" parallelsim="2">
+			<grouping type="field">
+				<fields>bid,item_id</fields>
+				<component>PretreatmentBolt</component>
+				<streaming_ids>user_action</streaming_ids>
+			</grouping>
+			
 			<grouping type="field">
 				<fields>bid,item_id</fields>
 				<component>ARCFBolt</component>
@@ -262,46 +232,63 @@
 				<streaming_ids>computer_result</streaming_ids>
 			</grouping>
 		
-			<debug>true</debug>
+			<debug>false</debug>
 			<item_detail_table>521</item_detail_table>
-			<data_expiretime>259200</data_expiretime>
+			<data_expiretime>2592000</data_expiretime>
 			<cache_expiretime>86400</cache_expiretime>
 			
 			<output_fields>
 				<stream_id>computer_result</stream_id>
 				<fields>bid,key,item_id,weight,alg_name,big_type,mid_type,small_type,free,price,shop_id</fields>
 			</output_fields>
-		</bolt>
-		
-		
-		<bolt name="FilterBolt" class="com.tencent.urs.bolts.FilterBolt" parallelsim="1">
-			<grouping type="field">
-				<fields>qq</fields>
-				<component>PretreatmentBolt</component>
-				<streaming_ids>user_action</streaming_ids>
-			</grouping>
 			
-			<debug>true</debug>
-			<topNum>100</topNum>>
-			<storage_table>518</storage_table>
-			<data_expiretime>15552000</data_expiretime>
-			<cache_expiretime>3600</cache_expiretime>
+			<output_fields>
+				<stream_id>user_action</stream_id>
+				<fields>bid,item_id,qq,action_type,action_time,platform,lbs_info,big_type,mid_type,small_type,free,price,shop_id</fields>
+			</output_fields>
 		</bolt>
-		
-		<bolt name="ResultStorageBolt" class="com.tencent.urs.bolts.ResultStorageBolt" parallelsim="1">
+				
+		<bolt name="ResultStorageBolt" class="com.tencent.urs.bolts.ResultStorageBolt" parallelsim="4">
 			<grouping type="field">
 				<fields>key</fields>
 				<component>AddItemInfoBolt</component>
 				<streaming_ids>computer_result</streaming_ids>
 			</grouping>
 		
-			<debug>true</debug>
+			<debug>false</debug>
 			<top_num>100</top_num>
 			<storage_table>520</storage_table>
-			<data_expiretime>259200</data_expiretime>
+			<data_expiretime>2592000</data_expiretime>
 			<cache_expiretime>3600</cache_expiretime>
 		</bolt>
 		
+		<bolt name="TopActionBolt" class="com.tencent.urs.bolts.TopActionBolt" parallelsim="2">
+			<grouping type="field">
+				<fields>qq</fields>
+				<component>AddItemInfoBolt</component>
+				<streaming_ids>user_action</streaming_ids>
+			</grouping>
+			
+			<debug>false</debug>
+			<topNum>30</topNum>>
+			<storage_table>511</storage_table>
+			<data_expiretime>2592000</data_expiretime>
+			<cache_expiretime>3600</cache_expiretime>
+		</bolt>
+		
+		<bolt name="FilterBolt" class="com.tencent.urs.bolts.FilterBolt" parallelsim="2">
+			<grouping type="field">
+				<fields>qq</fields>
+				<component>AddItemInfoBolt</component>
+				<streaming_ids>user_action</streaming_ids>
+			</grouping>
+			
+			<debug>false</debug>
+			<topNum>100</topNum>>
+			<storage_table>518</storage_table>
+			<data_expiretime>15552000</data_expiretime>
+			<cache_expiretime>3600</cache_expiretime>
+		</bolt>
 	</bolts>
 	
 	<configs>
@@ -312,12 +299,12 @@
 	
 		<config>
 			<key>list.tdengine.configserver</key>
-			<value>10.149.22.35:5198,10.149.24.110:5198</value>
+			<value>10.208.146.154:5198,10.208.146.172:5198</value>
 		</config>
 
 		<config>
 			<key>list.tdengine.groupname</key>
-			<value>Dummy_test_tdengine</value>
+			<value>comm_gk_tdengine</value>
 		</config>
 
 		<config>
@@ -360,9 +347,5 @@
 			<value>BOSS_MONITOR</value>
 		</config>
 		
-		<config>
-			<key>tdengine.config.timeout</key>
-			<value>2000</value>
-		</config>
 	</configs>
 </topology>

@@ -59,7 +59,7 @@ public class BaseInfoBolt extends AbstractConfigUpdateBolt{
 	
 	private void save(short tableId,String key,byte[] values) {
 		if(values != null){
-			logger.info("key="+key+",tableId="+tableId);
+			//logger.info("key="+key+",tableId="+tableId);
 			for(ClientAttr clientEntry:mtClientList){
 				TairOption putopt = new TairOption(clientEntry.getTimeout(),(short)0, dataExpireTime);				
 				try {
@@ -160,53 +160,58 @@ public class BaseInfoBolt extends AbstractConfigUpdateBolt{
 
 	@Override
 	public void updateConfig(XMLConfiguration config) {
-		nsItemDetailTableId = config.getInt("item_detail_table",311);
-		nsUserDetailTableId = config.getInt("user_detail_table",312);
-		nsActionWeightTableId = config.getInt("action_weight_table",313);
-		nsCateLevelTableId = config.getInt("category_level_table",314);
+		nsItemDetailTableId = config.getInt("item_detail_table",521);
+		nsUserDetailTableId = config.getInt("user_detail_table",522);
+		nsActionWeightTableId = config.getInt("action_weight_table",523);
+		nsCateLevelTableId = config.getInt("category_level_table",524);
 		
-		dataExpireTime = config.getInt("data_expiretime",10*24*3600);
+		dataExpireTime = config.getInt("data_expiretime",30*24*3600);
 		debug = config.getBoolean("debug",false);
 	}
 
 	@Override
 	public void processEvent(String sid, Tuple tuple) {
-		String bid = tuple.getStringByField("bid");
-		String topic = tuple.getStringByField("topic");
-		
-		Integer tableId = null;
-		String key = null;
-		byte[] value = null;
-		
-		if(topic.equals(Constants.item_info_stream)){
-			String itemId = tuple.getStringByField("item_id");
-			key = bid+"#"+itemId;
-			tableId = nsItemDetailTableId;
+		try{
+			String bid = tuple.getStringByField("bid");
+			String topic = tuple.getStringByField("topic");
 			
-			value = genItemInfoPbValue(itemId,tuple);		
-		}else if(topic.equals(Constants.user_info_stream)){
-			String qq = tuple.getStringByField("qq");
-			key = bid+"#"+qq;
-			tableId = nsUserDetailTableId;
+			Integer tableId = null;
+			String key = null;
+			byte[] value = null;
 			
-			value = genUserInfoPbValue(qq,tuple);
-		}else if(topic.equals(Constants.action_weight_stream)){
-			String actionType = tuple.getStringByField("type_id");
-			key = bid+"#"+actionType;
-			tableId = nsActionWeightTableId;
+			if(topic.equals(Constants.item_info_stream)){
+				String itemId = tuple.getStringByField("item_id");
+				key = bid+"#"+itemId;
+				tableId = nsItemDetailTableId;
+				
+				value = genItemInfoPbValue(itemId,tuple);		
+			}else if(topic.equals(Constants.user_info_stream)){
+				String qq = tuple.getStringByField("qq");
+				key = bid+"#"+qq;
+				tableId = nsUserDetailTableId;
+				
+				value = genUserInfoPbValue(qq,tuple);
+			}else if(topic.equals(Constants.action_weight_stream)){
+				String actionType = tuple.getStringByField("type_id");
+				key = bid+"#"+actionType;
+				tableId = nsActionWeightTableId;
+				
+				value = genActionWeightPbValue(actionType,tuple);
+			}else if(topic.equals(Constants.category_level_stream)){
+				String cate_id = tuple.getStringByField("cate_id");
+				key = bid+"#"+cate_id;
+				tableId = nsCateLevelTableId;
+				
+				value = genCateLevelPbValue(cate_id,tuple);
+			}else{
+				return;
+			}
 			
-			value = genActionWeightPbValue(actionType,tuple);
-		}else if(topic.equals(Constants.category_level_stream)){
-			String cate_id = tuple.getStringByField("cate_id");
-			key = bid+"#"+cate_id;
-			tableId = nsCateLevelTableId;
-			
-			value = genCateLevelPbValue(cate_id,tuple);
-		}else{
-			return;
+			save(tableId.shortValue(),key,value);
+		}catch(Exception e){
+			logger.error(e.getMessage(), e);
 		}
-		
-		save(tableId.shortValue(),key,value);
+	
 	}
 
 }

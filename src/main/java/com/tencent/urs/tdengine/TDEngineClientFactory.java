@@ -29,6 +29,7 @@ public class TDEngineClientFactory {
 				&& configServerList.length == timeOutList.length
 				&& configServerList.length == groupNameList.length) {
 
+			logger.info("init client: count ="+ configServerList.length);
 			for (int i = 0; i < configServerList.length; i++) {
 
 				try {
@@ -51,6 +52,7 @@ public class TDEngineClientFactory {
 					//mtClientMap.put(
 					//		new ClientAttr(groupNameList[i], Integer
 					//				.parseInt(timeOutList[i])), client);
+					logger.info("init client:" + groupNameList[i] + "success£¡");
 				} catch (Exception e) {
 					logger.error("init client:" + groupNameList[i] + "; err info:"
 							+ e.toString());

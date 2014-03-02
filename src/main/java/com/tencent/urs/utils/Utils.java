@@ -68,15 +68,22 @@ public class Utils {
 		return false;
 	}
 	
+	
+	public static boolean isPageIdValid(String pageId){
+		if(pageId.matches("[0-9]+")){
+			return true;
+		}
+		return false;
+	}
+	
 	public static boolean isQNumValid(String qq){
 		if(!qq.matches("[0-9]+") || qq.equals("0") ){
 			return false;
 		}else{
-			if(Long.valueOf(qq) <10000 || Long.valueOf(qq) > 10000000000L){
+			if(Long.valueOf(qq) <10000 || Long.valueOf(qq) > 4000000000L){
 				return false;
 			}
 		}
-		
 		return true;
 	}
 	
@@ -91,14 +98,6 @@ public class Utils {
 			}
 		}
 
-	}
-
-	
-	/**
-	 * @param args
-	 */
-	public static void main(String[] args) {
-		// TODO Auto-generated method stub	
 	}
 
 	public static ActiveType getActionTypeByString(String actionType) {
@@ -159,4 +158,15 @@ public class Utils {
 		String expireId = new SimpleDateFormat("yyyyMMdd").format(time*1000L);
 		return Long.valueOf(expireId);
 	}
+	
+
+	
+	/**
+	 * @param args
+	 */
+	public static void main(String[] args) {
+		System.out.println(getDateByTime(1393743909L - 7*3600*24L));
+	}
+
+
 }
