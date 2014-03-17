@@ -63,7 +63,7 @@ public class PretreatmentBolt extends AbstractConfigUpdateBolt {
 	@Override
 	public void updateConfig(XMLConfiguration config) {		
 		nsTableGroup = config.getInt("tdengine.table.group", 51);
-		nsTableUin = config.getInt("tdengine.table.uin", 522);		
+		nsTableUin = config.getInt("tdengine.table.uin", 52);		
 		cacheExpireTime = config.getInt("cache_expiretime",24*3600);
 	}
 
@@ -90,7 +90,7 @@ public class PretreatmentBolt extends AbstractConfigUpdateBolt {
 			Values outputValues = new Values();		
 			outputValues.add(bid);
 			outputValues.add(topic);
-			outputValues.add(adpos);//adpos = 0 ,表示行为不区分广告位
+			outputValues.add(adpos);	//adpos = 0 ,表示行为不区分广告位
 			outputValues.add(actTypeStr);
 			outputValues.add(tuple.getStringByField("action_time"));
 			outputValues.add(tuple.getStringByField("item_id"));

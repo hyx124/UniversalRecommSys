@@ -143,7 +143,7 @@ public class ItemCountBolt extends AbstractConfigUpdateBolt{
 			String bid = tuple.getStringByField("bid");
 			String qq = tuple.getStringByField("qq");
 			String groupId = tuple.getStringByField("group_id");
-			String adpos = "0";
+			String adpos = Constants.DEFAULT_ADPOS;
 			String itemId = tuple.getStringByField("item_id");
 			
 			String actionType = tuple.getStringByField("action_type");
@@ -323,7 +323,6 @@ public class ItemCountBolt extends AbstractConfigUpdateBolt{
 			//logger.info("get step2 key="+userCountKey+",old count="+oldCount+",new count="+count);
 			
 			GroupCountInfo.Builder newGroupInfoBuiler = GroupCountInfo.newBuilder();
-			boolean isAdded = false;
 			HashSet<Long> alreadyIn = new HashSet<Long>();
 			Long now = System.currentTimeMillis()/1000;
 			if(oldWeightInfo != null){
@@ -342,7 +341,6 @@ public class ItemCountBolt extends AbstractConfigUpdateBolt{
 						GroupCountInfo.TimeSegment.Builder tsBuilder = GroupCountInfo.TimeSegment.newBuilder();
 						tsBuilder.setTimeId(ts.getTimeId()).setCount(newCount);
 						newGroupInfoBuiler.addTsegs(tsBuilder.build());
-						isAdded = true;
 					}else{
 						if(debug){
 							logger.info("step3 ,not found group new count,item="+inKey.getItemId()+",date="+ts.getTimeId()+",oldWeight="+ts.getCount());

@@ -135,7 +135,7 @@ public class ItemPairBolt  extends AbstractConfigUpdateBolt{
 			String bid = tuple.getStringByField("bid");
 			String qq = tuple.getStringByField("qq");
 			String groupId = tuple.getStringByField("group_id");
-			String adpos = "0";
+			String adpos = Constants.DEFAULT_ADPOS;
 			String itemId = tuple.getStringByField("item_id");
 			
 			String actionType = tuple.getStringByField("action_type");
@@ -275,32 +275,6 @@ public class ItemPairBolt  extends AbstractConfigUpdateBolt{
 			}
 		}
 
-		private void addUserToGroup(GroupPairInfo oldGroupInfo,UserPairInfo userInfo,GroupPairInfo.Builder newInfoBuilder){
-			
-			for(UserPairInfo.TimeSegment uts: userInfo.getTsegsList()){
-				boolean isAdded = false;
-				for(GroupPairInfo.TimeSegment gts: oldGroupInfo.getTsegsList()){
-					if(gts.getTimeId() == uts.getTimeId()){
-						Recommend.GroupPairInfo.TimeSegment.Builder newTs = 
-									Recommend.GroupPairInfo.TimeSegment.newBuilder();
-							
-						newTs.setTimeId(gts.getTimeId()).setCount(gts.getCount() + uts.getCount());
-						newInfoBuilder.addTsegs(newTs.build());
-						
-						isAdded = true;
-					}
-				}
-				
-				if(!isAdded){
-					Recommend.GroupPairInfo.TimeSegment.Builder newTs = 
-							Recommend.GroupPairInfo.TimeSegment.newBuilder();
-					newTs.setTimeId(uts.getTimeId()).setCount(uts.getCount());
-					newInfoBuilder.addTsegs(newTs.build());
-				}
-				
-			}
-		}
-		
 		private void save(String key,GroupPairInfo newInfo){	
 		
 			synchronized(groupPairCache){
@@ -350,7 +324,6 @@ public class ItemPairBolt  extends AbstractConfigUpdateBolt{
 			//logger.info("get step2 key="+userCountKey+",old count="+oldCount+",new count="+count);
 			
 			GroupPairInfo.Builder newGroupInfoBuiler = GroupPairInfo.newBuilder();
-			boolean isAdded = false;
 			HashSet<Long> alreadyIn = new HashSet<Long>();
 			Long now = System.currentTimeMillis()/1000;
 			if(oldWeightInfo != null){
@@ -362,16 +335,15 @@ public class ItemPairBolt  extends AbstractConfigUpdateBolt{
 					Float newCount = 0F;
 					if(weightInfoMap.containsKey(ts.getTimeId())){
 						newCount = ts.getCount() + weightInfoMap.get(ts.getTimeId()).getWeight();
-						if(debug){
+						if(debug && key.getUin() == 389687043L){
 							logger.info("step3,add changes to group,date="+ts.getTimeId()+",oldWeight="+ts.getCount()+",change="+weightInfoMap.get(ts.getTimeId()).getWeight()+",newWeight="+newCount);
 						}
 						
 						GroupPairInfo.TimeSegment.Builder tsBuilder = GroupPairInfo.TimeSegment.newBuilder();
 						tsBuilder.setTimeId(ts.getTimeId()).setCount(newCount);
 						newGroupInfoBuiler.addTsegs(tsBuilder.build());
-						isAdded = true;
 					}else{
-						if(debug){
+						if(debug && key.getUin() == 389687043L){
 							logger.info("step3 ,not found group new count,date="+ts.getTimeId()+",oldWeight="+ts.getCount());
 						}
 						newGroupInfoBuiler.addTsegs(ts);
@@ -380,7 +352,7 @@ public class ItemPairBolt  extends AbstractConfigUpdateBolt{
 					alreadyIn.add(ts.getTimeId());
 				}
 			}else{
-				if(debug){
+				if(debug && key.getUin() == 389687043L){
 					logger.info("step3 ,old heap is null");
 				}
 			}
@@ -390,7 +362,7 @@ public class ItemPairBolt  extends AbstractConfigUpdateBolt{
 					GroupPairInfo.TimeSegment.Builder tsBuilder = GroupPairInfo.TimeSegment.newBuilder();
 					tsBuilder.setTimeId(key).setCount(weightInfoMap.get(key).getWeight());
 					
-					if(debug){
+					if(debug && this.key.getUin() == 389687043L){
 						logger.info("step3,not found old ,addd new,date="+key+",weight="+weightInfoMap.get(key).getWeight());
 					}
 					
@@ -448,7 +420,7 @@ public class ItemPairBolt  extends AbstractConfigUpdateBolt{
 			HashMap<Long,MidInfo> midInfoMap = new HashMap<Long,MidInfo>();
 			boolean isAdded = false;
 			if(oldWeightInfo != null){
-				if(debug){
+				if(debug && key.getUin() == 389687043L){
 					for(UserPairInfo.TimeSegment ts:oldWeightInfo.getTsegsList()){
 						logger.info("step2,loop,key="+userPairKey+",date="+ts.getTimeId()+",old="+ts.getCount());
 					}
@@ -465,7 +437,7 @@ public class ItemPairBolt  extends AbstractConfigUpdateBolt{
 						Float changeWeight = weightInfo.getWeight()-ts.getCount();
 						MidInfo newMidInfo = new MidInfo(ts.getTimeId(), changeWeight);
 						
-						if(debug){
+						if(debug && key.getUin() == 389687043L){
 							logger.info("step2,same date,key="+userPairKey+",date="+newMidInfo.getTimeId()+",changeWeight="+newMidInfo.getWeight());
 						}
 						
@@ -479,7 +451,7 @@ public class ItemPairBolt  extends AbstractConfigUpdateBolt{
 						Float changeWeight = 0 - ts.getCount();
 						MidInfo newMidInfo = new MidInfo(ts.getTimeId(), changeWeight);
 						
-						if(debug){
+						if(debug && key.getUin() == 389687043L){
 							logger.info("step2,other date,key="+userPairKey+",date="+newMidInfo.getTimeId()+",changeWeight="+newMidInfo.getWeight());
 						}
 						
@@ -500,11 +472,11 @@ public class ItemPairBolt  extends AbstractConfigUpdateBolt{
 				Float changeWeight = weightInfo.getWeight();
 				MidInfo newMidInfo = new MidInfo(weightInfo.getTimeId(), changeWeight);
 				
-				if(debug){
+				if(debug && key.getUin() == 389687043L){
 					logger.info("step2, not found old date,key="+userPairKey+",new date="+newMidInfo.getTimeId()+",new weight="+changeWeight);
 				}
 				
-				if(changeWeight != 0){
+				if(changeWeight > 0){
 					midInfoMap.put(weightInfo.getTimeId(),newMidInfo);
 				}
 				
@@ -586,13 +558,13 @@ public class ItemPairBolt  extends AbstractConfigUpdateBolt{
 				for(String itemId:weightMap.keySet()){
 					if(!itemId.equals(key.getItemId())){
 						new UserPairUpdateCallBack(key, itemId, weightMap.get(itemId)).excute();
-						if(debug){
-							logger.info("step1,emit to 2,item="+key.getItemId()+",qq="+key.getUin() +",otherItem="+itemId+",weight="+weightMap.get(itemId));
+						if(debug && key.getUin() == 389687043L){
+							logger.info("step1,emit to 2,item="+key.getItemId()+",qq="+key.getUin() +",otherItem="+itemId+",weight="+weightMap.get(itemId).getWeight());
 						}
 					}
 				}
 			}else{
-				if(debug){
+				if(debug && key.getUin() == 389687043L){
 					logger.info("step1,not found this key ,item="+key.getItemId()+",qq="+key.getUin());
 				}
 			}

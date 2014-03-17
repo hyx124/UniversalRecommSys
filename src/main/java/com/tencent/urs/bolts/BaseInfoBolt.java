@@ -59,7 +59,9 @@ public class BaseInfoBolt extends AbstractConfigUpdateBolt{
 	
 	private void save(short tableId,String key,byte[] values) {
 		if(values != null){
-			//logger.info("key="+key+",tableId="+tableId);
+			if(debug){
+				logger.info("key="+key+",tableId="+tableId);
+			}
 			for(ClientAttr clientEntry:mtClientList){
 				TairOption putopt = new TairOption(clientEntry.getTimeout(),(short)0, dataExpireTime);				
 				try {

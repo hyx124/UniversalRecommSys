@@ -82,7 +82,7 @@ public class HotTopBolt extends AbstractConfigUpdateBolt{
 			String bid = tuple.getStringByField("bid");
 			String qq = tuple.getStringByField("qq");
 			String groupId = tuple.getStringByField("group_id");
-			String adpos = "0";
+			String adpos = Constants.DEFAULT_ADPOS;
 			String itemId = tuple.getStringByField("item_id");
 			
 			String actionType = tuple.getStringByField("action_type");

@@ -100,7 +100,9 @@ public class ActionDetailBolt extends AbstractConfigUpdateBolt{
 			//bid,topic,adpos,action_type,action_time,item_id,action_result,imei,platform,lbs_info,qq,group_id
 			//[2, user_action, 0, 3, 1393389425, 0, , , , , 191069, 61]
 			String bid = tuple.getStringByField("bid");
-			String adpos = tuple.getStringByField("adpos");
+			
+			String adpos = Constants.DEFAULT_ADPOS;;
+			
 			String qq = tuple.getStringByField("qq");
 			String itemId = tuple.getStringByField("item_id");
 			

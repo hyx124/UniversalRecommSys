@@ -26,6 +26,8 @@ public class Constants {
 	public static final String tdbank_interfaceID = "2";
 	public static final String tde_interfaceID = "3";
 	
+	public static final String DEFAULT_ADPOS = "1";
+	
 	
 	public static final int SUCCESSCODE = 0;
 	public static final int BUSSINESS_ERRORCODE = 2;
