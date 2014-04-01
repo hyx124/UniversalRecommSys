@@ -30,7 +30,6 @@ import com.tencent.urs.asyncupdate.UpdateCallBack;
 import com.tencent.urs.asyncupdate.UpdateCallBackContext;
 import com.tencent.urs.combine.ActionCombinerValue;
 import com.tencent.urs.protobuf.Recommend;
-import com.tencent.urs.protobuf.Recommend.ActiveType;
 import com.tencent.urs.protobuf.Recommend.UserActiveHistory;
 import com.tencent.urs.protobuf.Recommend.UserActiveHistory.ActiveRecord;
 import com.tencent.urs.tdengine.TDEngineClientFactory;
@@ -55,6 +54,7 @@ public class TopActionBolt extends AbstractConfigUpdateBolt {
 	private int dataExpireTime;
 	private int cacheExpireTime;
 	private int topNum;
+	private boolean debug;
 
 	private static Logger logger = LoggerFactory
 			.getLogger(TopActionBolt.class);
@@ -72,7 +72,7 @@ public class TopActionBolt extends AbstractConfigUpdateBolt {
 		this.mtClientList = TDEngineClientFactory.createMTClientList(conf);
 		this.mt = MonitorTools.getMonitorInstance(conf);
 		this.combinerMap = new ConcurrentHashMap<String,ActionCombinerValue>(1024);
-		this.putCallBack = new UpdateCallBack(mt, Constants.systemID, Constants.tde_interfaceID, "TopActions");	
+		this.putCallBack = new UpdateCallBack(mt, Constants.systemID, Constants.tde_send_interfaceID, "TopActions");	
 		this.cacheMap = new DataCache<UserActiveHistory>(conf);
 		
 		int combinerExpireTime = Utils.getInt(conf, "combiner.expireTime",5);
@@ -85,6 +85,7 @@ public class TopActionBolt extends AbstractConfigUpdateBolt {
 		dataExpireTime = config.getInt("data_expiretime",15*24*3600);
 		cacheExpireTime = config.getInt("cache_expiretime",3600);
 		topNum = config.getInt("top_num",30);
+		debug = config.getBoolean("debug",false);
 	}
 
 	@Override
@@ -103,7 +104,6 @@ public class TopActionBolt extends AbstractConfigUpdateBolt {
 			String actionTime = tuple.getStringByField("action_time");
 			String lbsInfo = tuple.getStringByField("lbs_info");
 			String platform = tuple.getStringByField("platform");
-			ActiveType actType = Utils.getActionTypeByString(actionType);
 		
 			Long bigType = tuple.getLongByField("big_type");
 			Long midType = tuple.getLongByField("mid_type");
@@ -111,14 +111,15 @@ public class TopActionBolt extends AbstractConfigUpdateBolt {
 
 			String shopId = tuple.getStringByField("shop_id");
 			
-			if(actType != Recommend.ActiveType.PageView){
+			if(Utils.isRecommendAction(actionType)){
 				return;
 			}
 			
 			Recommend.UserActiveHistory.ActiveRecord.Builder actBuilder =
 					Recommend.UserActiveHistory.ActiveRecord.newBuilder();
-			actBuilder.setItem(itemId).setActTime(Long.valueOf(actionTime)).setActType(actType)
-						.setBigType(bigType.intValue()).setMiddleType(midType.intValue()).setSmallType(smallType.intValue())
+			actBuilder.setItem(itemId).setActTime(Long.valueOf(actionTime))
+						.setActType(Integer.valueOf(actionType))
+						.setBigType(bigType).setMiddleType(midType).setSmallType(smallType)
 						.setLBSInfo(lbsInfo).setPlatForm(platform).setShopId(shopId);
 
 			
@@ -246,10 +247,13 @@ public class TopActionBolt extends AbstractConfigUpdateBolt {
 		}
 
 		private void Save(UserActiveHistory.Builder mergeValueBuilder){	
-			/*logger.info("in save,size="+mergeValueBuilder.getActRecordsCount());
-			for(Recommend.UserActiveHistory.ActiveRecord act:mergeValueBuilder.getActRecordsList()){
-				logger.info("new itemId = "+act.getItem()+",time="+act.getActTime()+",type="+act.getActType());
-			}*/
+			if(debug){
+				logger.info("in save,size="+mergeValueBuilder.getActRecordsCount());
+				for(Recommend.UserActiveHistory.ActiveRecord act:mergeValueBuilder.getActRecordsList()){
+					logger.info("new itemId = "+act.getItem()+",time="+act.getActTime()+",type="+act.getActType());
+				}
+			}
+			
 			
 			UserActiveHistory putValue = mergeValueBuilder.build();
 			synchronized(cacheMap){

@@ -244,11 +244,8 @@ public class UrsInputSpout extends TdbankSpout {
 			this.collector.emit("error_data",new Values());
 			return;
 		}
-		
-		Recommend.ActiveType actTypeValue = Utils.getActionTypeByString(actType);
-		
-		if(actTypeValue != Recommend.ActiveType.Impress 
-				&& actTypeValue != Recommend.ActiveType.Click){
+			
+		if(!Utils.isRecommendAction(actType)){
 			if(!Utils.isItemIdValid(itemId)){
 				this.collector.emit("error_data",new Values());
 				return;

@@ -25,7 +25,6 @@ import com.tencent.tde.client.TairClient.TairOption;
 import com.tencent.tde.client.impl.MutiThreadCallbackClient.MutiClientCallBack;
 import com.tencent.urs.combine.GroupActionCombinerValue;
 import com.tencent.urs.combine.UpdateKey;
-import com.tencent.urs.protobuf.Recommend.ActiveType;
 import com.tencent.urs.protobuf.Recommend.GroupCountInfo;
 import com.tencent.urs.tdengine.TDEngineClientFactory;
 import com.tencent.urs.tdengine.TDEngineClientFactory.ClientAttr;
@@ -44,10 +43,8 @@ public class HotTopBolt extends AbstractConfigUpdateBolt{
 	private int nsGroupCountTableId;
 	private String categoryType;
 
-	
 	private static Logger logger = LoggerFactory
 			.getLogger(HotTopBolt.class);
-	
 	
 	public HotTopBolt(String config, ImmutableList<Output> outputField) {
 		super(config, outputField, Constants.config_stream);
@@ -56,7 +53,7 @@ public class HotTopBolt extends AbstractConfigUpdateBolt{
 	@Override
 	public void updateConfig(XMLConfiguration config) {
 		nsGroupCountTableId = config.getInt("item_count_table",514);
-		categoryType = config.getString("category_type","Small-Type");
+		//categoryType = config.getString("category_type","Small-Type");
 		dataExpireTime = config.getInt("data_expiretime",7*24*3600);
 		categoryType = config.getString("category_type","Big-Type");
 		//cacheExpireTime = config.getInt("cache_expiretime",3600);
@@ -87,14 +84,12 @@ public class HotTopBolt extends AbstractConfigUpdateBolt{
 			
 			String actionType = tuple.getStringByField("action_type");
 			String actionTime = tuple.getStringByField("action_time");
-		
-			ActiveType actType = Utils.getActionTypeByString(actionType);
-			
+					
 			if(!Utils.isBidValid(bid) || !Utils.isQNumValid(qq) || !Utils.isGroupIdVaild(groupId) || !Utils.isItemIdValid(itemId)){
 				return;
 			}
 			
-			GroupActionCombinerValue value = new GroupActionCombinerValue(actType,Long.valueOf(actionTime));
+			GroupActionCombinerValue value = new GroupActionCombinerValue(Integer.valueOf(actionType),Long.valueOf(actionTime));
 			UpdateKey key = new UpdateKey(bid,Long.valueOf(qq),Integer.valueOf(groupId),adpos,itemId);
 			combinerKeys(key,value);	
 		}catch(Exception e){
@@ -207,7 +202,5 @@ public class HotTopBolt extends AbstractConfigUpdateBolt{
 			return sumCount;
 		}
 	}
-	
-	
 	
 }

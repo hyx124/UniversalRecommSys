@@ -13,11 +13,9 @@ import com.google.common.collect.ImmutableList;
 import com.tencent.streaming.commons.bolts.config.AbstractConfigUpdateBolt;
 import com.tencent.streaming.commons.spouts.tdbank.Output;
 import com.tencent.tde.client.Result;
-import com.tencent.tde.client.Result.ResultCode;
 import com.tencent.tde.client.TairClient.TairOption;
 import com.tencent.tde.client.impl.MutiThreadCallbackClient.MutiClientCallBack;
 import com.tencent.urs.protobuf.Recommend;
-import com.tencent.urs.protobuf.Recommend.ChargeType;
 import com.tencent.urs.protobuf.Recommend.ItemDetailInfo;
 import com.tencent.urs.tdengine.TDEngineClientFactory;
 import com.tencent.urs.tdengine.TDEngineClientFactory.ClientAttr;
@@ -164,7 +162,7 @@ public class AddItemInfoBolt extends AbstractConfigUpdateBolt {
 				value.add(0L);
 				value.add(0L);
 				value.add(0L);
-				value.add(ChargeType.NormalFee);
+				value.add(0L);
 				value.add(0L);	
 				value.add("");
 			}

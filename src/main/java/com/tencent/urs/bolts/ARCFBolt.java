@@ -26,7 +26,6 @@ import com.tencent.tde.client.TairClient.TairOption;
 import com.tencent.tde.client.impl.MutiThreadCallbackClient.MutiClientCallBack;
 import com.tencent.urs.combine.GroupActionCombinerValue;
 import com.tencent.urs.combine.UpdateKey;
-import com.tencent.urs.protobuf.Recommend.ActiveType;
 import com.tencent.urs.protobuf.Recommend.GroupCountInfo;
 import com.tencent.urs.protobuf.Recommend.GroupPairInfo;
 import com.tencent.urs.protobuf.Recommend.UserActiveDetail;
@@ -94,14 +93,13 @@ public class ARCFBolt extends AbstractConfigUpdateBolt{
 			
 			String actionType = tuple.getStringByField("action_type");
 			String actionTime = tuple.getStringByField("action_time");
-			
-			ActiveType actType = Utils.getActionTypeByString(actionType);
-			
+						
 			if(!Utils.isBidValid(bid) || !Utils.isQNumValid(qq) || !Utils.isGroupIdVaild(groupId) || !Utils.isItemIdValid(itemId)){
 				return;
 			}
 			
-			GroupActionCombinerValue value = new GroupActionCombinerValue(actType,Long.valueOf(actionTime));
+			GroupActionCombinerValue value = 
+					new GroupActionCombinerValue(Integer.valueOf(actionType),Long.valueOf(actionTime));
 			UpdateKey key = new UpdateKey(bid,Long.valueOf(qq),Integer.valueOf(groupId),adpos,itemId);
 			combinerKeys(key,value);	
 		}catch(Exception e){

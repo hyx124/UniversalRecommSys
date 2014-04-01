@@ -1,0 +1,9 @@
+<component name="libraryTable">
+  <library name="news_processor">
+    <CLASSES>
+      <root url="jar://$PROJECT_DIR$/src/main/lib/news_processor.jar!/" />
+    </CLASSES>
+    <JAVADOC />
+    <SOURCES />
+  </library>
+</component>

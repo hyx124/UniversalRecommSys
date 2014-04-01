@@ -2,7 +2,6 @@ package com.tencent.urs.bolts;
 
 import com.google.common.collect.ImmutableList;
 import com.tencent.urs.protobuf.Recommend;
-import com.tencent.urs.protobuf.Recommend.ActiveType;
 import com.tencent.urs.protobuf.Recommend.GroupCountInfo;
 import com.tencent.urs.protobuf.Recommend.UserActiveDetail.TimeSegment;
 import com.tencent.urs.protobuf.Recommend.UserActiveDetail.TimeSegment.ItemInfo;
@@ -52,14 +51,12 @@ public class ItemCountBolt extends AbstractConfigUpdateBolt{
 	private DataCache<UserCountInfo> userCountCache;
 
 	private ConcurrentHashMap<UpdateKey, GroupActionCombinerValue> combinerMap;
-	private ConcurrentHashMap<Recommend.ActiveType, Float> actWeightMap;
-	private Long lastUpdateTime; 
+	private ConcurrentHashMap<Integer, Float> actWeightMap;
 	private UpdateCallBack putCallBack;	
 	
 	private int nsUserCountTableId;
 	private int nsGroupCountTableId;
 	private int nsDetailTableId;
-	private int nsActWeightTableId;
 	
 	private int dataExpireTime;
 	private int cacheExpireTime;
@@ -93,26 +90,9 @@ public class ItemCountBolt extends AbstractConfigUpdateBolt{
 		nsGroupCountTableId = config.getInt("group_count_table",514);
 		nsDetailTableId = config.getInt("dependent_table",512);
 		
-		nsActWeightTableId = config.getInt("act_weight_table",524);
 		dataExpireTime = config.getInt("data_expiretime",7*24*3600);
 		cacheExpireTime = config.getInt("cache_expiretime",3600);
 		debug = config.getBoolean("debug",false);
-	}
-	
-	private void weightInit(){
-		actWeightMap.put(Recommend.ActiveType.Impress, 0.5F);
-		actWeightMap.put(Recommend.ActiveType.Click, 1F);
-		actWeightMap.put(Recommend.ActiveType.PageView, 1F);
-		actWeightMap.put(Recommend.ActiveType.Read, 1.5F);
-		actWeightMap.put(Recommend.ActiveType.Save, 2F);
-		actWeightMap.put(Recommend.ActiveType.BuyCart, 2F);
-		actWeightMap.put(Recommend.ActiveType.Deal, 2F);
-		actWeightMap.put(Recommend.ActiveType.Score, 3F);
-		actWeightMap.put(Recommend.ActiveType.Comments, 3F);
-		actWeightMap.put(Recommend.ActiveType.Reply, 3F);
-		actWeightMap.put(Recommend.ActiveType.Ups, 3F);
-		actWeightMap.put(Recommend.ActiveType.Praise, 4F);
-		actWeightMap.put(Recommend.ActiveType.Share, 4F);
 	}
 	
 	@Override
@@ -120,17 +100,16 @@ public class ItemCountBolt extends AbstractConfigUpdateBolt{
 		super.prepare(conf, context, collector);
 		updateConfig(super.config);
 	
-		this.lastUpdateTime = 0L;
 		this.mtClientList = TDEngineClientFactory.createMTClientList(conf);
 		this.mt = MonitorTools.getMonitorInstance(conf);
 		this.groupCountCache = new DataCache<GroupCountInfo>(conf);
 		this.userCountCache = new DataCache<UserCountInfo>(conf);
 		
-		this.actWeightMap = new ConcurrentHashMap<Recommend.ActiveType, Float>(20);
+		this.actWeightMap = new ConcurrentHashMap<Integer, Float>(20);
 		
 		this.combinerMap = new ConcurrentHashMap<UpdateKey,GroupActionCombinerValue>(1024);
 				
-		this.putCallBack = new UpdateCallBack(mt, Constants.systemID, Constants.tde_interfaceID, this.getClass().getName());
+		this.putCallBack = new UpdateCallBack(mt, Constants.systemID, Constants.tde_send_interfaceID, this.getClass().getName());
 		
 		int combinerExpireTime = Utils.getInt(conf, "combiner.expireTime",5);
 		setCombinerTime(combinerExpireTime);
@@ -148,14 +127,14 @@ public class ItemCountBolt extends AbstractConfigUpdateBolt{
 			
 			String actionType = tuple.getStringByField("action_type");
 			String actionTime = tuple.getStringByField("action_time");
-		
-			ActiveType actType = Utils.getActionTypeByString(actionType);
-			
-			if(!Utils.isBidValid(bid) || !Utils.isQNumValid(qq) || !Utils.isGroupIdVaild(groupId) || !Utils.isItemIdValid(itemId)){
+					
+			if(!Utils.isBidValid(bid) || !Utils.isQNumValid(qq) 
+					|| !Utils.isGroupIdVaild(groupId) || !Utils.isItemIdValid(itemId)){
 				return;
 			}
 			
-			GroupActionCombinerValue value = new GroupActionCombinerValue(actType,Long.valueOf(actionTime));
+			GroupActionCombinerValue value = 
+					new GroupActionCombinerValue(Integer.valueOf(actionType),Long.valueOf(actionTime));
 			UpdateKey key = new UpdateKey(bid,Long.valueOf(qq),Integer.valueOf(groupId),adpos,itemId);
 			combinerKeys(key,value);
 		}catch(Exception e){
@@ -203,40 +182,8 @@ public class ItemCountBolt extends AbstractConfigUpdateBolt{
 		}
 	}	
 	
-	private Float getWeightByType(String bid,Recommend.ActiveType actionType){
-		
-		/*Long now = System.currentTimeMillis()/1000L;
-		if(lastUpdateTime == 0){
-			weightInit();
-			lastUpdateTime = now;
-		}else if(lastUpdateTime < (now - 3600*24)  ){
-			actWeightMap.clear();
-			lastUpdateTime = now;
-		}*/
-		
-		//String actTypeKey = this.
-		weightInit();		
-		if(actWeightMap.containsKey(actionType)){
-			return actWeightMap.get(actionType);
-		}else{
-			try{
-				MutiThreadCallbackClient clientEntry = mtClientList.get(0).getClient();
-				TairOption opt = new TairOption(mtClientList.get(0).getTimeout());
-				Result<byte[]> res =  clientEntry.get((short)nsActWeightTableId, actionType.toString().getBytes(), opt);
-				if(res.isSuccess() && res.getResult()!=null)
-				{
-						
-					Recommend.ActionWeightInfo pbWeightInfo = Recommend.ActionWeightInfo.parseFrom(res.getResult());
-					if(pbWeightInfo.getWeight()>=0){
-						actWeightMap.put(actionType, pbWeightInfo.getWeight());
-						return pbWeightInfo.getWeight();
-					}
-				}					
-			}catch(Exception e){
-				logger.error(e.toString());
-			}
-		}
-		return 0F;
+	private Float getWeightByType(String bid,Integer actionType){
+		return Utils.getActionWeight(actionType);
 	}
 
 	private class GroupCountUpdateCallback implements MutiClientCallBack{
@@ -299,6 +246,7 @@ public class ItemCountBolt extends AbstractConfigUpdateBolt{
 				} catch (Exception e){
 					logger.error(e.getMessage(), e);
 				}
+				break;
 			}
 		}
 		
@@ -522,6 +470,7 @@ public class ItemCountBolt extends AbstractConfigUpdateBolt{
 				} catch (Exception e){
 					logger.error(e.getMessage(), e);
 				}
+				break;
 			}
 		}
 			

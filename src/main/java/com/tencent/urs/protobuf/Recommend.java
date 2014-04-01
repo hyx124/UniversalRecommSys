@@ -8,127 +8,6 @@ public final class Recommend {
   public static void registerAllExtensions(
       com.google.protobuf.ExtensionRegistryLite registry) {
   }
-  public enum ActiveType
-      implements com.google.protobuf.Internal.EnumLite {
-    Unknown(0, 0),
-    Impress(1, 1),
-    Click(2, 2),
-    PageView(3, 3),
-    Read(4, 4),
-    Save(5, 5),
-    BuyCart(6, 6),
-    Deal(7, 7),
-    Score(8, 8),
-    Comments(9, 9),
-    Reply(10, 10),
-    Ups(11, 11),
-    Praise(12, 12),
-    Share(13, 13),
-    ;
-    
-    public static final int Unknown_VALUE = 0;
-    public static final int Impress_VALUE = 1;
-    public static final int Click_VALUE = 2;
-    public static final int PageView_VALUE = 3;
-    public static final int Read_VALUE = 4;
-    public static final int Save_VALUE = 5;
-    public static final int BuyCart_VALUE = 6;
-    public static final int Deal_VALUE = 7;
-    public static final int Score_VALUE = 8;
-    public static final int Comments_VALUE = 9;
-    public static final int Reply_VALUE = 10;
-    public static final int Ups_VALUE = 11;
-    public static final int Praise_VALUE = 12;
-    public static final int Share_VALUE = 13;
-    
-    
-    public final int getNumber() { return value; }
-    
-    public static ActiveType valueOf(int value) {
-      switch (value) {
-        case 0: return Unknown;
-        case 1: return Impress;
-        case 2: return Click;
-        case 3: return PageView;
-        case 4: return Read;
-        case 5: return Save;
-        case 6: return BuyCart;
-        case 7: return Deal;
-        case 8: return Score;
-        case 9: return Comments;
-        case 10: return Reply;
-        case 11: return Ups;
-        case 12: return Praise;
-        case 13: return Share;
-        default: return null;
-      }
-    }
-    
-    public static com.google.protobuf.Internal.EnumLiteMap<ActiveType>
-        internalGetValueMap() {
-      return internalValueMap;
-    }
-    private static com.google.protobuf.Internal.EnumLiteMap<ActiveType>
-        internalValueMap =
-          new com.google.protobuf.Internal.EnumLiteMap<ActiveType>() {
-            public ActiveType findValueByNumber(int number) {
-              return ActiveType.valueOf(number);
-            }
-          };
-    
-    private final int value;
-    
-    private ActiveType(int index, int value) {
-      this.value = value;
-    }
-    
-    // @@protoc_insertion_point(enum_scope:com.tencent.urs.protobuf.ActiveType)
-  }
-  
-  public enum ChargeType
-      implements com.google.protobuf.Internal.EnumLite {
-    NormalFee(0, 0),
-    Free(1, 1),
-    VipFree(2, 2),
-    ;
-    
-    public static final int NormalFee_VALUE = 0;
-    public static final int Free_VALUE = 1;
-    public static final int VipFree_VALUE = 2;
-    
-    
-    public final int getNumber() { return value; }
-    
-    public static ChargeType valueOf(int value) {
-      switch (value) {
-        case 0: return NormalFee;
-        case 1: return Free;
-        case 2: return VipFree;
-        default: return null;
-      }
-    }
-    
-    public static com.google.protobuf.Internal.EnumLiteMap<ChargeType>
-        internalGetValueMap() {
-      return internalValueMap;
-    }
-    private static com.google.protobuf.Internal.EnumLiteMap<ChargeType>
-        internalValueMap =
-          new com.google.protobuf.Internal.EnumLiteMap<ChargeType>() {
-            public ChargeType findValueByNumber(int number) {
-              return ChargeType.valueOf(number);
-            }
-          };
-    
-    private final int value;
-    
-    private ChargeType(int index, int value) {
-      this.value = value;
-    }
-    
-    // @@protoc_insertion_point(enum_scope:com.tencent.urs.protobuf.ChargeType)
-  }
-  
   public interface ItemDetailInfoOrBuilder
       extends com.google.protobuf.MessageLiteOrBuilder {
     
@@ -164,13 +43,13 @@ public final class Recommend {
     boolean hasSmallTypeName();
     String getSmallTypeName();
     
-    // optional .com.tencent.urs.protobuf.ChargeType FreeFlag = 9 [default = NormalFee];
+    // optional uint32 FreeFlag = 9;
     boolean hasFreeFlag();
-    com.tencent.urs.protobuf.Recommend.ChargeType getFreeFlag();
+    int getFreeFlag();
     
-    // optional .com.tencent.urs.protobuf.ItemDetailInfo.PublicType PublicFlag = 10 [default = NotPublic];
+    // optional uint32 PublicFlag = 10;
     boolean hasPublicFlag();
-    com.tencent.urs.protobuf.Recommend.ItemDetailInfo.PublicType getPublicFlag();
+    int getPublicFlag();
     
     // optional float Price = 11;
     boolean hasPrice();
@@ -212,50 +91,6 @@ public final class Recommend {
     
     public ItemDetailInfo getDefaultInstanceForType() {
       return defaultInstance;
-    }
-    
-    public enum PublicType
-        implements com.google.protobuf.Internal.EnumLite {
-      NotPublic(0, 0),
-      OnSell(1, 1),
-      SellOut(2, 2),
-      ;
-      
-      public static final int NotPublic_VALUE = 0;
-      public static final int OnSell_VALUE = 1;
-      public static final int SellOut_VALUE = 2;
-      
-      
-      public final int getNumber() { return value; }
-      
-      public static PublicType valueOf(int value) {
-        switch (value) {
-          case 0: return NotPublic;
-          case 1: return OnSell;
-          case 2: return SellOut;
-          default: return null;
-        }
-      }
-      
-      public static com.google.protobuf.Internal.EnumLiteMap<PublicType>
-          internalGetValueMap() {
-        return internalValueMap;
-      }
-      private static com.google.protobuf.Internal.EnumLiteMap<PublicType>
-          internalValueMap =
-            new com.google.protobuf.Internal.EnumLiteMap<PublicType>() {
-              public PublicType findValueByNumber(int number) {
-                return PublicType.valueOf(number);
-              }
-            };
-      
-      private final int value;
-      
-      private PublicType(int index, int value) {
-        this.value = value;
-      }
-      
-      // @@protoc_insertion_point(enum_scope:com.tencent.urs.protobuf.ItemDetailInfo.PublicType)
     }
     
     private int bitField0_;
@@ -427,23 +262,23 @@ public final class Recommend {
       }
     }
     
-    // optional .com.tencent.urs.protobuf.ChargeType FreeFlag = 9 [default = NormalFee];
+    // optional uint32 FreeFlag = 9;
     public static final int FREEFLAG_FIELD_NUMBER = 9;
-    private com.tencent.urs.protobuf.Recommend.ChargeType freeFlag_;
+    private int freeFlag_;
     public boolean hasFreeFlag() {
       return ((bitField0_ & 0x00000100) == 0x00000100);
     }
-    public com.tencent.urs.protobuf.Recommend.ChargeType getFreeFlag() {
+    public int getFreeFlag() {
       return freeFlag_;
     }
     
-    // optional .com.tencent.urs.protobuf.ItemDetailInfo.PublicType PublicFlag = 10 [default = NotPublic];
+    // optional uint32 PublicFlag = 10;
     public static final int PUBLICFLAG_FIELD_NUMBER = 10;
-    private com.tencent.urs.protobuf.Recommend.ItemDetailInfo.PublicType publicFlag_;
+    private int publicFlag_;
     public boolean hasPublicFlag() {
       return ((bitField0_ & 0x00000200) == 0x00000200);
     }
-    public com.tencent.urs.protobuf.Recommend.ItemDetailInfo.PublicType getPublicFlag() {
+    public int getPublicFlag() {
       return publicFlag_;
     }
     
@@ -560,8 +395,8 @@ public final class Recommend {
       middleTypeName_ = "";
       smallType_ = 0L;
       smallTypeName_ = "";
-      freeFlag_ = com.tencent.urs.protobuf.Recommend.ChargeType.NormalFee;
-      publicFlag_ = com.tencent.urs.protobuf.Recommend.ItemDetailInfo.PublicType.NotPublic;
+      freeFlag_ = 0;
+      publicFlag_ = 0;
       price_ = 0F;
       text_ = "";
       itemTime_ = 0L;
@@ -614,10 +449,10 @@ public final class Recommend {
         output.writeBytes(8, getSmallTypeNameBytes());
       }
       if (((bitField0_ & 0x00000100) == 0x00000100)) {
-        output.writeEnum(9, freeFlag_.getNumber());
+        output.writeUInt32(9, freeFlag_);
       }
       if (((bitField0_ & 0x00000200) == 0x00000200)) {
-        output.writeEnum(10, publicFlag_.getNumber());
+        output.writeUInt32(10, publicFlag_);
       }
       if (((bitField0_ & 0x00000400) == 0x00000400)) {
         output.writeFloat(11, price_);
@@ -679,11 +514,11 @@ public final class Recommend {
       }
       if (((bitField0_ & 0x00000100) == 0x00000100)) {
         size += com.google.protobuf.CodedOutputStream
-          .computeEnumSize(9, freeFlag_.getNumber());
+          .computeUInt32Size(9, freeFlag_);
       }
       if (((bitField0_ & 0x00000200) == 0x00000200)) {
         size += com.google.protobuf.CodedOutputStream
-          .computeEnumSize(10, publicFlag_.getNumber());
+          .computeUInt32Size(10, publicFlag_);
       }
       if (((bitField0_ & 0x00000400) == 0x00000400)) {
         size += com.google.protobuf.CodedOutputStream
@@ -827,9 +662,9 @@ public final class Recommend {
         bitField0_ = (bitField0_ & ~0x00000040);
         smallTypeName_ = "";
         bitField0_ = (bitField0_ & ~0x00000080);
-        freeFlag_ = com.tencent.urs.protobuf.Recommend.ChargeType.NormalFee;
+        freeFlag_ = 0;
         bitField0_ = (bitField0_ & ~0x00000100);
-        publicFlag_ = com.tencent.urs.protobuf.Recommend.ItemDetailInfo.PublicType.NotPublic;
+        publicFlag_ = 0;
         bitField0_ = (bitField0_ & ~0x00000200);
         price_ = 0F;
         bitField0_ = (bitField0_ & ~0x00000400);
@@ -1067,21 +902,13 @@ public final class Recommend {
               break;
             }
             case 72: {
-              int rawValue = input.readEnum();
-              com.tencent.urs.protobuf.Recommend.ChargeType value = com.tencent.urs.protobuf.Recommend.ChargeType.valueOf(rawValue);
-              if (value != null) {
-                bitField0_ |= 0x00000100;
-                freeFlag_ = value;
-              }
+              bitField0_ |= 0x00000100;
+              freeFlag_ = input.readUInt32();
               break;
             }
             case 80: {
-              int rawValue = input.readEnum();
-              com.tencent.urs.protobuf.Recommend.ItemDetailInfo.PublicType value = com.tencent.urs.protobuf.Recommend.ItemDetailInfo.PublicType.valueOf(rawValue);
-              if (value != null) {
-                bitField0_ |= 0x00000200;
-                publicFlag_ = value;
-              }
+              bitField0_ |= 0x00000200;
+              publicFlag_ = input.readUInt32();
               break;
             }
             case 93: {
@@ -1348,18 +1175,15 @@ public final class Recommend {
         
       }
       
-      // optional .com.tencent.urs.protobuf.ChargeType FreeFlag = 9 [default = NormalFee];
-      private com.tencent.urs.protobuf.Recommend.ChargeType freeFlag_ = com.tencent.urs.protobuf.Recommend.ChargeType.NormalFee;
+      // optional uint32 FreeFlag = 9;
+      private int freeFlag_ ;
       public boolean hasFreeFlag() {
         return ((bitField0_ & 0x00000100) == 0x00000100);
       }
-      public com.tencent.urs.protobuf.Recommend.ChargeType getFreeFlag() {
+      public int getFreeFlag() {
         return freeFlag_;
       }
-      public Builder setFreeFlag(com.tencent.urs.protobuf.Recommend.ChargeType value) {
-        if (value == null) {
-          throw new NullPointerException();
-        }
+      public Builder setFreeFlag(int value) {
         bitField0_ |= 0x00000100;
         freeFlag_ = value;
         
@@ -1367,23 +1191,20 @@ public final class Recommend {
       }
       public Builder clearFreeFlag() {
         bitField0_ = (bitField0_ & ~0x00000100);
-        freeFlag_ = com.tencent.urs.protobuf.Recommend.ChargeType.NormalFee;
+        freeFlag_ = 0;
         
         return this;
       }
       
-      // optional .com.tencent.urs.protobuf.ItemDetailInfo.PublicType PublicFlag = 10 [default = NotPublic];
-      private com.tencent.urs.protobuf.Recommend.ItemDetailInfo.PublicType publicFlag_ = com.tencent.urs.protobuf.Recommend.ItemDetailInfo.PublicType.NotPublic;
+      // optional uint32 PublicFlag = 10;
+      private int publicFlag_ ;
       public boolean hasPublicFlag() {
         return ((bitField0_ & 0x00000200) == 0x00000200);
       }
-      public com.tencent.urs.protobuf.Recommend.ItemDetailInfo.PublicType getPublicFlag() {
+      public int getPublicFlag() {
         return publicFlag_;
       }
-      public Builder setPublicFlag(com.tencent.urs.protobuf.Recommend.ItemDetailInfo.PublicType value) {
-        if (value == null) {
-          throw new NullPointerException();
-        }
+      public Builder setPublicFlag(int value) {
         bitField0_ |= 0x00000200;
         publicFlag_ = value;
         
@@ -1391,7 +1212,7 @@ public final class Recommend {
       }
       public Builder clearPublicFlag() {
         bitField0_ = (bitField0_ & ~0x00000200);
-        publicFlag_ = com.tencent.urs.protobuf.Recommend.ItemDetailInfo.PublicType.NotPublic;
+        publicFlag_ = 0;
         
         return this;
       }
@@ -3217,25 +3038,25 @@ public final class Recommend {
       boolean hasItem();
       String getItem();
       
-      // optional uint32 BigType = 2;
+      // optional uint64 BigType = 2;
       boolean hasBigType();
-      int getBigType();
+      long getBigType();
       
-      // optional uint32 MiddleType = 3;
+      // optional uint64 MiddleType = 3;
       boolean hasMiddleType();
-      int getMiddleType();
+      long getMiddleType();
       
-      // optional uint32 SmallType = 4;
+      // optional uint64 SmallType = 4;
       boolean hasSmallType();
-      int getSmallType();
+      long getSmallType();
       
       // optional double Weight = 5;
       boolean hasWeight();
       double getWeight();
       
-      // optional .com.tencent.urs.protobuf.ChargeType FreeFlag = 6 [default = NormalFee];
+      // optional uint32 FreeFlag = 6;
       boolean hasFreeFlag();
-      com.tencent.urs.protobuf.Recommend.ChargeType getFreeFlag();
+      int getFreeFlag();
       
       // optional uint64 Price = 7;
       boolean hasPrice();
@@ -3308,33 +3129,33 @@ public final class Recommend {
         }
       }
       
-      // optional uint32 BigType = 2;
+      // optional uint64 BigType = 2;
       public static final int BIGTYPE_FIELD_NUMBER = 2;
-      private int bigType_;
+      private long bigType_;
       public boolean hasBigType() {
         return ((bitField0_ & 0x00000002) == 0x00000002);
       }
-      public int getBigType() {
+      public long getBigType() {
         return bigType_;
       }
       
-      // optional uint32 MiddleType = 3;
+      // optional uint64 MiddleType = 3;
       public static final int MIDDLETYPE_FIELD_NUMBER = 3;
-      private int middleType_;
+      private long middleType_;
       public boolean hasMiddleType() {
         return ((bitField0_ & 0x00000004) == 0x00000004);
       }
-      public int getMiddleType() {
+      public long getMiddleType() {
         return middleType_;
       }
       
-      // optional uint32 SmallType = 4;
+      // optional uint64 SmallType = 4;
       public static final int SMALLTYPE_FIELD_NUMBER = 4;
-      private int smallType_;
+      private long smallType_;
       public boolean hasSmallType() {
         return ((bitField0_ & 0x00000008) == 0x00000008);
       }
-      public int getSmallType() {
+      public long getSmallType() {
         return smallType_;
       }
       
@@ -3348,13 +3169,13 @@ public final class Recommend {
         return weight_;
       }
       
-      // optional .com.tencent.urs.protobuf.ChargeType FreeFlag = 6 [default = NormalFee];
+      // optional uint32 FreeFlag = 6;
       public static final int FREEFLAG_FIELD_NUMBER = 6;
-      private com.tencent.urs.protobuf.Recommend.ChargeType freeFlag_;
+      private int freeFlag_;
       public boolean hasFreeFlag() {
         return ((bitField0_ & 0x00000020) == 0x00000020);
       }
-      public com.tencent.urs.protobuf.Recommend.ChargeType getFreeFlag() {
+      public int getFreeFlag() {
         return freeFlag_;
       }
       
@@ -3454,11 +3275,11 @@ public final class Recommend {
       
       private void initFields() {
         item_ = "";
-        bigType_ = 0;
-        middleType_ = 0;
-        smallType_ = 0;
+        bigType_ = 0L;
+        middleType_ = 0L;
+        smallType_ = 0L;
         weight_ = 0D;
-        freeFlag_ = com.tencent.urs.protobuf.Recommend.ChargeType.NormalFee;
+        freeFlag_ = 0;
         price_ = 0L;
         updateTime_ = 0L;
         expireTime_ = 0L;
@@ -3485,19 +3306,19 @@ public final class Recommend {
           output.writeBytes(1, getItemBytes());
         }
         if (((bitField0_ & 0x00000002) == 0x00000002)) {
-          output.writeUInt32(2, bigType_);
+          output.writeUInt64(2, bigType_);
         }
         if (((bitField0_ & 0x00000004) == 0x00000004)) {
-          output.writeUInt32(3, middleType_);
+          output.writeUInt64(3, middleType_);
         }
         if (((bitField0_ & 0x00000008) == 0x00000008)) {
-          output.writeUInt32(4, smallType_);
+          output.writeUInt64(4, smallType_);
         }
         if (((bitField0_ & 0x00000010) == 0x00000010)) {
           output.writeDouble(5, weight_);
         }
         if (((bitField0_ & 0x00000020) == 0x00000020)) {
-          output.writeEnum(6, freeFlag_.getNumber());
+          output.writeUInt32(6, freeFlag_);
         }
         if (((bitField0_ & 0x00000040) == 0x00000040)) {
           output.writeUInt64(7, price_);
@@ -3528,15 +3349,15 @@ public final class Recommend {
         }
         if (((bitField0_ & 0x00000002) == 0x00000002)) {
           size += com.google.protobuf.CodedOutputStream
-            .computeUInt32Size(2, bigType_);
+            .computeUInt64Size(2, bigType_);
         }
         if (((bitField0_ & 0x00000004) == 0x00000004)) {
           size += com.google.protobuf.CodedOutputStream
-            .computeUInt32Size(3, middleType_);
+            .computeUInt64Size(3, middleType_);
         }
         if (((bitField0_ & 0x00000008) == 0x00000008)) {
           size += com.google.protobuf.CodedOutputStream
-            .computeUInt32Size(4, smallType_);
+            .computeUInt64Size(4, smallType_);
         }
         if (((bitField0_ & 0x00000010) == 0x00000010)) {
           size += com.google.protobuf.CodedOutputStream
@@ -3544,7 +3365,7 @@ public final class Recommend {
         }
         if (((bitField0_ & 0x00000020) == 0x00000020)) {
           size += com.google.protobuf.CodedOutputStream
-            .computeEnumSize(6, freeFlag_.getNumber());
+            .computeUInt32Size(6, freeFlag_);
         }
         if (((bitField0_ & 0x00000040) == 0x00000040)) {
           size += com.google.protobuf.CodedOutputStream
@@ -3670,15 +3491,15 @@ public final class Recommend {
           super.clear();
           item_ = "";
           bitField0_ = (bitField0_ & ~0x00000001);
-          bigType_ = 0;
+          bigType_ = 0L;
           bitField0_ = (bitField0_ & ~0x00000002);
-          middleType_ = 0;
+          middleType_ = 0L;
           bitField0_ = (bitField0_ & ~0x00000004);
-          smallType_ = 0;
+          smallType_ = 0L;
           bitField0_ = (bitField0_ & ~0x00000008);
           weight_ = 0D;
           bitField0_ = (bitField0_ & ~0x00000010);
-          freeFlag_ = com.tencent.urs.protobuf.Recommend.ChargeType.NormalFee;
+          freeFlag_ = 0;
           bitField0_ = (bitField0_ & ~0x00000020);
           price_ = 0L;
           bitField0_ = (bitField0_ & ~0x00000040);
@@ -3841,17 +3662,17 @@ public final class Recommend {
               }
               case 16: {
                 bitField0_ |= 0x00000002;
-                bigType_ = input.readUInt32();
+                bigType_ = input.readUInt64();
                 break;
               }
               case 24: {
                 bitField0_ |= 0x00000004;
-                middleType_ = input.readUInt32();
+                middleType_ = input.readUInt64();
                 break;
               }
               case 32: {
                 bitField0_ |= 0x00000008;
-                smallType_ = input.readUInt32();
+                smallType_ = input.readUInt64();
                 break;
               }
               case 41: {
@@ -3860,12 +3681,8 @@ public final class Recommend {
                 break;
               }
               case 48: {
-                int rawValue = input.readEnum();
-                com.tencent.urs.protobuf.Recommend.ChargeType value = com.tencent.urs.protobuf.Recommend.ChargeType.valueOf(rawValue);
-                if (value != null) {
-                  bitField0_ |= 0x00000020;
-                  freeFlag_ = value;
-                }
+                bitField0_ |= 0x00000020;
+                freeFlag_ = input.readUInt32();
                 break;
               }
               case 56: {
@@ -3935,15 +3752,15 @@ public final class Recommend {
           
         }
         
-        // optional uint32 BigType = 2;
-        private int bigType_ ;
+        // optional uint64 BigType = 2;
+        private long bigType_ ;
         public boolean hasBigType() {
           return ((bitField0_ & 0x00000002) == 0x00000002);
         }
-        public int getBigType() {
+        public long getBigType() {
           return bigType_;
         }
-        public Builder setBigType(int value) {
+        public Builder setBigType(long value) {
           bitField0_ |= 0x00000002;
           bigType_ = value;
           
@@ -3951,20 +3768,20 @@ public final class Recommend {
         }
         public Builder clearBigType() {
           bitField0_ = (bitField0_ & ~0x00000002);
-          bigType_ = 0;
+          bigType_ = 0L;
           
           return this;
         }
         
-        // optional uint32 MiddleType = 3;
-        private int middleType_ ;
+        // optional uint64 MiddleType = 3;
+        private long middleType_ ;
         public boolean hasMiddleType() {
           return ((bitField0_ & 0x00000004) == 0x00000004);
         }
-        public int getMiddleType() {
+        public long getMiddleType() {
           return middleType_;
         }
-        public Builder setMiddleType(int value) {
+        public Builder setMiddleType(long value) {
           bitField0_ |= 0x00000004;
           middleType_ = value;
           
@@ -3972,20 +3789,20 @@ public final class Recommend {
         }
         public Builder clearMiddleType() {
           bitField0_ = (bitField0_ & ~0x00000004);
-          middleType_ = 0;
+          middleType_ = 0L;
           
           return this;
         }
         
-        // optional uint32 SmallType = 4;
-        private int smallType_ ;
+        // optional uint64 SmallType = 4;
+        private long smallType_ ;
         public boolean hasSmallType() {
           return ((bitField0_ & 0x00000008) == 0x00000008);
         }
-        public int getSmallType() {
+        public long getSmallType() {
           return smallType_;
         }
-        public Builder setSmallType(int value) {
+        public Builder setSmallType(long value) {
           bitField0_ |= 0x00000008;
           smallType_ = value;
           
@@ -3993,7 +3810,7 @@ public final class Recommend {
         }
         public Builder clearSmallType() {
           bitField0_ = (bitField0_ & ~0x00000008);
-          smallType_ = 0;
+          smallType_ = 0L;
           
           return this;
         }
@@ -4019,18 +3836,15 @@ public final class Recommend {
           return this;
         }
         
-        // optional .com.tencent.urs.protobuf.ChargeType FreeFlag = 6 [default = NormalFee];
-        private com.tencent.urs.protobuf.Recommend.ChargeType freeFlag_ = com.tencent.urs.protobuf.Recommend.ChargeType.NormalFee;
+        // optional uint32 FreeFlag = 6;
+        private int freeFlag_ ;
         public boolean hasFreeFlag() {
           return ((bitField0_ & 0x00000020) == 0x00000020);
         }
-        public com.tencent.urs.protobuf.Recommend.ChargeType getFreeFlag() {
+        public int getFreeFlag() {
           return freeFlag_;
         }
-        public Builder setFreeFlag(com.tencent.urs.protobuf.Recommend.ChargeType value) {
-          if (value == null) {
-            throw new NullPointerException();
-          }
+        public Builder setFreeFlag(int value) {
           bitField0_ |= 0x00000020;
           freeFlag_ = value;
           
@@ -4038,7 +3852,7 @@ public final class Recommend {
         }
         public Builder clearFreeFlag() {
           bitField0_ = (bitField0_ & ~0x00000020);
-          freeFlag_ = com.tencent.urs.protobuf.Recommend.ChargeType.NormalFee;
+          freeFlag_ = 0;
           
           return this;
         }
@@ -4578,21 +4392,21 @@ public final class Recommend {
       boolean hasItem();
       String getItem();
       
-      // optional uint32 BigType = 2;
+      // optional uint64 BigType = 2;
       boolean hasBigType();
-      int getBigType();
+      long getBigType();
       
-      // optional uint32 MiddleType = 3;
+      // optional uint64 MiddleType = 3;
       boolean hasMiddleType();
-      int getMiddleType();
+      long getMiddleType();
       
-      // optional uint32 SmallType = 4;
+      // optional uint64 SmallType = 4;
       boolean hasSmallType();
-      int getSmallType();
+      long getSmallType();
       
-      // optional .com.tencent.urs.protobuf.ActiveType ActType = 5 [default = Unknown];
+      // optional uint32 ActType = 5;
       boolean hasActType();
-      com.tencent.urs.protobuf.Recommend.ActiveType getActType();
+      int getActType();
       
       // optional string ActResult = 6;
       boolean hasActResult();
@@ -4681,43 +4495,43 @@ public final class Recommend {
         }
       }
       
-      // optional uint32 BigType = 2;
+      // optional uint64 BigType = 2;
       public static final int BIGTYPE_FIELD_NUMBER = 2;
-      private int bigType_;
+      private long bigType_;
       public boolean hasBigType() {
         return ((bitField0_ & 0x00000002) == 0x00000002);
       }
-      public int getBigType() {
+      public long getBigType() {
         return bigType_;
       }
       
-      // optional uint32 MiddleType = 3;
+      // optional uint64 MiddleType = 3;
       public static final int MIDDLETYPE_FIELD_NUMBER = 3;
-      private int middleType_;
+      private long middleType_;
       public boolean hasMiddleType() {
         return ((bitField0_ & 0x00000004) == 0x00000004);
       }
-      public int getMiddleType() {
+      public long getMiddleType() {
         return middleType_;
       }
       
-      // optional uint32 SmallType = 4;
+      // optional uint64 SmallType = 4;
       public static final int SMALLTYPE_FIELD_NUMBER = 4;
-      private int smallType_;
+      private long smallType_;
       public boolean hasSmallType() {
         return ((bitField0_ & 0x00000008) == 0x00000008);
       }
-      public int getSmallType() {
+      public long getSmallType() {
         return smallType_;
       }
       
-      // optional .com.tencent.urs.protobuf.ActiveType ActType = 5 [default = Unknown];
+      // optional uint32 ActType = 5;
       public static final int ACTTYPE_FIELD_NUMBER = 5;
-      private com.tencent.urs.protobuf.Recommend.ActiveType actType_;
+      private int actType_;
       public boolean hasActType() {
         return ((bitField0_ & 0x00000010) == 0x00000010);
       }
-      public com.tencent.urs.protobuf.Recommend.ActiveType getActType() {
+      public int getActType() {
         return actType_;
       }
       
@@ -4945,10 +4759,10 @@ public final class Recommend {
       
       private void initFields() {
         item_ = "";
-        bigType_ = 0;
-        middleType_ = 0;
-        smallType_ = 0;
-        actType_ = com.tencent.urs.protobuf.Recommend.ActiveType.Unknown;
+        bigType_ = 0L;
+        middleType_ = 0L;
+        smallType_ = 0L;
+        actType_ = 0;
         actResult_ = "";
         actTime_ = 0L;
         expireTime_ = 0L;
@@ -4979,16 +4793,16 @@ public final class Recommend {
           output.writeBytes(1, getItemBytes());
         }
         if (((bitField0_ & 0x00000002) == 0x00000002)) {
-          output.writeUInt32(2, bigType_);
+          output.writeUInt64(2, bigType_);
         }
         if (((bitField0_ & 0x00000004) == 0x00000004)) {
-          output.writeUInt32(3, middleType_);
+          output.writeUInt64(3, middleType_);
         }
         if (((bitField0_ & 0x00000008) == 0x00000008)) {
-          output.writeUInt32(4, smallType_);
+          output.writeUInt64(4, smallType_);
         }
         if (((bitField0_ & 0x00000010) == 0x00000010)) {
-          output.writeEnum(5, actType_.getNumber());
+          output.writeUInt32(5, actType_);
         }
         if (((bitField0_ & 0x00000020) == 0x00000020)) {
           output.writeBytes(6, getActResultBytes());
@@ -5031,19 +4845,19 @@ public final class Recommend {
         }
         if (((bitField0_ & 0x00000002) == 0x00000002)) {
           size += com.google.protobuf.CodedOutputStream
-            .computeUInt32Size(2, bigType_);
+            .computeUInt64Size(2, bigType_);
         }
         if (((bitField0_ & 0x00000004) == 0x00000004)) {
           size += com.google.protobuf.CodedOutputStream
-            .computeUInt32Size(3, middleType_);
+            .computeUInt64Size(3, middleType_);
         }
         if (((bitField0_ & 0x00000008) == 0x00000008)) {
           size += com.google.protobuf.CodedOutputStream
-            .computeUInt32Size(4, smallType_);
+            .computeUInt64Size(4, smallType_);
         }
         if (((bitField0_ & 0x00000010) == 0x00000010)) {
           size += com.google.protobuf.CodedOutputStream
-            .computeEnumSize(5, actType_.getNumber());
+            .computeUInt32Size(5, actType_);
         }
         if (((bitField0_ & 0x00000020) == 0x00000020)) {
           size += com.google.protobuf.CodedOutputStream
@@ -5185,13 +4999,13 @@ public final class Recommend {
           super.clear();
           item_ = "";
           bitField0_ = (bitField0_ & ~0x00000001);
-          bigType_ = 0;
+          bigType_ = 0L;
           bitField0_ = (bitField0_ & ~0x00000002);
-          middleType_ = 0;
+          middleType_ = 0L;
           bitField0_ = (bitField0_ & ~0x00000004);
-          smallType_ = 0;
+          smallType_ = 0L;
           bitField0_ = (bitField0_ & ~0x00000008);
-          actType_ = com.tencent.urs.protobuf.Recommend.ActiveType.Unknown;
+          actType_ = 0;
           bitField0_ = (bitField0_ & ~0x00000010);
           actResult_ = "";
           bitField0_ = (bitField0_ & ~0x00000020);
@@ -5383,26 +5197,22 @@ public final class Recommend {
               }
               case 16: {
                 bitField0_ |= 0x00000002;
-                bigType_ = input.readUInt32();
+                bigType_ = input.readUInt64();
                 break;
               }
               case 24: {
                 bitField0_ |= 0x00000004;
-                middleType_ = input.readUInt32();
+                middleType_ = input.readUInt64();
                 break;
               }
               case 32: {
                 bitField0_ |= 0x00000008;
-                smallType_ = input.readUInt32();
+                smallType_ = input.readUInt64();
                 break;
               }
               case 40: {
-                int rawValue = input.readEnum();
-                com.tencent.urs.protobuf.Recommend.ActiveType value = com.tencent.urs.protobuf.Recommend.ActiveType.valueOf(rawValue);
-                if (value != null) {
-                  bitField0_ |= 0x00000010;
-                  actType_ = value;
-                }
+                bitField0_ |= 0x00000010;
+                actType_ = input.readUInt32();
                 break;
               }
               case 50: {
@@ -5492,15 +5302,15 @@ public final class Recommend {
           
         }
         
-        // optional uint32 BigType = 2;
-        private int bigType_ ;
+        // optional uint64 BigType = 2;
+        private long bigType_ ;
         public boolean hasBigType() {
           return ((bitField0_ & 0x00000002) == 0x00000002);
         }
-        public int getBigType() {
+        public long getBigType() {
           return bigType_;
         }
-        public Builder setBigType(int value) {
+        public Builder setBigType(long value) {
           bitField0_ |= 0x00000002;
           bigType_ = value;
           
@@ -5508,20 +5318,20 @@ public final class Recommend {
         }
         public Builder clearBigType() {
           bitField0_ = (bitField0_ & ~0x00000002);
-          bigType_ = 0;
+          bigType_ = 0L;
           
           return this;
         }
         
-        // optional uint32 MiddleType = 3;
-        private int middleType_ ;
+        // optional uint64 MiddleType = 3;
+        private long middleType_ ;
         public boolean hasMiddleType() {
           return ((bitField0_ & 0x00000004) == 0x00000004);
         }
-        public int getMiddleType() {
+        public long getMiddleType() {
           return middleType_;
         }
-        public Builder setMiddleType(int value) {
+        public Builder setMiddleType(long value) {
           bitField0_ |= 0x00000004;
           middleType_ = value;
           
@@ -5529,20 +5339,20 @@ public final class Recommend {
         }
         public Builder clearMiddleType() {
           bitField0_ = (bitField0_ & ~0x00000004);
-          middleType_ = 0;
+          middleType_ = 0L;
           
           return this;
         }
         
-        // optional uint32 SmallType = 4;
-        private int smallType_ ;
+        // optional uint64 SmallType = 4;
+        private long smallType_ ;
         public boolean hasSmallType() {
           return ((bitField0_ & 0x00000008) == 0x00000008);
         }
-        public int getSmallType() {
+        public long getSmallType() {
           return smallType_;
         }
-        public Builder setSmallType(int value) {
+        public Builder setSmallType(long value) {
           bitField0_ |= 0x00000008;
           smallType_ = value;
           
@@ -5550,23 +5360,20 @@ public final class Recommend {
         }
         public Builder clearSmallType() {
           bitField0_ = (bitField0_ & ~0x00000008);
-          smallType_ = 0;
+          smallType_ = 0L;
           
           return this;
         }
         
-        // optional .com.tencent.urs.protobuf.ActiveType ActType = 5 [default = Unknown];
-        private com.tencent.urs.protobuf.Recommend.ActiveType actType_ = com.tencent.urs.protobuf.Recommend.ActiveType.Unknown;
+        // optional uint32 ActType = 5;
+        private int actType_ ;
         public boolean hasActType() {
           return ((bitField0_ & 0x00000010) == 0x00000010);
         }
-        public com.tencent.urs.protobuf.Recommend.ActiveType getActType() {
+        public int getActType() {
           return actType_;
         }
-        public Builder setActType(com.tencent.urs.protobuf.Recommend.ActiveType value) {
-          if (value == null) {
-            throw new NullPointerException();
-          }
+        public Builder setActType(int value) {
           bitField0_ |= 0x00000010;
           actType_ = value;
           
@@ -5574,7 +5381,7 @@ public final class Recommend {
         }
         public Builder clearActType() {
           bitField0_ = (bitField0_ & ~0x00000010);
-          actType_ = com.tencent.urs.protobuf.Recommend.ActiveType.Unknown;
+          actType_ = 0;
           
           return this;
         }
@@ -6224,678 +6031,6 @@ public final class Recommend {
     // @@protoc_insertion_point(class_scope:com.tencent.urs.protobuf.UserActiveHistory)
   }
   
-  public interface ItemInfoOrBuilder
-      extends com.google.protobuf.MessageLiteOrBuilder {
-    
-    // required uint64 UpdateTime = 1;
-    boolean hasUpdateTime();
-    long getUpdateTime();
-    
-    // optional uint32 BigType = 2;
-    boolean hasBigType();
-    int getBigType();
-    
-    // optional uint32 MiddleType = 3;
-    boolean hasMiddleType();
-    int getMiddleType();
-    
-    // optional uint32 SmallType = 4;
-    boolean hasSmallType();
-    int getSmallType();
-    
-    // required .com.tencent.urs.protobuf.ItemInfo.ValidType VFlag = 5 [default = UNKNOWN];
-    boolean hasVFlag();
-    com.tencent.urs.protobuf.Recommend.ItemInfo.ValidType getVFlag();
-    
-    // optional string shopId = 6;
-    boolean hasShopId();
-    String getShopId();
-  }
-  public static final class ItemInfo extends
-      com.google.protobuf.GeneratedMessageLite
-      implements ItemInfoOrBuilder {
-    // Use ItemInfo.newBuilder() to construct.
-    private ItemInfo(Builder builder) {
-      super(builder);
-    }
-    private ItemInfo(boolean noInit) {}
-    
-    private static final ItemInfo defaultInstance;
-    public static ItemInfo getDefaultInstance() {
-      return defaultInstance;
-    }
-    
-    public ItemInfo getDefaultInstanceForType() {
-      return defaultInstance;
-    }
-    
-    public enum ValidType
-        implements com.google.protobuf.Internal.EnumLite {
-      INVALID(0, 0),
-      VALID(1, 1),
-      UNKNOWN(2, 2),
-      ;
-      
-      public static final int INVALID_VALUE = 0;
-      public static final int VALID_VALUE = 1;
-      public static final int UNKNOWN_VALUE = 2;
-      
-      
-      public final int getNumber() { return value; }
-      
-      public static ValidType valueOf(int value) {
-        switch (value) {
-          case 0: return INVALID;
-          case 1: return VALID;
-          case 2: return UNKNOWN;
-          default: return null;
-        }
-      }
-      
-      public static com.google.protobuf.Internal.EnumLiteMap<ValidType>
-          internalGetValueMap() {
-        return internalValueMap;
-      }
-      private static com.google.protobuf.Internal.EnumLiteMap<ValidType>
-          internalValueMap =
-            new com.google.protobuf.Internal.EnumLiteMap<ValidType>() {
-              public ValidType findValueByNumber(int number) {
-                return ValidType.valueOf(number);
-              }
-            };
-      
-      private final int value;
-      
-      private ValidType(int index, int value) {
-        this.value = value;
-      }
-      
-      // @@protoc_insertion_point(enum_scope:com.tencent.urs.protobuf.ItemInfo.ValidType)
-    }
-    
-    private int bitField0_;
-    // required uint64 UpdateTime = 1;
-    public static final int UPDATETIME_FIELD_NUMBER = 1;
-    private long updateTime_;
-    public boolean hasUpdateTime() {
-      return ((bitField0_ & 0x00000001) == 0x00000001);
-    }
-    public long getUpdateTime() {
-      return updateTime_;
-    }
-    
-    // optional uint32 BigType = 2;
-    public static final int BIGTYPE_FIELD_NUMBER = 2;
-    private int bigType_;
-    public boolean hasBigType() {
-      return ((bitField0_ & 0x00000002) == 0x00000002);
-    }
-    public int getBigType() {
-      return bigType_;
-    }
-    
-    // optional uint32 MiddleType = 3;
-    public static final int MIDDLETYPE_FIELD_NUMBER = 3;
-    private int middleType_;
-    public boolean hasMiddleType() {
-      return ((bitField0_ & 0x00000004) == 0x00000004);
-    }
-    public int getMiddleType() {
-      return middleType_;
-    }
-    
-    // optional uint32 SmallType = 4;
-    public static final int SMALLTYPE_FIELD_NUMBER = 4;
-    private int smallType_;
-    public boolean hasSmallType() {
-      return ((bitField0_ & 0x00000008) == 0x00000008);
-    }
-    public int getSmallType() {
-      return smallType_;
-    }
-    
-    // required .com.tencent.urs.protobuf.ItemInfo.ValidType VFlag = 5 [default = UNKNOWN];
-    public static final int VFLAG_FIELD_NUMBER = 5;
-    private com.tencent.urs.protobuf.Recommend.ItemInfo.ValidType vFlag_;
-    public boolean hasVFlag() {
-      return ((bitField0_ & 0x00000010) == 0x00000010);
-    }
-    public com.tencent.urs.protobuf.Recommend.ItemInfo.ValidType getVFlag() {
-      return vFlag_;
-    }
-    
-    // optional string shopId = 6;
-    public static final int SHOPID_FIELD_NUMBER = 6;
-    private java.lang.Object shopId_;
-    public boolean hasShopId() {
-      return ((bitField0_ & 0x00000020) == 0x00000020);
-    }
-    public String getShopId() {
-      java.lang.Object ref = shopId_;
-      if (ref instanceof String) {
-        return (String) ref;
-      } else {
-        com.google.protobuf.ByteString bs = 
-            (com.google.protobuf.ByteString) ref;
-        String s = bs.toStringUtf8();
-        if (com.google.protobuf.Internal.isValidUtf8(bs)) {
-          shopId_ = s;
-        }
-        return s;
-      }
-    }
-    private com.google.protobuf.ByteString getShopIdBytes() {
-      java.lang.Object ref = shopId_;
-      if (ref instanceof String) {
-        com.google.protobuf.ByteString b = 
-            com.google.protobuf.ByteString.copyFromUtf8((String) ref);
-        shopId_ = b;
-        return b;
-      } else {
-        return (com.google.protobuf.ByteString) ref;
-      }
-    }
-    
-    private void initFields() {
-      updateTime_ = 0L;
-      bigType_ = 0;
-      middleType_ = 0;
-      smallType_ = 0;
-      vFlag_ = com.tencent.urs.protobuf.Recommend.ItemInfo.ValidType.UNKNOWN;
-      shopId_ = "";
-    }
-    private byte memoizedIsInitialized = -1;
-    public final boolean isInitialized() {
-      byte isInitialized = memoizedIsInitialized;
-      if (isInitialized != -1) return isInitialized == 1;
-      
-      if (!hasUpdateTime()) {
-        memoizedIsInitialized = 0;
-        return false;
-      }
-      if (!hasVFlag()) {
-        memoizedIsInitialized = 0;
-        return false;
-      }
-      memoizedIsInitialized = 1;
-      return true;
-    }
-    
-    public void writeTo(com.google.protobuf.CodedOutputStream output)
-                        throws java.io.IOException {
-      getSerializedSize();
-      if (((bitField0_ & 0x00000001) == 0x00000001)) {
-        output.writeUInt64(1, updateTime_);
-      }
-      if (((bitField0_ & 0x00000002) == 0x00000002)) {
-        output.writeUInt32(2, bigType_);
-      }
-      if (((bitField0_ & 0x00000004) == 0x00000004)) {
-        output.writeUInt32(3, middleType_);
-      }
-      if (((bitField0_ & 0x00000008) == 0x00000008)) {
-        output.writeUInt32(4, smallType_);
-      }
-      if (((bitField0_ & 0x00000010) == 0x00000010)) {
-        output.writeEnum(5, vFlag_.getNumber());
-      }
-      if (((bitField0_ & 0x00000020) == 0x00000020)) {
-        output.writeBytes(6, getShopIdBytes());
-      }
-    }
-    
-    private int memoizedSerializedSize = -1;
-    public int getSerializedSize() {
-      int size = memoizedSerializedSize;
-      if (size != -1) return size;
-    
-      size = 0;
-      if (((bitField0_ & 0x00000001) == 0x00000001)) {
-        size += com.google.protobuf.CodedOutputStream
-          .computeUInt64Size(1, updateTime_);
-      }
-      if (((bitField0_ & 0x00000002) == 0x00000002)) {
-        size += com.google.protobuf.CodedOutputStream
-          .computeUInt32Size(2, bigType_);
-      }
-      if (((bitField0_ & 0x00000004) == 0x00000004)) {
-        size += com.google.protobuf.CodedOutputStream
-          .computeUInt32Size(3, middleType_);
-      }
-      if (((bitField0_ & 0x00000008) == 0x00000008)) {
-        size += com.google.protobuf.CodedOutputStream
-          .computeUInt32Size(4, smallType_);
-      }
-      if (((bitField0_ & 0x00000010) == 0x00000010)) {
-        size += com.google.protobuf.CodedOutputStream
-          .computeEnumSize(5, vFlag_.getNumber());
-      }
-      if (((bitField0_ & 0x00000020) == 0x00000020)) {
-        size += com.google.protobuf.CodedOutputStream
-          .computeBytesSize(6, getShopIdBytes());
-      }
-      memoizedSerializedSize = size;
-      return size;
-    }
-    
-    private static final long serialVersionUID = 0L;
-    @java.lang.Override
-    protected java.lang.Object writeReplace()
-        throws java.io.ObjectStreamException {
-      return super.writeReplace();
-    }
-    
-    public static com.tencent.urs.protobuf.Recommend.ItemInfo parseFrom(
-        com.google.protobuf.ByteString data)
-        throws com.google.protobuf.InvalidProtocolBufferException {
-      return newBuilder().mergeFrom(data).buildParsed();
-    }
-    public static com.tencent.urs.protobuf.Recommend.ItemInfo parseFrom(
-        com.google.protobuf.ByteString data,
-        com.google.protobuf.ExtensionRegistryLite extensionRegistry)
-        throws com.google.protobuf.InvalidProtocolBufferException {
-      return newBuilder().mergeFrom(data, extensionRegistry)
-               .buildParsed();
-    }
-    public static com.tencent.urs.protobuf.Recommend.ItemInfo parseFrom(byte[] data)
-        throws com.google.protobuf.InvalidProtocolBufferException {
-      return newBuilder().mergeFrom(data).buildParsed();
-    }
-    public static com.tencent.urs.protobuf.Recommend.ItemInfo parseFrom(
-        byte[] data,
-        com.google.protobuf.ExtensionRegistryLite extensionRegistry)
-        throws com.google.protobuf.InvalidProtocolBufferException {
-      return newBuilder().mergeFrom(data, extensionRegistry)
-               .buildParsed();
-    }
-    public static com.tencent.urs.protobuf.Recommend.ItemInfo parseFrom(java.io.InputStream input)
-        throws java.io.IOException {
-      return newBuilder().mergeFrom(input).buildParsed();
-    }
-    public static com.tencent.urs.protobuf.Recommend.ItemInfo parseFrom(
-        java.io.InputStream input,
-        com.google.protobuf.ExtensionRegistryLite extensionRegistry)
-        throws java.io.IOException {
-      return newBuilder().mergeFrom(input, extensionRegistry)
-               .buildParsed();
-    }
-    public static com.tencent.urs.protobuf.Recommend.ItemInfo parseDelimitedFrom(java.io.InputStream input)
-        throws java.io.IOException {
-      Builder builder = newBuilder();
-      if (builder.mergeDelimitedFrom(input)) {
-        return builder.buildParsed();
-      } else {
-        return null;
-      }
-    }
-    public static com.tencent.urs.protobuf.Recommend.ItemInfo parseDelimitedFrom(
-        java.io.InputStream input,
-        com.google.protobuf.ExtensionRegistryLite extensionRegistry)
-        throws java.io.IOException {
-      Builder builder = newBuilder();
-      if (builder.mergeDelimitedFrom(input, extensionRegistry)) {
-        return builder.buildParsed();
-      } else {
-        return null;
-      }
-    }
-    public static com.tencent.urs.protobuf.Recommend.ItemInfo parseFrom(
-        com.google.protobuf.CodedInputStream input)
-        throws java.io.IOException {
-      return newBuilder().mergeFrom(input).buildParsed();
-    }
-    public static com.tencent.urs.protobuf.Recommend.ItemInfo parseFrom(
-        com.google.protobuf.CodedInputStream input,
-        com.google.protobuf.ExtensionRegistryLite extensionRegistry)
-        throws java.io.IOException {
-      return newBuilder().mergeFrom(input, extensionRegistry)
-               .buildParsed();
-    }
-    
-    public static Builder newBuilder() { return Builder.create(); }
-    public Builder newBuilderForType() { return newBuilder(); }
-    public static Builder newBuilder(com.tencent.urs.protobuf.Recommend.ItemInfo prototype) {
-      return newBuilder().mergeFrom(prototype);
-    }
-    public Builder toBuilder() { return newBuilder(this); }
-    
-    public static final class Builder extends
-        com.google.protobuf.GeneratedMessageLite.Builder<
-          com.tencent.urs.protobuf.Recommend.ItemInfo, Builder>
-        implements com.tencent.urs.protobuf.Recommend.ItemInfoOrBuilder {
-      // Construct using com.tencent.urs.protobuf.Recommend.ItemInfo.newBuilder()
-      private Builder() {
-        maybeForceBuilderInitialization();
-      }
-      
-      private void maybeForceBuilderInitialization() {
-      }
-      private static Builder create() {
-        return new Builder();
-      }
-      
-      public Builder clear() {
-        super.clear();
-        updateTime_ = 0L;
-        bitField0_ = (bitField0_ & ~0x00000001);
-        bigType_ = 0;
-        bitField0_ = (bitField0_ & ~0x00000002);
-        middleType_ = 0;
-        bitField0_ = (bitField0_ & ~0x00000004);
-        smallType_ = 0;
-        bitField0_ = (bitField0_ & ~0x00000008);
-        vFlag_ = com.tencent.urs.protobuf.Recommend.ItemInfo.ValidType.UNKNOWN;
-        bitField0_ = (bitField0_ & ~0x00000010);
-        shopId_ = "";
-        bitField0_ = (bitField0_ & ~0x00000020);
-        return this;
-      }
-      
-      public Builder clone() {
-        return create().mergeFrom(buildPartial());
-      }
-      
-      public com.tencent.urs.protobuf.Recommend.ItemInfo getDefaultInstanceForType() {
-        return com.tencent.urs.protobuf.Recommend.ItemInfo.getDefaultInstance();
-      }
-      
-      public com.tencent.urs.protobuf.Recommend.ItemInfo build() {
-        com.tencent.urs.protobuf.Recommend.ItemInfo result = buildPartial();
-        if (!result.isInitialized()) {
-          throw newUninitializedMessageException(result);
-        }
-        return result;
-      }
-      
-      private com.tencent.urs.protobuf.Recommend.ItemInfo buildParsed()
-          throws com.google.protobuf.InvalidProtocolBufferException {
-        com.tencent.urs.protobuf.Recommend.ItemInfo result = buildPartial();
-        if (!result.isInitialized()) {
-          throw newUninitializedMessageException(
-            result).asInvalidProtocolBufferException();
-        }
-        return result;
-      }
-      
-      public com.tencent.urs.protobuf.Recommend.ItemInfo buildPartial() {
-        com.tencent.urs.protobuf.Recommend.ItemInfo result = new com.tencent.urs.protobuf.Recommend.ItemInfo(this);
-        int from_bitField0_ = bitField0_;
-        int to_bitField0_ = 0;
-        if (((from_bitField0_ & 0x00000001) == 0x00000001)) {
-          to_bitField0_ |= 0x00000001;
-        }
-        result.updateTime_ = updateTime_;
-        if (((from_bitField0_ & 0x00000002) == 0x00000002)) {
-          to_bitField0_ |= 0x00000002;
-        }
-        result.bigType_ = bigType_;
-        if (((from_bitField0_ & 0x00000004) == 0x00000004)) {
-          to_bitField0_ |= 0x00000004;
-        }
-        result.middleType_ = middleType_;
-        if (((from_bitField0_ & 0x00000008) == 0x00000008)) {
-          to_bitField0_ |= 0x00000008;
-        }
-        result.smallType_ = smallType_;
-        if (((from_bitField0_ & 0x00000010) == 0x00000010)) {
-          to_bitField0_ |= 0x00000010;
-        }
-        result.vFlag_ = vFlag_;
-        if (((from_bitField0_ & 0x00000020) == 0x00000020)) {
-          to_bitField0_ |= 0x00000020;
-        }
-        result.shopId_ = shopId_;
-        result.bitField0_ = to_bitField0_;
-        return result;
-      }
-      
-      public Builder mergeFrom(com.tencent.urs.protobuf.Recommend.ItemInfo other) {
-        if (other == com.tencent.urs.protobuf.Recommend.ItemInfo.getDefaultInstance()) return this;
-        if (other.hasUpdateTime()) {
-          setUpdateTime(other.getUpdateTime());
-        }
-        if (other.hasBigType()) {
-          setBigType(other.getBigType());
-        }
-        if (other.hasMiddleType()) {
-          setMiddleType(other.getMiddleType());
-        }
-        if (other.hasSmallType()) {
-          setSmallType(other.getSmallType());
-        }
-        if (other.hasVFlag()) {
-          setVFlag(other.getVFlag());
-        }
-        if (other.hasShopId()) {
-          setShopId(other.getShopId());
-        }
-        return this;
-      }
-      
-      public final boolean isInitialized() {
-        if (!hasUpdateTime()) {
-          
-          return false;
-        }
-        if (!hasVFlag()) {
-          
-          return false;
-        }
-        return true;
-      }
-      
-      public Builder mergeFrom(
-          com.google.protobuf.CodedInputStream input,
-          com.google.protobuf.ExtensionRegistryLite extensionRegistry)
-          throws java.io.IOException {
-        while (true) {
-          int tag = input.readTag();
-          switch (tag) {
-            case 0:
-              
-              return this;
-            default: {
-              if (!parseUnknownField(input, extensionRegistry, tag)) {
-                
-                return this;
-              }
-              break;
-            }
-            case 8: {
-              bitField0_ |= 0x00000001;
-              updateTime_ = input.readUInt64();
-              break;
-            }
-            case 16: {
-              bitField0_ |= 0x00000002;
-              bigType_ = input.readUInt32();
-              break;
-            }
-            case 24: {
-              bitField0_ |= 0x00000004;
-              middleType_ = input.readUInt32();
-              break;
-            }
-            case 32: {
-              bitField0_ |= 0x00000008;
-              smallType_ = input.readUInt32();
-              break;
-            }
-            case 40: {
-              int rawValue = input.readEnum();
-              com.tencent.urs.protobuf.Recommend.ItemInfo.ValidType value = com.tencent.urs.protobuf.Recommend.ItemInfo.ValidType.valueOf(rawValue);
-              if (value != null) {
-                bitField0_ |= 0x00000010;
-                vFlag_ = value;
-              }
-              break;
-            }
-            case 50: {
-              bitField0_ |= 0x00000020;
-              shopId_ = input.readBytes();
-              break;
-            }
-          }
-        }
-      }
-      
-      private int bitField0_;
-      
-      // required uint64 UpdateTime = 1;
-      private long updateTime_ ;
-      public boolean hasUpdateTime() {
-        return ((bitField0_ & 0x00000001) == 0x00000001);
-      }
-      public long getUpdateTime() {
-        return updateTime_;
-      }
-      public Builder setUpdateTime(long value) {
-        bitField0_ |= 0x00000001;
-        updateTime_ = value;
-        
-        return this;
-      }
-      public Builder clearUpdateTime() {
-        bitField0_ = (bitField0_ & ~0x00000001);
-        updateTime_ = 0L;
-        
-        return this;
-      }
-      
-      // optional uint32 BigType = 2;
-      private int bigType_ ;
-      public boolean hasBigType() {
-        return ((bitField0_ & 0x00000002) == 0x00000002);
-      }
-      public int getBigType() {
-        return bigType_;
-      }
-      public Builder setBigType(int value) {
-        bitField0_ |= 0x00000002;
-        bigType_ = value;
-        
-        return this;
-      }
-      public Builder clearBigType() {
-        bitField0_ = (bitField0_ & ~0x00000002);
-        bigType_ = 0;
-        
-        return this;
-      }
-      
-      // optional uint32 MiddleType = 3;
-      private int middleType_ ;
-      public boolean hasMiddleType() {
-        return ((bitField0_ & 0x00000004) == 0x00000004);
-      }
-      public int getMiddleType() {
-        return middleType_;
-      }
-      public Builder setMiddleType(int value) {
-        bitField0_ |= 0x00000004;
-        middleType_ = value;
-        
-        return this;
-      }
-      public Builder clearMiddleType() {
-        bitField0_ = (bitField0_ & ~0x00000004);
-        middleType_ = 0;
-        
-        return this;
-      }
-      
-      // optional uint32 SmallType = 4;
-      private int smallType_ ;
-      public boolean hasSmallType() {
-        return ((bitField0_ & 0x00000008) == 0x00000008);
-      }
-      public int getSmallType() {
-        return smallType_;
-      }
-      public Builder setSmallType(int value) {
-        bitField0_ |= 0x00000008;
-        smallType_ = value;
-        
-        return this;
-      }
-      public Builder clearSmallType() {
-        bitField0_ = (bitField0_ & ~0x00000008);
-        smallType_ = 0;
-        
-        return this;
-      }
-      
-      // required .com.tencent.urs.protobuf.ItemInfo.ValidType VFlag = 5 [default = UNKNOWN];
-      private com.tencent.urs.protobuf.Recommend.ItemInfo.ValidType vFlag_ = com.tencent.urs.protobuf.Recommend.ItemInfo.ValidType.UNKNOWN;
-      public boolean hasVFlag() {
-        return ((bitField0_ & 0x00000010) == 0x00000010);
-      }
-      public com.tencent.urs.protobuf.Recommend.ItemInfo.ValidType getVFlag() {
-        return vFlag_;
-      }
-      public Builder setVFlag(com.tencent.urs.protobuf.Recommend.ItemInfo.ValidType value) {
-        if (value == null) {
-          throw new NullPointerException();
-        }
-        bitField0_ |= 0x00000010;
-        vFlag_ = value;
-        
-        return this;
-      }
-      public Builder clearVFlag() {
-        bitField0_ = (bitField0_ & ~0x00000010);
-        vFlag_ = com.tencent.urs.protobuf.Recommend.ItemInfo.ValidType.UNKNOWN;
-        
-        return this;
-      }
-      
-      // optional string shopId = 6;
-      private java.lang.Object shopId_ = "";
-      public boolean hasShopId() {
-        return ((bitField0_ & 0x00000020) == 0x00000020);
-      }
-      public String getShopId() {
-        java.lang.Object ref = shopId_;
-        if (!(ref instanceof String)) {
-          String s = ((com.google.protobuf.ByteString) ref).toStringUtf8();
-          shopId_ = s;
-          return s;
-        } else {
-          return (String) ref;
-        }
-      }
-      public Builder setShopId(String value) {
-        if (value == null) {
-    throw new NullPointerException();
-  }
-  bitField0_ |= 0x00000020;
-        shopId_ = value;
-        
-        return this;
-      }
-      public Builder clearShopId() {
-        bitField0_ = (bitField0_ & ~0x00000020);
-        shopId_ = getDefaultInstance().getShopId();
-        
-        return this;
-      }
-      void setShopId(com.google.protobuf.ByteString value) {
-        bitField0_ |= 0x00000020;
-        shopId_ = value;
-        
-      }
-      
-      // @@protoc_insertion_point(builder_scope:com.tencent.urs.protobuf.ItemInfo)
-    }
-    
-    static {
-      defaultInstance = new ItemInfo(true);
-      defaultInstance.initFields();
-    }
-    
-    // @@protoc_insertion_point(class_scope:com.tencent.urs.protobuf.ItemInfo)
-  }
-  
   public interface UserActiveDetailOrBuilder
       extends com.google.protobuf.MessageLiteOrBuilder {
     
@@ -6988,9 +6123,9 @@ public final class Recommend {
         public interface ActTypeOrBuilder
             extends com.google.protobuf.MessageLiteOrBuilder {
           
-          // required .com.tencent.urs.protobuf.ActiveType ActType = 1 [default = Unknown];
+          // required uint32 ActType = 1;
           boolean hasActType();
-          com.tencent.urs.protobuf.Recommend.ActiveType getActType();
+          int getActType();
           
           // optional uint64 Count = 2;
           boolean hasCount();
@@ -7019,13 +6154,13 @@ public final class Recommend {
           }
           
           private int bitField0_;
-          // required .com.tencent.urs.protobuf.ActiveType ActType = 1 [default = Unknown];
+          // required uint32 ActType = 1;
           public static final int ACTTYPE_FIELD_NUMBER = 1;
-          private com.tencent.urs.protobuf.Recommend.ActiveType actType_;
+          private int actType_;
           public boolean hasActType() {
             return ((bitField0_ & 0x00000001) == 0x00000001);
           }
-          public com.tencent.urs.protobuf.Recommend.ActiveType getActType() {
+          public int getActType() {
             return actType_;
           }
           
@@ -7050,7 +6185,7 @@ public final class Recommend {
           }
           
           private void initFields() {
-            actType_ = com.tencent.urs.protobuf.Recommend.ActiveType.Unknown;
+            actType_ = 0;
             count_ = 0L;
             lastUpdateTime_ = 0L;
           }
@@ -7071,7 +6206,7 @@ public final class Recommend {
                               throws java.io.IOException {
             getSerializedSize();
             if (((bitField0_ & 0x00000001) == 0x00000001)) {
-              output.writeEnum(1, actType_.getNumber());
+              output.writeUInt32(1, actType_);
             }
             if (((bitField0_ & 0x00000002) == 0x00000002)) {
               output.writeUInt64(2, count_);
@@ -7089,7 +6224,7 @@ public final class Recommend {
             size = 0;
             if (((bitField0_ & 0x00000001) == 0x00000001)) {
               size += com.google.protobuf.CodedOutputStream
-                .computeEnumSize(1, actType_.getNumber());
+                .computeUInt32Size(1, actType_);
             }
             if (((bitField0_ & 0x00000002) == 0x00000002)) {
               size += com.google.protobuf.CodedOutputStream
@@ -7201,7 +6336,7 @@ public final class Recommend {
             
             public Builder clear() {
               super.clear();
-              actType_ = com.tencent.urs.protobuf.Recommend.ActiveType.Unknown;
+              actType_ = 0;
               bitField0_ = (bitField0_ & ~0x00000001);
               count_ = 0L;
               bitField0_ = (bitField0_ & ~0x00000002);
@@ -7296,12 +6431,8 @@ public final class Recommend {
                     break;
                   }
                   case 8: {
-                    int rawValue = input.readEnum();
-                    com.tencent.urs.protobuf.Recommend.ActiveType value = com.tencent.urs.protobuf.Recommend.ActiveType.valueOf(rawValue);
-                    if (value != null) {
-                      bitField0_ |= 0x00000001;
-                      actType_ = value;
-                    }
+                    bitField0_ |= 0x00000001;
+                    actType_ = input.readUInt32();
                     break;
                   }
                   case 16: {
@@ -7320,18 +6451,15 @@ public final class Recommend {
             
             private int bitField0_;
             
-            // required .com.tencent.urs.protobuf.ActiveType ActType = 1 [default = Unknown];
-            private com.tencent.urs.protobuf.Recommend.ActiveType actType_ = com.tencent.urs.protobuf.Recommend.ActiveType.Unknown;
+            // required uint32 ActType = 1;
+            private int actType_ ;
             public boolean hasActType() {
               return ((bitField0_ & 0x00000001) == 0x00000001);
             }
-            public com.tencent.urs.protobuf.Recommend.ActiveType getActType() {
+            public int getActType() {
               return actType_;
             }
-            public Builder setActType(com.tencent.urs.protobuf.Recommend.ActiveType value) {
-              if (value == null) {
-                throw new NullPointerException();
-              }
+            public Builder setActType(int value) {
               bitField0_ |= 0x00000001;
               actType_ = value;
               
@@ -7339,7 +6467,7 @@ public final class Recommend {
             }
             public Builder clearActType() {
               bitField0_ = (bitField0_ & ~0x00000001);
-              actType_ = com.tencent.urs.protobuf.Recommend.ActiveType.Unknown;
+              actType_ = 0;
               
               return this;
             }
@@ -10877,11 +10005,11 @@ public final class Recommend {
   public interface UserPairInfoOrBuilder
       extends com.google.protobuf.MessageLiteOrBuilder {
     
-    // repeated .com.tencent.urs.protobuf.UserPairInfo.TimeSegment tsegs = 1;
-    java.util.List<com.tencent.urs.protobuf.Recommend.UserPairInfo.TimeSegment> 
-        getTsegsList();
-    com.tencent.urs.protobuf.Recommend.UserPairInfo.TimeSegment getTsegs(int index);
-    int getTsegsCount();
+    // repeated .com.tencent.urs.protobuf.UserPairInfo.ItemPairs ipairs = 1;
+    java.util.List<com.tencent.urs.protobuf.Recommend.UserPairInfo.ItemPairs> 
+        getIpairsList();
+    com.tencent.urs.protobuf.Recommend.UserPairInfo.ItemPairs getIpairs(int index);
+    int getIpairsCount();
   }
   public static final class UserPairInfo extends
       com.google.protobuf.GeneratedMessageLite
@@ -10901,66 +10029,111 @@ public final class Recommend {
       return defaultInstance;
     }
     
-    public interface TimeSegmentOrBuilder
+    public interface ItemPairsOrBuilder
         extends com.google.protobuf.MessageLiteOrBuilder {
       
-      // required uint64 timeId = 1;
-      boolean hasTimeId();
-      long getTimeId();
+      // required string itemPair = 1;
+      boolean hasItemPair();
+      String getItemPair();
       
-      // optional float count = 2;
-      boolean hasCount();
-      float getCount();
+      // required uint64 lastTimeId = 2;
+      boolean hasLastTimeId();
+      long getLastTimeId();
+      
+      // required float lastCount = 3;
+      boolean hasLastCount();
+      float getLastCount();
     }
-    public static final class TimeSegment extends
+    public static final class ItemPairs extends
         com.google.protobuf.GeneratedMessageLite
-        implements TimeSegmentOrBuilder {
-      // Use TimeSegment.newBuilder() to construct.
-      private TimeSegment(Builder builder) {
+        implements ItemPairsOrBuilder {
+      // Use ItemPairs.newBuilder() to construct.
+      private ItemPairs(Builder builder) {
         super(builder);
       }
-      private TimeSegment(boolean noInit) {}
+      private ItemPairs(boolean noInit) {}
       
-      private static final TimeSegment defaultInstance;
-      public static TimeSegment getDefaultInstance() {
+      private static final ItemPairs defaultInstance;
+      public static ItemPairs getDefaultInstance() {
         return defaultInstance;
       }
       
-      public TimeSegment getDefaultInstanceForType() {
+      public ItemPairs getDefaultInstanceForType() {
         return defaultInstance;
       }
       
       private int bitField0_;
-      // required uint64 timeId = 1;
-      public static final int TIMEID_FIELD_NUMBER = 1;
-      private long timeId_;
-      public boolean hasTimeId() {
+      // required string itemPair = 1;
+      public static final int ITEMPAIR_FIELD_NUMBER = 1;
+      private java.lang.Object itemPair_;
+      public boolean hasItemPair() {
         return ((bitField0_ & 0x00000001) == 0x00000001);
       }
-      public long getTimeId() {
-        return timeId_;
+      public String getItemPair() {
+        java.lang.Object ref = itemPair_;
+        if (ref instanceof String) {
+          return (String) ref;
+        } else {
+          com.google.protobuf.ByteString bs = 
+              (com.google.protobuf.ByteString) ref;
+          String s = bs.toStringUtf8();
+          if (com.google.protobuf.Internal.isValidUtf8(bs)) {
+            itemPair_ = s;
+          }
+          return s;
+        }
+      }
+      private com.google.protobuf.ByteString getItemPairBytes() {
+        java.lang.Object ref = itemPair_;
+        if (ref instanceof String) {
+          com.google.protobuf.ByteString b = 
+              com.google.protobuf.ByteString.copyFromUtf8((String) ref);
+          itemPair_ = b;
+          return b;
+        } else {
+          return (com.google.protobuf.ByteString) ref;
+        }
       }
       
-      // optional float count = 2;
-      public static final int COUNT_FIELD_NUMBER = 2;
-      private float count_;
-      public boolean hasCount() {
+      // required uint64 lastTimeId = 2;
+      public static final int LASTTIMEID_FIELD_NUMBER = 2;
+      private long lastTimeId_;
+      public boolean hasLastTimeId() {
         return ((bitField0_ & 0x00000002) == 0x00000002);
       }
-      public float getCount() {
-        return count_;
+      public long getLastTimeId() {
+        return lastTimeId_;
+      }
+      
+      // required float lastCount = 3;
+      public static final int LASTCOUNT_FIELD_NUMBER = 3;
+      private float lastCount_;
+      public boolean hasLastCount() {
+        return ((bitField0_ & 0x00000004) == 0x00000004);
+      }
+      public float getLastCount() {
+        return lastCount_;
       }
       
       private void initFields() {
-        timeId_ = 0L;
-        count_ = 0F;
+        itemPair_ = "";
+        lastTimeId_ = 0L;
+        lastCount_ = 0F;
       }
       private byte memoizedIsInitialized = -1;
       public final boolean isInitialized() {
         byte isInitialized = memoizedIsInitialized;
         if (isInitialized != -1) return isInitialized == 1;
         
-        if (!hasTimeId()) {
+        if (!hasItemPair()) {
+          memoizedIsInitialized = 0;
+          return false;
+        }
+        if (!hasLastTimeId()) {
+          memoizedIsInitialized = 0;
+          return false;
+        }
+        if (!hasLastCount()) {
           memoizedIsInitialized = 0;
           return false;
         }
@@ -10972,10 +10145,13 @@ public final class Recommend {
                           throws java.io.IOException {
         getSerializedSize();
         if (((bitField0_ & 0x00000001) == 0x00000001)) {
-          output.writeUInt64(1, timeId_);
+          output.writeBytes(1, getItemPairBytes());
         }
         if (((bitField0_ & 0x00000002) == 0x00000002)) {
-          output.writeFloat(2, count_);
+          output.writeUInt64(2, lastTimeId_);
+        }
+        if (((bitField0_ & 0x00000004) == 0x00000004)) {
+          output.writeFloat(3, lastCount_);
         }
       }
       
@@ -10987,11 +10163,15 @@ public final class Recommend {
         size = 0;
         if (((bitField0_ & 0x00000001) == 0x00000001)) {
           size += com.google.protobuf.CodedOutputStream
-            .computeUInt64Size(1, timeId_);
+            .computeBytesSize(1, getItemPairBytes());
         }
         if (((bitField0_ & 0x00000002) == 0x00000002)) {
           size += com.google.protobuf.CodedOutputStream
-            .computeFloatSize(2, count_);
+            .computeUInt64Size(2, lastTimeId_);
+        }
+        if (((bitField0_ & 0x00000004) == 0x00000004)) {
+          size += com.google.protobuf.CodedOutputStream
+            .computeFloatSize(3, lastCount_);
         }
         memoizedSerializedSize = size;
         return size;
@@ -11004,41 +10184,41 @@ public final class Recommend {
         return super.writeReplace();
       }
       
-      public static com.tencent.urs.protobuf.Recommend.UserPairInfo.TimeSegment parseFrom(
+      public static com.tencent.urs.protobuf.Recommend.UserPairInfo.ItemPairs parseFrom(
           com.google.protobuf.ByteString data)
           throws com.google.protobuf.InvalidProtocolBufferException {
         return newBuilder().mergeFrom(data).buildParsed();
       }
-      public static com.tencent.urs.protobuf.Recommend.UserPairInfo.TimeSegment parseFrom(
+      public static com.tencent.urs.protobuf.Recommend.UserPairInfo.ItemPairs parseFrom(
           com.google.protobuf.ByteString data,
           com.google.protobuf.ExtensionRegistryLite extensionRegistry)
           throws com.google.protobuf.InvalidProtocolBufferException {
         return newBuilder().mergeFrom(data, extensionRegistry)
                  .buildParsed();
       }
-      public static com.tencent.urs.protobuf.Recommend.UserPairInfo.TimeSegment parseFrom(byte[] data)
+      public static com.tencent.urs.protobuf.Recommend.UserPairInfo.ItemPairs parseFrom(byte[] data)
           throws com.google.protobuf.InvalidProtocolBufferException {
         return newBuilder().mergeFrom(data).buildParsed();
       }
-      public static com.tencent.urs.protobuf.Recommend.UserPairInfo.TimeSegment parseFrom(
+      public static com.tencent.urs.protobuf.Recommend.UserPairInfo.ItemPairs parseFrom(
           byte[] data,
           com.google.protobuf.ExtensionRegistryLite extensionRegistry)
           throws com.google.protobuf.InvalidProtocolBufferException {
         return newBuilder().mergeFrom(data, extensionRegistry)
                  .buildParsed();
       }
-      public static com.tencent.urs.protobuf.Recommend.UserPairInfo.TimeSegment parseFrom(java.io.InputStream input)
+      public static com.tencent.urs.protobuf.Recommend.UserPairInfo.ItemPairs parseFrom(java.io.InputStream input)
           throws java.io.IOException {
         return newBuilder().mergeFrom(input).buildParsed();
       }
-      public static com.tencent.urs.protobuf.Recommend.UserPairInfo.TimeSegment parseFrom(
+      public static com.tencent.urs.protobuf.Recommend.UserPairInfo.ItemPairs parseFrom(
           java.io.InputStream input,
           com.google.protobuf.ExtensionRegistryLite extensionRegistry)
           throws java.io.IOException {
         return newBuilder().mergeFrom(input, extensionRegistry)
                  .buildParsed();
       }
-      public static com.tencent.urs.protobuf.Recommend.UserPairInfo.TimeSegment parseDelimitedFrom(java.io.InputStream input)
+      public static com.tencent.urs.protobuf.Recommend.UserPairInfo.ItemPairs parseDelimitedFrom(java.io.InputStream input)
           throws java.io.IOException {
         Builder builder = newBuilder();
         if (builder.mergeDelimitedFrom(input)) {
@@ -11047,7 +10227,7 @@ public final class Recommend {
           return null;
         }
       }
-      public static com.tencent.urs.protobuf.Recommend.UserPairInfo.TimeSegment parseDelimitedFrom(
+      public static com.tencent.urs.protobuf.Recommend.UserPairInfo.ItemPairs parseDelimitedFrom(
           java.io.InputStream input,
           com.google.protobuf.ExtensionRegistryLite extensionRegistry)
           throws java.io.IOException {
@@ -11058,12 +10238,12 @@ public final class Recommend {
           return null;
         }
       }
-      public static com.tencent.urs.protobuf.Recommend.UserPairInfo.TimeSegment parseFrom(
+      public static com.tencent.urs.protobuf.Recommend.UserPairInfo.ItemPairs parseFrom(
           com.google.protobuf.CodedInputStream input)
           throws java.io.IOException {
         return newBuilder().mergeFrom(input).buildParsed();
       }
-      public static com.tencent.urs.protobuf.Recommend.UserPairInfo.TimeSegment parseFrom(
+      public static com.tencent.urs.protobuf.Recommend.UserPairInfo.ItemPairs parseFrom(
           com.google.protobuf.CodedInputStream input,
           com.google.protobuf.ExtensionRegistryLite extensionRegistry)
           throws java.io.IOException {
@@ -11073,16 +10253,16 @@ public final class Recommend {
       
       public static Builder newBuilder() { return Builder.create(); }
       public Builder newBuilderForType() { return newBuilder(); }
-      public static Builder newBuilder(com.tencent.urs.protobuf.Recommend.UserPairInfo.TimeSegment prototype) {
+      public static Builder newBuilder(com.tencent.urs.protobuf.Recommend.UserPairInfo.ItemPairs prototype) {
         return newBuilder().mergeFrom(prototype);
       }
       public Builder toBuilder() { return newBuilder(this); }
       
       public static final class Builder extends
           com.google.protobuf.GeneratedMessageLite.Builder<
-            com.tencent.urs.protobuf.Recommend.UserPairInfo.TimeSegment, Builder>
-          implements com.tencent.urs.protobuf.Recommend.UserPairInfo.TimeSegmentOrBuilder {
-        // Construct using com.tencent.urs.protobuf.Recommend.UserPairInfo.TimeSegment.newBuilder()
+            com.tencent.urs.protobuf.Recommend.UserPairInfo.ItemPairs, Builder>
+          implements com.tencent.urs.protobuf.Recommend.UserPairInfo.ItemPairsOrBuilder {
+        // Construct using com.tencent.urs.protobuf.Recommend.UserPairInfo.ItemPairs.newBuilder()
         private Builder() {
           maybeForceBuilderInitialization();
         }
@@ -11095,10 +10275,12 @@ public final class Recommend {
         
         public Builder clear() {
           super.clear();
-          timeId_ = 0L;
+          itemPair_ = "";
           bitField0_ = (bitField0_ & ~0x00000001);
-          count_ = 0F;
+          lastTimeId_ = 0L;
           bitField0_ = (bitField0_ & ~0x00000002);
+          lastCount_ = 0F;
+          bitField0_ = (bitField0_ & ~0x00000004);
           return this;
         }
         
@@ -11106,21 +10288,21 @@ public final class Recommend {
           return create().mergeFrom(buildPartial());
         }
         
-        public com.tencent.urs.protobuf.Recommend.UserPairInfo.TimeSegment getDefaultInstanceForType() {
-          return com.tencent.urs.protobuf.Recommend.UserPairInfo.TimeSegment.getDefaultInstance();
+        public com.tencent.urs.protobuf.Recommend.UserPairInfo.ItemPairs getDefaultInstanceForType() {
+          return com.tencent.urs.protobuf.Recommend.UserPairInfo.ItemPairs.getDefaultInstance();
         }
         
-        public com.tencent.urs.protobuf.Recommend.UserPairInfo.TimeSegment build() {
-          com.tencent.urs.protobuf.Recommend.UserPairInfo.TimeSegment result = buildPartial();
+        public com.tencent.urs.protobuf.Recommend.UserPairInfo.ItemPairs build() {
+          com.tencent.urs.protobuf.Recommend.UserPairInfo.ItemPairs result = buildPartial();
           if (!result.isInitialized()) {
             throw newUninitializedMessageException(result);
           }
           return result;
         }
         
-        private com.tencent.urs.protobuf.Recommend.UserPairInfo.TimeSegment buildParsed()
+        private com.tencent.urs.protobuf.Recommend.UserPairInfo.ItemPairs buildParsed()
             throws com.google.protobuf.InvalidProtocolBufferException {
-          com.tencent.urs.protobuf.Recommend.UserPairInfo.TimeSegment result = buildPartial();
+          com.tencent.urs.protobuf.Recommend.UserPairInfo.ItemPairs result = buildPartial();
           if (!result.isInitialized()) {
             throw newUninitializedMessageException(
               result).asInvalidProtocolBufferException();
@@ -11128,35 +10310,50 @@ public final class Recommend {
           return result;
         }
         
-        public com.tencent.urs.protobuf.Recommend.UserPairInfo.TimeSegment buildPartial() {
-          com.tencent.urs.protobuf.Recommend.UserPairInfo.TimeSegment result = new com.tencent.urs.protobuf.Recommend.UserPairInfo.TimeSegment(this);
+        public com.tencent.urs.protobuf.Recommend.UserPairInfo.ItemPairs buildPartial() {
+          com.tencent.urs.protobuf.Recommend.UserPairInfo.ItemPairs result = new com.tencent.urs.protobuf.Recommend.UserPairInfo.ItemPairs(this);
           int from_bitField0_ = bitField0_;
           int to_bitField0_ = 0;
           if (((from_bitField0_ & 0x00000001) == 0x00000001)) {
             to_bitField0_ |= 0x00000001;
           }
-          result.timeId_ = timeId_;
+          result.itemPair_ = itemPair_;
           if (((from_bitField0_ & 0x00000002) == 0x00000002)) {
             to_bitField0_ |= 0x00000002;
           }
-          result.count_ = count_;
+          result.lastTimeId_ = lastTimeId_;
+          if (((from_bitField0_ & 0x00000004) == 0x00000004)) {
+            to_bitField0_ |= 0x00000004;
+          }
+          result.lastCount_ = lastCount_;
           result.bitField0_ = to_bitField0_;
           return result;
         }
         
-        public Builder mergeFrom(com.tencent.urs.protobuf.Recommend.UserPairInfo.TimeSegment other) {
-          if (other == com.tencent.urs.protobuf.Recommend.UserPairInfo.TimeSegment.getDefaultInstance()) return this;
-          if (other.hasTimeId()) {
-            setTimeId(other.getTimeId());
+        public Builder mergeFrom(com.tencent.urs.protobuf.Recommend.UserPairInfo.ItemPairs other) {
+          if (other == com.tencent.urs.protobuf.Recommend.UserPairInfo.ItemPairs.getDefaultInstance()) return this;
+          if (other.hasItemPair()) {
+            setItemPair(other.getItemPair());
           }
-          if (other.hasCount()) {
-            setCount(other.getCount());
+          if (other.hasLastTimeId()) {
+            setLastTimeId(other.getLastTimeId());
+          }
+          if (other.hasLastCount()) {
+            setLastCount(other.getLastCount());
           }
           return this;
         }
         
         public final boolean isInitialized() {
-          if (!hasTimeId()) {
+          if (!hasItemPair()) {
+            
+            return false;
+          }
+          if (!hasLastTimeId()) {
+            
+            return false;
+          }
+          if (!hasLastCount()) {
             
             return false;
           }
@@ -11180,14 +10377,19 @@ public final class Recommend {
                 }
                 break;
               }
-              case 8: {
+              case 10: {
                 bitField0_ |= 0x00000001;
-                timeId_ = input.readUInt64();
+                itemPair_ = input.readBytes();
                 break;
               }
-              case 21: {
+              case 16: {
                 bitField0_ |= 0x00000002;
-                count_ = input.readFloat();
+                lastTimeId_ = input.readUInt64();
+                break;
+              }
+              case 29: {
+                bitField0_ |= 0x00000004;
+                lastCount_ = input.readFloat();
                 break;
               }
             }
@@ -11196,90 +10398,126 @@ public final class Recommend {
         
         private int bitField0_;
         
-        // required uint64 timeId = 1;
-        private long timeId_ ;
-        public boolean hasTimeId() {
+        // required string itemPair = 1;
+        private java.lang.Object itemPair_ = "";
+        public boolean hasItemPair() {
           return ((bitField0_ & 0x00000001) == 0x00000001);
         }
-        public long getTimeId() {
-          return timeId_;
+        public String getItemPair() {
+          java.lang.Object ref = itemPair_;
+          if (!(ref instanceof String)) {
+            String s = ((com.google.protobuf.ByteString) ref).toStringUtf8();
+            itemPair_ = s;
+            return s;
+          } else {
+            return (String) ref;
+          }
         }
-        public Builder setTimeId(long value) {
-          bitField0_ |= 0x00000001;
-          timeId_ = value;
+        public Builder setItemPair(String value) {
+          if (value == null) {
+    throw new NullPointerException();
+  }
+  bitField0_ |= 0x00000001;
+          itemPair_ = value;
           
           return this;
         }
-        public Builder clearTimeId() {
+        public Builder clearItemPair() {
           bitField0_ = (bitField0_ & ~0x00000001);
-          timeId_ = 0L;
+          itemPair_ = getDefaultInstance().getItemPair();
           
           return this;
+        }
+        void setItemPair(com.google.protobuf.ByteString value) {
+          bitField0_ |= 0x00000001;
+          itemPair_ = value;
+          
         }
         
-        // optional float count = 2;
-        private float count_ ;
-        public boolean hasCount() {
+        // required uint64 lastTimeId = 2;
+        private long lastTimeId_ ;
+        public boolean hasLastTimeId() {
           return ((bitField0_ & 0x00000002) == 0x00000002);
         }
-        public float getCount() {
-          return count_;
+        public long getLastTimeId() {
+          return lastTimeId_;
         }
-        public Builder setCount(float value) {
+        public Builder setLastTimeId(long value) {
           bitField0_ |= 0x00000002;
-          count_ = value;
+          lastTimeId_ = value;
           
           return this;
         }
-        public Builder clearCount() {
+        public Builder clearLastTimeId() {
           bitField0_ = (bitField0_ & ~0x00000002);
-          count_ = 0F;
+          lastTimeId_ = 0L;
           
           return this;
         }
         
-        // @@protoc_insertion_point(builder_scope:com.tencent.urs.protobuf.UserPairInfo.TimeSegment)
+        // required float lastCount = 3;
+        private float lastCount_ ;
+        public boolean hasLastCount() {
+          return ((bitField0_ & 0x00000004) == 0x00000004);
+        }
+        public float getLastCount() {
+          return lastCount_;
+        }
+        public Builder setLastCount(float value) {
+          bitField0_ |= 0x00000004;
+          lastCount_ = value;
+          
+          return this;
+        }
+        public Builder clearLastCount() {
+          bitField0_ = (bitField0_ & ~0x00000004);
+          lastCount_ = 0F;
+          
+          return this;
+        }
+        
+        // @@protoc_insertion_point(builder_scope:com.tencent.urs.protobuf.UserPairInfo.ItemPairs)
       }
       
       static {
-        defaultInstance = new TimeSegment(true);
+        defaultInstance = new ItemPairs(true);
         defaultInstance.initFields();
       }
       
-      // @@protoc_insertion_point(class_scope:com.tencent.urs.protobuf.UserPairInfo.TimeSegment)
+      // @@protoc_insertion_point(class_scope:com.tencent.urs.protobuf.UserPairInfo.ItemPairs)
     }
     
-    // repeated .com.tencent.urs.protobuf.UserPairInfo.TimeSegment tsegs = 1;
-    public static final int TSEGS_FIELD_NUMBER = 1;
-    private java.util.List<com.tencent.urs.protobuf.Recommend.UserPairInfo.TimeSegment> tsegs_;
-    public java.util.List<com.tencent.urs.protobuf.Recommend.UserPairInfo.TimeSegment> getTsegsList() {
-      return tsegs_;
+    // repeated .com.tencent.urs.protobuf.UserPairInfo.ItemPairs ipairs = 1;
+    public static final int IPAIRS_FIELD_NUMBER = 1;
+    private java.util.List<com.tencent.urs.protobuf.Recommend.UserPairInfo.ItemPairs> ipairs_;
+    public java.util.List<com.tencent.urs.protobuf.Recommend.UserPairInfo.ItemPairs> getIpairsList() {
+      return ipairs_;
     }
-    public java.util.List<? extends com.tencent.urs.protobuf.Recommend.UserPairInfo.TimeSegmentOrBuilder> 
-        getTsegsOrBuilderList() {
-      return tsegs_;
+    public java.util.List<? extends com.tencent.urs.protobuf.Recommend.UserPairInfo.ItemPairsOrBuilder> 
+        getIpairsOrBuilderList() {
+      return ipairs_;
     }
-    public int getTsegsCount() {
-      return tsegs_.size();
+    public int getIpairsCount() {
+      return ipairs_.size();
     }
-    public com.tencent.urs.protobuf.Recommend.UserPairInfo.TimeSegment getTsegs(int index) {
-      return tsegs_.get(index);
+    public com.tencent.urs.protobuf.Recommend.UserPairInfo.ItemPairs getIpairs(int index) {
+      return ipairs_.get(index);
     }
-    public com.tencent.urs.protobuf.Recommend.UserPairInfo.TimeSegmentOrBuilder getTsegsOrBuilder(
+    public com.tencent.urs.protobuf.Recommend.UserPairInfo.ItemPairsOrBuilder getIpairsOrBuilder(
         int index) {
-      return tsegs_.get(index);
+      return ipairs_.get(index);
     }
     
     private void initFields() {
-      tsegs_ = java.util.Collections.emptyList();
+      ipairs_ = java.util.Collections.emptyList();
     }
     private byte memoizedIsInitialized = -1;
     public final boolean isInitialized() {
       byte isInitialized = memoizedIsInitialized;
       if (isInitialized != -1) return isInitialized == 1;
       
-      for (int i = 0; i < getTsegsCount(); i++) {
-        if (!getTsegs(i).isInitialized()) {
+      for (int i = 0; i < getIpairsCount(); i++) {
+        if (!getIpairs(i).isInitialized()) {
           memoizedIsInitialized = 0;
           return false;
         }
@@ -11291,8 +10529,8 @@ public final class Recommend {
     public void writeTo(com.google.protobuf.CodedOutputStream output)
                         throws java.io.IOException {
       getSerializedSize();
-      for (int i = 0; i < tsegs_.size(); i++) {
-        output.writeMessage(1, tsegs_.get(i));
+      for (int i = 0; i < ipairs_.size(); i++) {
+        output.writeMessage(1, ipairs_.get(i));
       }
     }
     
@@ -11302,9 +10540,9 @@ public final class Recommend {
       if (size != -1) return size;
     
       size = 0;
-      for (int i = 0; i < tsegs_.size(); i++) {
+      for (int i = 0; i < ipairs_.size(); i++) {
         size += com.google.protobuf.CodedOutputStream
-          .computeMessageSize(1, tsegs_.get(i));
+          .computeMessageSize(1, ipairs_.get(i));
       }
       memoizedSerializedSize = size;
       return size;
@@ -11408,7 +10646,7 @@ public final class Recommend {
       
       public Builder clear() {
         super.clear();
-        tsegs_ = java.util.Collections.emptyList();
+        ipairs_ = java.util.Collections.emptyList();
         bitField0_ = (bitField0_ & ~0x00000001);
         return this;
       }
@@ -11443,22 +10681,22 @@ public final class Recommend {
         com.tencent.urs.protobuf.Recommend.UserPairInfo result = new com.tencent.urs.protobuf.Recommend.UserPairInfo(this);
         int from_bitField0_ = bitField0_;
         if (((bitField0_ & 0x00000001) == 0x00000001)) {
-          tsegs_ = java.util.Collections.unmodifiableList(tsegs_);
+          ipairs_ = java.util.Collections.unmodifiableList(ipairs_);
           bitField0_ = (bitField0_ & ~0x00000001);
         }
-        result.tsegs_ = tsegs_;
+        result.ipairs_ = ipairs_;
         return result;
       }
       
       public Builder mergeFrom(com.tencent.urs.protobuf.Recommend.UserPairInfo other) {
         if (other == com.tencent.urs.protobuf.Recommend.UserPairInfo.getDefaultInstance()) return this;
-        if (!other.tsegs_.isEmpty()) {
-          if (tsegs_.isEmpty()) {
-            tsegs_ = other.tsegs_;
+        if (!other.ipairs_.isEmpty()) {
+          if (ipairs_.isEmpty()) {
+            ipairs_ = other.ipairs_;
             bitField0_ = (bitField0_ & ~0x00000001);
           } else {
-            ensureTsegsIsMutable();
-            tsegs_.addAll(other.tsegs_);
+            ensureIpairsIsMutable();
+            ipairs_.addAll(other.ipairs_);
           }
           
         }
@@ -11466,8 +10704,8 @@ public final class Recommend {
       }
       
       public final boolean isInitialized() {
-        for (int i = 0; i < getTsegsCount(); i++) {
-          if (!getTsegs(i).isInitialized()) {
+        for (int i = 0; i < getIpairsCount(); i++) {
+          if (!getIpairs(i).isInitialized()) {
             
             return false;
           }
@@ -11493,9 +10731,9 @@ public final class Recommend {
               break;
             }
             case 10: {
-              com.tencent.urs.protobuf.Recommend.UserPairInfo.TimeSegment.Builder subBuilder = com.tencent.urs.protobuf.Recommend.UserPairInfo.TimeSegment.newBuilder();
+              com.tencent.urs.protobuf.Recommend.UserPairInfo.ItemPairs.Builder subBuilder = com.tencent.urs.protobuf.Recommend.UserPairInfo.ItemPairs.newBuilder();
               input.readMessage(subBuilder, extensionRegistry);
-              addTsegs(subBuilder.buildPartial());
+              addIpairs(subBuilder.buildPartial());
               break;
             }
           }
@@ -11504,91 +10742,91 @@ public final class Recommend {
       
       private int bitField0_;
       
-      // repeated .com.tencent.urs.protobuf.UserPairInfo.TimeSegment tsegs = 1;
-      private java.util.List<com.tencent.urs.protobuf.Recommend.UserPairInfo.TimeSegment> tsegs_ =
+      // repeated .com.tencent.urs.protobuf.UserPairInfo.ItemPairs ipairs = 1;
+      private java.util.List<com.tencent.urs.protobuf.Recommend.UserPairInfo.ItemPairs> ipairs_ =
         java.util.Collections.emptyList();
-      private void ensureTsegsIsMutable() {
+      private void ensureIpairsIsMutable() {
         if (!((bitField0_ & 0x00000001) == 0x00000001)) {
-          tsegs_ = new java.util.ArrayList<com.tencent.urs.protobuf.Recommend.UserPairInfo.TimeSegment>(tsegs_);
+          ipairs_ = new java.util.ArrayList<com.tencent.urs.protobuf.Recommend.UserPairInfo.ItemPairs>(ipairs_);
           bitField0_ |= 0x00000001;
          }
       }
       
-      public java.util.List<com.tencent.urs.protobuf.Recommend.UserPairInfo.TimeSegment> getTsegsList() {
-        return java.util.Collections.unmodifiableList(tsegs_);
+      public java.util.List<com.tencent.urs.protobuf.Recommend.UserPairInfo.ItemPairs> getIpairsList() {
+        return java.util.Collections.unmodifiableList(ipairs_);
       }
-      public int getTsegsCount() {
-        return tsegs_.size();
+      public int getIpairsCount() {
+        return ipairs_.size();
       }
-      public com.tencent.urs.protobuf.Recommend.UserPairInfo.TimeSegment getTsegs(int index) {
-        return tsegs_.get(index);
+      public com.tencent.urs.protobuf.Recommend.UserPairInfo.ItemPairs getIpairs(int index) {
+        return ipairs_.get(index);
       }
-      public Builder setTsegs(
-          int index, com.tencent.urs.protobuf.Recommend.UserPairInfo.TimeSegment value) {
+      public Builder setIpairs(
+          int index, com.tencent.urs.protobuf.Recommend.UserPairInfo.ItemPairs value) {
         if (value == null) {
           throw new NullPointerException();
         }
-        ensureTsegsIsMutable();
-        tsegs_.set(index, value);
+        ensureIpairsIsMutable();
+        ipairs_.set(index, value);
         
         return this;
       }
-      public Builder setTsegs(
-          int index, com.tencent.urs.protobuf.Recommend.UserPairInfo.TimeSegment.Builder builderForValue) {
-        ensureTsegsIsMutable();
-        tsegs_.set(index, builderForValue.build());
+      public Builder setIpairs(
+          int index, com.tencent.urs.protobuf.Recommend.UserPairInfo.ItemPairs.Builder builderForValue) {
+        ensureIpairsIsMutable();
+        ipairs_.set(index, builderForValue.build());
         
         return this;
       }
-      public Builder addTsegs(com.tencent.urs.protobuf.Recommend.UserPairInfo.TimeSegment value) {
+      public Builder addIpairs(com.tencent.urs.protobuf.Recommend.UserPairInfo.ItemPairs value) {
         if (value == null) {
           throw new NullPointerException();
         }
-        ensureTsegsIsMutable();
-        tsegs_.add(value);
+        ensureIpairsIsMutable();
+        ipairs_.add(value);
         
         return this;
       }
-      public Builder addTsegs(
-          int index, com.tencent.urs.protobuf.Recommend.UserPairInfo.TimeSegment value) {
+      public Builder addIpairs(
+          int index, com.tencent.urs.protobuf.Recommend.UserPairInfo.ItemPairs value) {
         if (value == null) {
           throw new NullPointerException();
         }
-        ensureTsegsIsMutable();
-        tsegs_.add(index, value);
+        ensureIpairsIsMutable();
+        ipairs_.add(index, value);
         
         return this;
       }
-      public Builder addTsegs(
-          com.tencent.urs.protobuf.Recommend.UserPairInfo.TimeSegment.Builder builderForValue) {
-        ensureTsegsIsMutable();
-        tsegs_.add(builderForValue.build());
+      public Builder addIpairs(
+          com.tencent.urs.protobuf.Recommend.UserPairInfo.ItemPairs.Builder builderForValue) {
+        ensureIpairsIsMutable();
+        ipairs_.add(builderForValue.build());
         
         return this;
       }
-      public Builder addTsegs(
-          int index, com.tencent.urs.protobuf.Recommend.UserPairInfo.TimeSegment.Builder builderForValue) {
-        ensureTsegsIsMutable();
-        tsegs_.add(index, builderForValue.build());
+      public Builder addIpairs(
+          int index, com.tencent.urs.protobuf.Recommend.UserPairInfo.ItemPairs.Builder builderForValue) {
+        ensureIpairsIsMutable();
+        ipairs_.add(index, builderForValue.build());
         
         return this;
       }
-      public Builder addAllTsegs(
-          java.lang.Iterable<? extends com.tencent.urs.protobuf.Recommend.UserPairInfo.TimeSegment> values) {
-        ensureTsegsIsMutable();
-        super.addAll(values, tsegs_);
+      public Builder addAllIpairs(
+          java.lang.Iterable<? extends com.tencent.urs.protobuf.Recommend.UserPairInfo.ItemPairs> values) {
+        ensureIpairsIsMutable();
+        super.addAll(values, ipairs_);
         
         return this;
       }
-      public Builder clearTsegs() {
-        tsegs_ = java.util.Collections.emptyList();
+      public Builder clearIpairs() {
+        ipairs_ = java.util.Collections.emptyList();
         bitField0_ = (bitField0_ & ~0x00000001);
         
         return this;
       }
-      public Builder removeTsegs(int index) {
-        ensureTsegsIsMutable();
-        tsegs_.remove(index);
+      public Builder removeIpairs(int index) {
+        ensureIpairsIsMutable();
+        ipairs_.remove(index);
         
         return this;
       }

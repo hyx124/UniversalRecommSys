@@ -24,11 +24,11 @@ import com.tencent.urs.protobuf.Recommend;
 import com.tencent.urs.utils.Constants;
 import com.tencent.urs.utils.Utils;
 
-public class NewUrsInputSpout extends TdbankSpout {
+public class TestSpout extends TdbankSpout {
 	
 	private static final long serialVersionUID = -779488162448649143L;
 	private static Logger logger = LoggerFactory
-			.getLogger(NewUrsInputSpout.class);
+			.getLogger(TestSpout.class);
 	public static byte SPEARATOR = (byte) 0xe0;
 
 	protected SpoutOutputCollector collector;
@@ -37,7 +37,7 @@ public class NewUrsInputSpout extends TdbankSpout {
 	private String topic;
 	private HashSet<String> cateIDSet;
 
-	public NewUrsInputSpout(String config, ImmutableList<Output> outputField) {
+	public TestSpout(String config, ImmutableList<Output> outputField) {
 		super(config, outputField);
 	}
 
@@ -52,7 +52,7 @@ public class NewUrsInputSpout extends TdbankSpout {
 	}
 
 	@Override
-	public void processMessage(byte[] message){	
+	public void processMessage(byte[] message){
 		int length = message.length;
 		if (length <= 0) {
 			logger.error("Msg message length is <0:");
@@ -61,7 +61,6 @@ public class NewUrsInputSpout extends TdbankSpout {
 
 		int bodyIndex = searchIndex(message, SPEARATOR);
 		if (bodyIndex == -1 || bodyIndex == length - 1) {
-			logger.error("check data failed,not found attr");
 			return;
 		}
 
@@ -245,11 +244,8 @@ public class NewUrsInputSpout extends TdbankSpout {
 			this.collector.emit("error_data",new Values());
 			return;
 		}
-		
-		Recommend.ActiveType actTypeValue = Utils.getActionTypeByString(actType);
-		
-		if(actTypeValue != Recommend.ActiveType.Impress 
-				&& actTypeValue != Recommend.ActiveType.Click){
+			
+		if(!Utils.isRecommendAction(actType)){
 			if(!Utils.isItemIdValid(itemId)){
 				this.collector.emit("error_data",new Values());
 				return;

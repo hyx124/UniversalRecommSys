@@ -1,0 +1,54 @@
+package NewsApp;
+
+// 用户画像
+message UserFace
+{
+    message UserPreference
+    {
+        required bytes preference	= 1 [default = ""];
+        optional int32 type         = 2 [default = -1]; // 1：类目兴趣；2：tag兴趣
+        optional int32 level        = 3 [default = -1]; // 类目兴趣的级别
+        optional float weight       = 4 [default =  0]; // 兴趣权值
+
+    }
+	message UserProfile
+	{
+		optional bytes province = 1 [default = ""]; // 常登录省
+		optional bytes city     = 2 [default = ""]; // 常登录市
+	}
+
+    repeated UserPreference preference  = 1;
+	optional UserProfile profile		= 2;
+}
+
+message NewsCategory
+{
+	required uint64 id		= 1 [default = 0];  // 类别ID
+	optional bytes name		= 2 [default = ""]; // 类别名称
+	optional uint32 level	= 3 [default = 0];  // 类别级别
+}
+
+// Item属性
+message NewsAttr
+{
+	required string news_id			= 1 [default = ""];		// Item ID
+	optional float index_score		= 2 [default = 0];		// Item list中排序用的score，在新闻倒排中为时间
+	optional float tag_score		= 3 [default = 0];		// CB算法的tag相似度
+	optional float click_score		= 4 [default = 0];		// Item的点击权值
+	optional float quality_score	= 5	[default = 0];		// Item的质量
+	optional float freshness_score	= 6	[default = 0];		// Item的时新性
+	optional uint64 source_id       = 7 [default = 0];      // Item的来源：腾讯新闻、订阅媒体
+	repeated NewsCategory category  = 8;
+	optional bytes title 			= 9[default = ""];	// 新闻title
+	optional bytes content			= 10[default = ""];	// 新闻内容
+}
+
+// Item倒排
+message NewsIndex
+{
+	required uint64 create_time	= 1 [default = 0];  // 倒排创建时间
+	required uint64 update_time	= 2 [default = 0];  // 倒排更新时间
+    repeated NewsAttr news_list	= 3;
+}
+
+option optimize_for = LITE_RUNTIME;

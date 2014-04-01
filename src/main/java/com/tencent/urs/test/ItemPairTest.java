@@ -18,8 +18,8 @@ import com.tencent.urs.utils.Utils;
 
 public class ItemPairTest{
 	
-	private static ConcurrentHashMap<Recommend.ActiveType, Float> actWeightMap = 
-			new ConcurrentHashMap<Recommend.ActiveType, Float>();
+	private static ConcurrentHashMap<Integer, Float> actWeightMap = 
+			new ConcurrentHashMap<Integer, Float>();
 	
 	public static class MidInfo {
 		private Long timeId;
@@ -38,30 +38,9 @@ public class ItemPairTest{
 			return this.weight;
 		}
 	}
-
-	private static void weightInit(){
-		actWeightMap.put(Recommend.ActiveType.Impress, 0.5F);
-		actWeightMap.put(Recommend.ActiveType.Click, 1F);
-		actWeightMap.put(Recommend.ActiveType.PageView, 1F);
-		actWeightMap.put(Recommend.ActiveType.Read, 1.5F);
-		actWeightMap.put(Recommend.ActiveType.Save, 2F);
-		actWeightMap.put(Recommend.ActiveType.BuyCart, 2F);
-		actWeightMap.put(Recommend.ActiveType.Deal, 2F);
-		actWeightMap.put(Recommend.ActiveType.Score, 3F);
-		actWeightMap.put(Recommend.ActiveType.Comments, 3F);
-		actWeightMap.put(Recommend.ActiveType.Reply, 3F);
-		actWeightMap.put(Recommend.ActiveType.Ups, 3F);
-		actWeightMap.put(Recommend.ActiveType.Praise, 4F);
-		actWeightMap.put(Recommend.ActiveType.Share, 4F);
-	}
 	
-	private static Float getWeightByType(String bid,Recommend.ActiveType actionType){
-		weightInit();		
-		if(actWeightMap.containsKey(actionType)){
-			return actWeightMap.get(actionType);
-		}else{
-			return 0F;
-		}
+	private static Float getWeightByType(String bid,Integer actionType){
+		return Utils.getActionWeight(actionType);
 	}
 	
 	private static void getMaxWeight(UpdateKey key, GroupActionCombinerValue values,Recommend.UserActiveDetail oldValueHeap){						
@@ -106,18 +85,18 @@ public class ItemPairTest{
 				Recommend.UserActiveDetail.TimeSegment.ItemInfo.ActType.Builder actBuilder1=
 						Recommend.UserActiveDetail.TimeSegment.ItemInfo.ActType.newBuilder();
 				
-				actBuilder1.setActType(Recommend.ActiveType.PageView).setCount(1).setLastUpdateTime(0);
+				actBuilder1.setActType(3).setCount(1).setLastUpdateTime(0);
 				
 				Recommend.UserActiveDetail.TimeSegment.ItemInfo.ActType.Builder actBuilder2=
 						Recommend.UserActiveDetail.TimeSegment.ItemInfo.ActType.newBuilder();
 				
-				actBuilder2.setActType(Recommend.ActiveType.Click).setCount(1).setLastUpdateTime(0);
+				actBuilder2.setActType(2).setCount(1).setLastUpdateTime(0);
 				
 				if(day <= 20140204){
 					Recommend.UserActiveDetail.TimeSegment.ItemInfo.ActType.Builder actBuilder3=
 							Recommend.UserActiveDetail.TimeSegment.ItemInfo.ActType.newBuilder();
 					
-					actBuilder3.setActType(Recommend.ActiveType.Deal).setCount(1).setLastUpdateTime(0);
+					actBuilder3.setActType(7).setCount(1).setLastUpdateTime(0);
 					itemBuilder.addActs(actBuilder3.build());
 				}
 				
@@ -125,7 +104,7 @@ public class ItemPairTest{
 				Recommend.UserActiveDetail.TimeSegment.ItemInfo.ActType.Builder actBuilder4=
 						Recommend.UserActiveDetail.TimeSegment.ItemInfo.ActType.newBuilder();
 				
-				actBuilder4.setActType(Recommend.ActiveType.Impress).setCount(1).setLastUpdateTime(0);
+				actBuilder4.setActType(1).setCount(1).setLastUpdateTime(0);
 				
 				itemBuilder.addActs(actBuilder1.build()).addActs(actBuilder2.build())
 						.addActs(actBuilder4.build());
@@ -183,7 +162,7 @@ public class ItemPairTest{
 	public static void main(String[] args){
 		Long time = System.currentTimeMillis()/1000;
 		
-		GroupActionCombinerValue value = new GroupActionCombinerValue(Recommend.ActiveType.PageView,time);
+		GroupActionCombinerValue value = new GroupActionCombinerValue(3,time);
 		UpdateKey key = new UpdateKey("2",389687043L,51,"1","123");
 		
 		

@@ -16,7 +16,6 @@ import com.tencent.tde.client.Result;
 import com.tencent.tde.client.TairClient.TairOption;
 import com.tencent.tde.client.impl.MutiThreadCallbackClient.MutiClientCallBack;
 import com.tencent.urs.protobuf.Recommend;
-import com.tencent.urs.protobuf.Recommend.ActiveType;
 import com.tencent.urs.tdengine.TDEngineClientFactory;
 import com.tencent.urs.tdengine.TDEngineClientFactory.ClientAttr;
 import com.tencent.urs.utils.Constants;
@@ -38,7 +37,6 @@ public class PretreatmentBolt extends AbstractConfigUpdateBolt {
 	private int cacheExpireTime;
 	private int nsTableGroup;
 	private int nsTableUin;
-	private Recommend.ActiveType actType;
 	
 	private static Logger logger = LoggerFactory
 			.getLogger(PretreatmentBolt.class);
@@ -62,8 +60,8 @@ public class PretreatmentBolt extends AbstractConfigUpdateBolt {
 	
 	@Override
 	public void updateConfig(XMLConfiguration config) {		
-		nsTableGroup = config.getInt("tdengine.table.group", 51);
-		nsTableUin = config.getInt("tdengine.table.uin", 52);		
+		nsTableGroup = config.getInt("group_table", 51);
+		nsTableUin = config.getInt("uin_table", 53);		
 		cacheExpireTime = config.getInt("cache_expiretime",24*3600);
 	}
 
@@ -78,20 +76,18 @@ public class PretreatmentBolt extends AbstractConfigUpdateBolt {
 			String topic = tuple.getStringByField("topic");	
 			String qq = tuple.getStringByField("qq");
 			String uid = tuple.getStringByField("uid");	
-			String adpos = tuple.getStringByField("adpos");	
-			
-			String actTypeStr = tuple.getStringByField("action_type");
-			this.actType = Utils.getActionTypeByString(actTypeStr);
 
-			if(!topic.equals(Constants.actions_stream) || actType == Recommend.ActiveType.Unknown){
+			
+			
+			if(!topic.equals(Constants.actions_stream)){
 				return ;
 			}
 			
 			Values outputValues = new Values();		
 			outputValues.add(bid);
 			outputValues.add(topic);
-			outputValues.add(adpos);	//adpos = 0 ,表示行为不区分广告位
-			outputValues.add(actTypeStr);
+			outputValues.add(tuple.getStringByField("adpos"));
+			outputValues.add(tuple.getStringByField("action_type"));
 			outputValues.add(tuple.getStringByField("action_time"));
 			outputValues.add(tuple.getStringByField("item_id"));
 			outputValues.add(tuple.getStringByField("action_result"));	
@@ -99,16 +95,25 @@ public class PretreatmentBolt extends AbstractConfigUpdateBolt {
 			outputValues.add(tuple.getStringByField("platform"));	
 			outputValues.add(tuple.getStringByField("lbs_info"));	
 			
-			if(!Utils.isQNumValid(qq)){
-				if(!uid.equals("0") && uid.matches("[0-9]+")){
-					new GetQQUpdateCallBack(uid,actType,outputValues).excute();				
+			if(topic.equals(Constants.actions_stream)){
+				if(!Utils.isQNumValid(qq)){
+					if(!uid.equals("0") && !uid.equals("")){
+						new GetQQUpdateCallBack(uid,outputValues).excute();				
+					}else{
+						if(qq.equals("389687043")){
+							logger.info("uid is error,uid="+uid);
+						}
+						return;
+					}
 				}else{
-					return;
-				}
-			}else{
-				outputValues.add(qq);
-				new GetGroupIdUpdateCallBack(qq,actType,outputValues).excute();
-			}					
+					outputValues.add(qq);
+					new GetGroupIdUpdateCallBack(qq,outputValues).excute();
+				}	
+			}
+					
+			if(qq.equals("389687043")){
+				logger.info("input = "+tuple.toString());
+			}
 		}catch(Exception e){
 			logger.error(e.getMessage(), e);
 		}
@@ -118,11 +123,9 @@ public class PretreatmentBolt extends AbstractConfigUpdateBolt {
 	public class GetQQUpdateCallBack implements MutiClientCallBack{
 		private String uid;
 		private Values outputValues;
-		private ActiveType actType;
 		
-		public GetQQUpdateCallBack(String uid,ActiveType actType, Values outputValues){
+		public GetQQUpdateCallBack(String uid, Values outputValues){
 			this.uid = uid;
-			this.actType = actType;
 			this.outputValues = outputValues;
 		}
 		
@@ -135,14 +138,16 @@ public class PretreatmentBolt extends AbstractConfigUpdateBolt {
 					String qq =  new String(res.getResult());					
 					if(Utils.isQNumValid(qq)){
 						outputValues.add(qq);
-						qqCache.set(uid, new SoftReference<String>(qq),cacheExpireTime);		
-						new GetGroupIdUpdateCallBack(qq,actType,outputValues).excute();
+						qqCache.set(uid, new SoftReference<String>(qq),cacheExpireTime);	
+						new GetGroupIdUpdateCallBack(qq,outputValues).excute();
+					}else{
+						qqCache.set(uid, new SoftReference<String>("0"),cacheExpireTime);
 					}
 				}
 			} catch (Exception e) {
 				logger.error(e.getMessage(), e);
 			}
-			
+
 			
 		}
 
@@ -155,7 +160,7 @@ public class PretreatmentBolt extends AbstractConfigUpdateBolt {
 				
 				if(qq != null && Utils.isQNumValid(qq)){
 					outputValues.add(qq);
-					new GetGroupIdUpdateCallBack(qq,actType,outputValues).excute();
+					new GetGroupIdUpdateCallBack(qq,outputValues).excute();
 				}else{
 					try{
 						ClientAttr clientEntry = mtClientList.get(0);		
@@ -173,12 +178,10 @@ public class PretreatmentBolt extends AbstractConfigUpdateBolt {
 	public class GetGroupIdUpdateCallBack implements MutiClientCallBack{
 		private String qq;
 		private Values outputValues;
-		private ActiveType actType;
 		
-		public GetGroupIdUpdateCallBack(String qq,ActiveType actType,Values outputValues) {
+		public GetGroupIdUpdateCallBack(String qq,Values outputValues) {
 			this.qq = qq;
 			this.outputValues = outputValues;
-			this.actType = actType;
 		}
 
 		@Override
@@ -190,8 +193,8 @@ public class PretreatmentBolt extends AbstractConfigUpdateBolt {
 				if(res.isSuccess() && res.getResult() != null){
 					String tde_gid = new String(res.getResult());
 					String[] grouplist = (tde_gid).split(",|\\|");
-					if(grouplist.length >= 2){
-						groupId = grouplist[1];
+					if(grouplist.length >= 2 && Utils.isGroupIdVaild(grouplist[1])){
+						groupId = grouplist[1];		
 					}				
 				}
 			} catch (Exception e) {
@@ -199,7 +202,8 @@ public class PretreatmentBolt extends AbstractConfigUpdateBolt {
 			}
 			outputValues.add(groupId);
 			groupIdCache.set(qq.toString(), new SoftReference<String>(groupId),cacheExpireTime);
-			emitData(actType,outputValues);
+			emitData(outputValues);
+			
 		}
 		
 		public void excute(){	
@@ -211,7 +215,7 @@ public class PretreatmentBolt extends AbstractConfigUpdateBolt {
 			
 			if(groupId != null){
 				outputValues.add(groupId);
-				emitData(actType,outputValues);
+				emitData(outputValues);
 			}else{
 				try{
 					ClientAttr clientEntry = mtClientList.get(0);		
@@ -225,14 +229,9 @@ public class PretreatmentBolt extends AbstractConfigUpdateBolt {
 		}
 	}
 	
-	private void emitData(ActiveType actType,Values outputValues) {
+	private void emitData(Values outputValues) {
 		synchronized(collector){
-			if( actType == Recommend.ActiveType.Impress || actType == Recommend.ActiveType.Click ){
-				this.collector.emit(Constants.recommend_action_stream,outputValues);
-			}else{
-				this.collector.emit(Constants.actions_stream,outputValues);
-			}
-			
+			this.collector.emit(Constants.actions_stream,outputValues);
 		}
 	}
 	

@@ -22,7 +22,6 @@ import com.tencent.tde.client.impl.MutiThreadCallbackClient.MutiClientCallBack;
 import com.tencent.urs.asyncupdate.UpdateCallBack;
 import com.tencent.urs.asyncupdate.UpdateCallBackContext;
 
-import com.tencent.urs.protobuf.Recommend.ActiveType;
 import com.tencent.urs.protobuf.Recommend.CtrInfo;
 import com.tencent.urs.tdengine.TDEngineClientFactory;
 import com.tencent.urs.tdengine.TDEngineClientFactory.ClientAttr;
@@ -53,11 +52,11 @@ public class CtrStorBolt extends AbstractConfigUpdateBolt{
 		private Long impress;
 		private Long lastUpdateTime;
 		
-		public CtrCombinerValue(ActiveType type,Long count,Long time){
-			if(ActiveType.Impress == type){
+		public CtrCombinerValue(Integer type,Long count,Long time){
+			if(1 == type){
 				click = 0L;
 				impress = count;
-			}else if(ActiveType.Click == type){
+			}else if(2 == type){
 				impress = 0L;
 				click = count;
 			}
@@ -105,7 +104,7 @@ public class CtrStorBolt extends AbstractConfigUpdateBolt{
 		this.mtClientList = TDEngineClientFactory.createMTClientList(conf);
 		this.mt = MonitorTools.getMonitorInstance(conf);
 		this.combinerMap = new ConcurrentHashMap<String,CtrCombinerValue>(1024);
-		this.putCallBack = new UpdateCallBack(mt, Constants.systemID, Constants.tde_interfaceID, this.getClass().getName());
+		this.putCallBack = new UpdateCallBack(mt, Constants.systemID, Constants.tde_send_interfaceID, this.getClass().getName());
 		this.ctrCache = new DataCache<CtrInfo>(conf);
 		
 		int combinerExpireTime = Utils.getInt(conf, "combiner.expireTime",5);
@@ -116,20 +115,12 @@ public class CtrStorBolt extends AbstractConfigUpdateBolt{
 	public void processEvent(String sid, Tuple tuple) {
 		try{
 			String bid = tuple.getStringByField("bid");
-			String qq = tuple.getStringByField("qq");
 			String adpos = tuple.getStringByField("adpos");
-			
-			
+					
 			String actionType = tuple.getStringByField("action_type");
 			String actionTime = tuple.getStringByField("action_time");
-		
-			ActiveType actType = Utils.getActionTypeByString(actionType);
-			
-			if(!Utils.isBidValid(bid) || !Utils.isQNumValid(qq)){
-				return;
-			}
-			
-			if(actType == ActiveType.Click || actType == ActiveType.Impress){
+					
+			if(Utils.isBidValid(bid) && Utils.isRecommendAction(actionType)){
 				String pageId = tuple.getStringByField("item_id");
 				String actionResult = tuple.getStringByField("action_result");
 				String[] items = actionResult.split(";",-1);
@@ -140,8 +131,7 @@ public class CtrStorBolt extends AbstractConfigUpdateBolt{
 							StringBuffer getKey = new StringBuffer(bid);		
 							getKey.append("#").append(adpos).append("#").append(pageId).append("#").append(eachItem);	
 
-							//logger.info("add items ,getKey = "+getKey.toString()+",value="+actionType+",time="+actionTime);
-							CtrCombinerValue vlaue = new CtrCombinerValue(actType,1L, Long.valueOf(actionTime));
+							CtrCombinerValue vlaue = new CtrCombinerValue(Integer.valueOf(actionType),1L, Long.valueOf(actionTime));
 							combinerKeys(getKey.toString(),vlaue);
 						}
 					}
@@ -291,6 +281,7 @@ public class CtrStorBolt extends AbstractConfigUpdateBolt{
 				} catch (Exception e){
 					logger.error(e.getMessage(), e);
 				}
+				break;
 			}
 		}
 	}

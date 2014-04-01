@@ -106,6 +106,12 @@ http://maven.apache.org/xsd/maven-4.0.0.xsd">
 			<scope>provided</scope>
 		</dependency>
 		
+		<dependency>
+			<groupId>com.tencent.urs</groupId>
+			<artifactId>newsprocessor</artifactId>
+			<version>1.0.0</version>
+		</dependency>
+		
 	</dependencies>
 
 </project>

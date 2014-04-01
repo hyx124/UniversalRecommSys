@@ -54,7 +54,7 @@ public class BaseInfoBolt extends AbstractConfigUpdateBolt{
 				
 		this.mtClientList = TDEngineClientFactory.createMTClientList(conf);
 		this.mt = MonitorTools.getMonitorInstance(conf);
-		this.putCallBack = new UpdateCallBack(mt, Constants.systemID, Constants.tde_interfaceID, this.getClass().getName());
+		this.putCallBack = new UpdateCallBack(mt, Constants.systemID, Constants.tde_send_interfaceID, this.getClass().getName());
 	}
 	
 	private void save(short tableId,String key,byte[] values) {
@@ -87,19 +87,19 @@ public class BaseInfoBolt extends AbstractConfigUpdateBolt{
 		String midTypeName = input.getStringByField("cate_name2");
 		String smallTypeName = input.getStringByField("cate_name3");
 		String freeFlag_str = input.getStringByField("free");
-		Recommend.ChargeType freeFlag = Recommend.ChargeType.NormalFee;
+		Integer freeFlag = 0;
 		if(freeFlag_str.equals("1")){
-			freeFlag = Recommend.ChargeType.Free;
+			freeFlag = 1;
 		}else if(freeFlag_str.equals("2")){
-			freeFlag = Recommend.ChargeType.VipFree;
+			freeFlag = 2;
 		}
 		
 		String publicFlag_str = input.getStringByField("publish");
-		Recommend.ItemDetailInfo.PublicType publicFlag = Recommend.ItemDetailInfo.PublicType.NotPublic;
+		Integer publicFlag = 0;
 		if(publicFlag_str.equals("1")){
-			publicFlag = Recommend.ItemDetailInfo.PublicType.OnSell;
+			publicFlag = 1;
 		}else if(publicFlag_str.equals("2")){
-			publicFlag = Recommend.ItemDetailInfo.PublicType.SellOut;
+			publicFlag = 2;
 		}
 		
 		

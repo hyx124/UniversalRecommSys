@@ -1,40 +1,7 @@
 package com.tencent.urs.protobuf;
 
-enum ActiveType
-{
-	Unknown   	= 0;  //未知的
-	Impress  	= 1;  //曝光
-	Click 		= 2;  //点击
-	PageView   	= 3;  //浏览
-	Read    	= 4;  //阅读
-	Save	 	= 5;  //收藏
-	BuyCart 	= 6;  //购物车
-	Deal		= 7;  //订单
-	Score		= 8;  //评分
-	Comments	= 9;  //评论
-	Reply		= 10; //回复评论
-	Ups			= 11; //顶
-	Praise		= 12; //赞
-	Share		= 13; //转
-}
-
-enum ChargeType
-{
-		NormalFee =0;  		//收费
-		Free  =1;  			//免费
-		VipFree =2;  		//vip免费
-}
-	
-	
 message ItemDetailInfo
 {
-	enum PublicType
-	{
-		NotPublic =0;  		//未上架
-		OnSell  =1;  		//已在架
-		SellOut =2;  		//已下架
-	}
-
 	required string Item = 1;
 	required uint64 ImpDate = 2;
 
@@ -48,8 +15,8 @@ message ItemDetailInfo
 	optional uint64 SmallType = 7;			//小类
 	optional string SmallTypeName = 8;		//小类中文描述
 
-	optional ChargeType FreeFlag = 9 [default = NormalFee];			//收费类型
-	optional PublicType PublicFlag = 10 [default = NotPublic];		//状态类型
+	optional uint32 FreeFlag = 9 ;			//收费类型
+	optional uint32 PublicFlag = 10 ;		//状态类型
 	
 	optional float Price = 11;				//价格
 	optional string Text = 12;				//备注
@@ -92,12 +59,12 @@ message RecommendResult
     message Result
     {
         required string Item = 1;			//商品ID
-		optional uint32 BigType = 2;		//大类ID
-		optional uint32 MiddleType = 3;  	//中类ID
-		optional uint32 SmallType = 4;		//小类ID
+		optional uint64 BigType = 2;		//大类ID
+		optional uint64 MiddleType = 3;  	//中类ID
+		optional uint64 SmallType = 4;		//小类ID
 		optional double Weight = 5;			//权重
 
-		optional ChargeType FreeFlag = 6 [default = NormalFee];		//收费类型
+		optional uint32 FreeFlag = 6;		//收费类型
 		optional uint64 Price = 7;			//价格
 		optional uint64 UpdateTime = 8;		//更新时间
 		optional uint64 ExpireTime = 9;		//过期时间
@@ -113,11 +80,11 @@ message UserActiveHistory
     message ActiveRecord
     {
         required string Item        = 1;                            //item
-		optional uint32 BigType      = 2;   						//item所属大类目
-		optional uint32 MiddleType   = 3;  							//item所属中类目
-		optional uint32 SmallType   = 4;  							//item所属小类目
+		optional uint64 BigType      = 2;   						//item所属大类目
+		optional uint64 MiddleType   = 3;  							//item所属中类目
+		optional uint64 SmallType   = 4;  							//item所属小类目
 		
-		optional ActiveType ActType = 5 [default = Unknown]; 		//item行为类型
+		optional uint32 ActType = 5 ; 								//item行为类型
 		optional string ActResult =	6;								//item行为的结果
         optional uint64 ActTime	 = 7; 								//item行为发生时间戳(s)
 		optional uint64 ExpireTime = 8; 							//item行为失效时间
@@ -134,25 +101,6 @@ message UserActiveHistory
     repeated ActiveRecord ActRecords  = 1;
 }
 
-message ItemInfo
-{
-	enum ValidType
-	{
-		INVALID =0;  	//无效
-		VALID  =1;  	//有效
-		UNKNOWN =2;		//未知
-	}
-	
-	required uint64 UpdateTime = 1;
-	optional uint32 BigType = 2;   								//item所属大类目
-	optional uint32 MiddleType = 3;  							//item所属中类目
-	optional uint32 SmallType = 4;  							//item所属小类目
-	required ValidType VFlag = 5 [default = UNKNOWN];			//item是否有效
-	
-	optional string shopId = 6;									//商品所属商家
-}
-
-
 message UserActiveDetail
 {	
 	message TimeSegment {	
@@ -161,7 +109,7 @@ message UserActiveDetail
 			required string Item = 1;                        	//商品ID
 			message ActType
     		{
-    			required ActiveType ActType = 1 [default = Unknown]; 
+    			required uint32 ActType = 1 ; 
     			optional uint64 Count = 2;							//该item在该时间的段内，该行为的次数
     			optional uint64 LastUpdateTime = 3; 				//item行为发生时间戳(s)
     		}
@@ -182,6 +130,7 @@ message CtrInfo
     repeated TimeSegment tsegs  = 1;
 }
 
+
 message UserCountInfo{
 	message TimeSegment {		
 		required uint64 timeId = 1;						
@@ -189,6 +138,7 @@ message UserCountInfo{
 	}
     repeated TimeSegment tsegs  = 1;
 }
+
 
 message GroupCountInfo{
 	message TimeSegment {		
@@ -199,11 +149,12 @@ message GroupCountInfo{
 }
 
 message UserPairInfo{
-	message TimeSegment {		
-		required uint64 timeId = 1;						
-		optional float count = 2;								//权重
+	message ItemPairs {			
+		required string itemPair = 1;
+		required uint64 lastTimeId = 2;	
+		required float lastCount = 3;
 	}
-    repeated TimeSegment tsegs  = 1;
+    	repeated ItemPairs ipairs  = 1;
 }
 
 message GroupPairInfo{

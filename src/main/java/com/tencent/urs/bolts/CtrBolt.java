@@ -6,7 +6,6 @@ import com.tencent.urs.protobuf.Recommend.CtrInfo;
 import com.tencent.urs.protobuf.Recommend.CtrInfo.Builder;
 import com.tencent.urs.protobuf.Recommend.CtrInfo.TimeSegment;
 import com.tencent.urs.protobuf.Recommend.UserActiveDetail.TimeSegment.ItemInfo.ActType;
-import com.tencent.urs.protobuf.Recommend.ActiveType;
 import com.tencent.urs.protobuf.Recommend.UserActiveDetail;
 import com.tencent.urs.protobuf.Recommend.UserActiveHistory;
 
@@ -151,7 +150,7 @@ public class CtrBolt extends AbstractConfigUpdateBolt{
 		this.combinerMap = new ConcurrentHashMap<CtrCombinerKey,Long>();
 				
 		
-		this.putCallBack = new UpdateCallBack(mt, Constants.systemID, Constants.tde_interfaceID, this.getClass().getName());
+		this.putCallBack = new UpdateCallBack(mt, Constants.systemID, Constants.tde_send_interfaceID, this.getClass().getName());
 		
 		int combinerExpireTime = Utils.getInt(conf, "combiner.expireTime",5)+3;
 		setCombinerTime(combinerExpireTime);
@@ -173,14 +172,8 @@ public class CtrBolt extends AbstractConfigUpdateBolt{
 			
 			String actionType = tuple.getStringByField("action_type");
 			String actionTime = tuple.getStringByField("action_time");
-		
-			ActiveType actType = Utils.getActionTypeByString(actionType);
-			
-			if(!Utils.isBidValid(bid)){
-				return;
-			}
-			
-			if(actType == ActiveType.Click || actType == ActiveType.Impress){
+
+			if(Utils.isBidValid(bid) && Utils.isRecommendAction(actionType)){
 				String pageId = tuple.getStringByField("item_id");
 				String actionResult = tuple.getStringByField("action_result");
 				String[] items = actionResult.split(";",-1);
@@ -257,6 +250,10 @@ public class CtrBolt extends AbstractConfigUpdateBolt{
 				}	
 			}
 					
+			if(debug){
+				logger.info("get weight info: click ="+click_sum+",imp="+impress_sum);
+			}
+			
 			if(impress_sum > 0 && click_sum > 0){				
 				return click_sum/impress_sum;
 			}else{
@@ -266,7 +263,6 @@ public class CtrBolt extends AbstractConfigUpdateBolt{
 	}
 	
 	public static void main(String[] args){
-		System.out.println((double) (1D/17186D));
 	}
 	
 }

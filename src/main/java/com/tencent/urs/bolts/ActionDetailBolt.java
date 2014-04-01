@@ -2,7 +2,6 @@ package com.tencent.urs.bolts;
 
 import com.google.common.collect.ImmutableList;
 import com.tencent.urs.protobuf.Recommend;
-import com.tencent.urs.protobuf.Recommend.ActiveType;
 import com.tencent.urs.protobuf.Recommend.UserActiveDetail;
 import com.tencent.urs.protobuf.Recommend.UserActiveHistory;
 import com.tencent.urs.protobuf.Recommend.UserActiveDetail.TimeSegment.ItemInfo.ActType;
@@ -88,7 +87,7 @@ public class ActionDetailBolt extends AbstractConfigUpdateBolt{
 		this.mt = MonitorTools.getMonitorInstance(conf);
 		this.cacheMap = new DataCache<Recommend.UserActiveDetail>(conf);
 		this.combinerMap = new ConcurrentHashMap<String,ActionCombinerValue>(1024);
-		this.putCallBack = new UpdateCallBack(mt, Constants.systemID, Constants.tde_interfaceID, "ActionDetail");
+		this.putCallBack = new UpdateCallBack(mt, Constants.systemID, Constants.tde_send_interfaceID, "ActionDetail");
 		
 		int combinerExpireTime = Utils.getInt(conf, "combiner.expireTime",5);
 		setCombinerTime(combinerExpireTime);
@@ -114,12 +113,10 @@ public class ActionDetailBolt extends AbstractConfigUpdateBolt{
 			String actionTime = tuple.getStringByField("action_time");
 			String lbsInfo = tuple.getStringByField("lbs_info");
 			String platform = tuple.getStringByField("platform");
-			
-			ActiveType actType = Utils.getActionTypeByString(actionType);
-			
+						
 			Recommend.UserActiveHistory.ActiveRecord.Builder actBuilder =
 					Recommend.UserActiveHistory.ActiveRecord.newBuilder();
-			actBuilder.setItem(itemId).setActTime(Long.valueOf(actionTime)).setActType(actType)
+			actBuilder.setItem(itemId).setActTime(Long.valueOf(actionTime)).setActType(Integer.valueOf(actionType))
 						.setLBSInfo(lbsInfo).setPlatForm(platform);
 
 			ActionCombinerValue value = new ActionCombinerValue();
@@ -212,26 +209,26 @@ public class ActionDetailBolt extends AbstractConfigUpdateBolt{
 		}	
 		
 		private void mergeOldToMap(UserActiveDetail oldValList,
-				HashMap<Long,HashMap<String,HashMap<Recommend.ActiveType,ActType>>> detailMap ){
+				HashMap<Long,HashMap<String,HashMap<Integer,ActType>>> detailMap ){
 			if(oldValList == null || oldValList.getTsegsCount() <=0 ){
 				return;
 			}
 			
 			for(UserActiveDetail.TimeSegment tsegs: oldValList.getTsegsList()){
-				HashMap<String,HashMap<Recommend.ActiveType,ActType>> itemMap;		
+				HashMap<String,HashMap<Integer,ActType>> itemMap;		
 				if(detailMap.containsKey(tsegs.getTimeId())){
 					itemMap = detailMap.get(tsegs.getTimeId());					
 				}else{				
-					itemMap = new HashMap<String,HashMap<Recommend.ActiveType,ActType>>();
+					itemMap = new HashMap<String,HashMap<Integer,ActType>>();
 	
 				}
 				
 				for(UserActiveDetail.TimeSegment.ItemInfo item: tsegs.getItemsList()){	
-					HashMap<Recommend.ActiveType,ActType> actMap;
+					HashMap<Integer,ActType> actMap;
 					if(itemMap.containsKey(item.getItem())){
 						actMap = itemMap.get(item.getItem());
 					}else{
-						actMap = new HashMap<Recommend.ActiveType,ActType>();		
+						actMap = new HashMap<Integer,ActType>();		
 					}	
 					
 					for(UserActiveDetail.TimeSegment.ItemInfo.ActType act: item.getActsList()){
@@ -254,20 +251,20 @@ public class ActionDetailBolt extends AbstractConfigUpdateBolt{
 		}
 		
 		private void mergeNewRecordsToMap(Long timeId, String itemId, ActiveRecord activeRecord,
-				HashMap<Long,HashMap<String,HashMap<Recommend.ActiveType,ActType>>> detailMap ) {
+				HashMap<Long,HashMap<String,HashMap<Integer,ActType>>> detailMap ) {
 			
-			HashMap<String,HashMap<Recommend.ActiveType,ActType>> itemMap;
+			HashMap<String,HashMap<Integer,ActType>> itemMap;
 			if(detailMap.containsKey(timeId)){
 				itemMap = detailMap.get(timeId);
 			}else{				
-				itemMap = new HashMap<String,HashMap<Recommend.ActiveType,ActType>>();
+				itemMap = new HashMap<String,HashMap<Integer,ActType>>();
 			}
 			
-			HashMap<Recommend.ActiveType,ActType> actMap;
+			HashMap<Integer,ActType> actMap;
 			if(itemMap.containsKey(itemId)){
 				actMap = itemMap.get(itemId);
 			}else{
-				actMap = new HashMap<Recommend.ActiveType,ActType>();		
+				actMap = new HashMap<Integer,ActType>();		
 			}	
 				
 			Long count = 1L;
@@ -290,8 +287,8 @@ public class ActionDetailBolt extends AbstractConfigUpdateBolt{
 				UserActiveDetail oldValueHeap,
 				UserActiveDetail.Builder mergeValueBuilder) {
 			
-			HashMap<Long,HashMap<String,HashMap<Recommend.ActiveType,ActType>>> detailMap
-						= new HashMap<Long,HashMap<String,HashMap<Recommend.ActiveType,ActType>>>();
+			HashMap<Long,HashMap<String,HashMap<Integer,ActType>>> detailMap
+						= new HashMap<Long,HashMap<String,HashMap<Integer,ActType>>>();
 			if(oldValueHeap != null && oldValueHeap.getTsegsCount()>0){
 				mergeOldToMap(oldValueHeap,detailMap);
 				if(debug){
@@ -311,7 +308,7 @@ public class ActionDetailBolt extends AbstractConfigUpdateBolt{
 		}
 				
 		private void changeMapToPB(
-				HashMap<Long, HashMap<String, HashMap<ActiveType, ActType>>> detailMap,
+				HashMap<Long, HashMap<String, HashMap<Integer, ActType>>> detailMap,
 				Builder mergeValueBuilder) {
 			Long time = System.currentTimeMillis()/1000;
 
@@ -342,7 +339,7 @@ public class ActionDetailBolt extends AbstractConfigUpdateBolt{
 					Recommend.UserActiveDetail.TimeSegment.ItemInfo.Builder itemBuilder =
 									Recommend.UserActiveDetail.TimeSegment.ItemInfo.newBuilder();
 					itemBuilder.setItem(item);
-					for(ActiveType act: detailMap.get(timeId).get(item).keySet()){
+					for(Integer act: detailMap.get(timeId).get(item).keySet()){
 						ActType actValue = detailMap.get(timeId).get(item).get(act);
 						itemBuilder.addActs(actValue);
 					}
@@ -392,6 +389,7 @@ public class ActionDetailBolt extends AbstractConfigUpdateBolt{
 				} catch (Exception e){
 					logger.error(e.getMessage(), e);
 				}
+				break;
 			}
 		}
 			

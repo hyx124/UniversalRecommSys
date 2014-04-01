@@ -1,14 +1,13 @@
 package com.tencent.urs.bolts;
 
-import java.lang.ref.SoftReference;
 import java.util.ArrayList;
 import java.util.Collections;
 import java.util.Comparator;
-import java.util.HashSet;
+import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
-import java.util.Map.Entry;
 import java.util.Set;
+import java.util.Map.Entry;
 import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.Future;
 
@@ -25,15 +24,16 @@ import com.tencent.tde.client.TairClient.TairOption;
 import com.tencent.tde.client.impl.MutiThreadCallbackClient.MutiClientCallBack;
 import com.tencent.urs.asyncupdate.UpdateCallBack;
 import com.tencent.urs.asyncupdate.UpdateCallBackContext;
+
 import com.tencent.urs.combine.ActionCombinerValue;
 import com.tencent.urs.protobuf.Recommend;
-import com.tencent.urs.protobuf.Recommend.ActiveType;
+import com.tencent.urs.protobuf.Recommend.UserActiveDetail;
+import com.tencent.urs.protobuf.Recommend.UserActiveDetail.TimeSegment.ItemInfo.ActType;
 import com.tencent.urs.protobuf.Recommend.UserActiveHistory;
 import com.tencent.urs.protobuf.Recommend.UserActiveHistory.ActiveRecord;
 import com.tencent.urs.tdengine.TDEngineClientFactory;
 import com.tencent.urs.tdengine.TDEngineClientFactory.ClientAttr;
 import com.tencent.urs.utils.Constants;
-import com.tencent.urs.utils.DataCache;
 import com.tencent.urs.utils.Utils;
 
 import backtype.storm.task.OutputCollector;
@@ -45,13 +45,13 @@ public class FilterBolt extends AbstractConfigUpdateBolt {
 	private List<ClientAttr> mtClientList;	
 	private MonitorTools mt;
 	private ConcurrentHashMap<String, ActionCombinerValue> combinerMap;
-	private DataCache<Recommend.UserActiveHistory> cacheMap;
 	private UpdateCallBack putCallBack;
 	
-	private int nsTableId;
+	private int nsFilterTableId;
+	private int nsDetailTableId;
 	private int dataExpireTime;
-	private int cacheExpireTime;
 	private int topNum;
+
 
 	private static Logger logger = LoggerFactory
 			.getLogger(FilterBolt.class);
@@ -69,8 +69,7 @@ public class FilterBolt extends AbstractConfigUpdateBolt {
 		this.mtClientList = TDEngineClientFactory.createMTClientList(conf);
 		this.mt = MonitorTools.getMonitorInstance(conf);
 		this.combinerMap = new ConcurrentHashMap<String,ActionCombinerValue>(1024);
-		this.putCallBack = new UpdateCallBack(mt, Constants.systemID, Constants.tde_interfaceID, "TopActions");	
-		this.cacheMap = new DataCache<UserActiveHistory>(conf);
+		this.putCallBack = new UpdateCallBack(mt, Constants.systemID, Constants.tde_send_interfaceID, "TopActions");	
 		
 		int combinerExpireTime = Utils.getInt(conf, "combiner.expireTime",5);
 		setCombinerTime(combinerExpireTime);
@@ -78,9 +77,9 @@ public class FilterBolt extends AbstractConfigUpdateBolt {
 	
 	@Override
 	public void updateConfig(XMLConfiguration config) {	
-		nsTableId = config.getInt("storage_table",518);
+		nsFilterTableId = config.getInt("storage_table",518);
+		nsDetailTableId = config.getInt("detail_table",512);
 		dataExpireTime = config.getInt("data_expiretime",180*24*3600);
-		cacheExpireTime = config.getInt("cache_expiretime",3600);
 		topNum = config.getInt("top_num",100);
 	}
 
@@ -101,26 +100,30 @@ public class FilterBolt extends AbstractConfigUpdateBolt {
 			String lbsInfo = tuple.getStringByField("lbs_info");
 			String platform = tuple.getStringByField("platform");
 			
+			if(Utils.isRecommendAction(actionType)){
+				return;
+			}
+			
 			Long bigType = tuple.getLongByField("big_type");
 			Long midType = tuple.getLongByField("mid_type");
 			Long smallType = tuple.getLongByField("small_type");
 
 			String shopId = tuple.getStringByField("shop_id");
-			ActiveType actType = Utils.getActionTypeByString(actionType);
-			
-			if(actType != Recommend.ActiveType.Deal){
-				return;
+
+			if(qq.equals("389687043")){
+				logger.info("input into combiner");
 			}
+			
 			
 			Recommend.UserActiveHistory.ActiveRecord.Builder actBuilder =
 					Recommend.UserActiveHistory.ActiveRecord.newBuilder();
-			actBuilder.setItem(itemId).setActTime(Long.valueOf(actionTime)).setActType(actType)
-						.setBigType(bigType.intValue()).setMiddleType(midType.intValue()).setSmallType(smallType.intValue())
+			actBuilder.setItem(itemId).setActTime(Long.valueOf(actionTime)).setActType(Integer.valueOf(actionType))
+						.setBigType(bigType).setMiddleType(midType).setSmallType(smallType)
 						.setLBSInfo(lbsInfo).setPlatForm(platform).setShopId(shopId);
 
 			ActionCombinerValue value = new ActionCombinerValue();
 			value.init(itemId,actBuilder.build());
-			String key = bid+"#"+qq;
+			String key = Utils.spliceStringBySymbol("#", bid,qq);
 			combinerKeys(key, value);	
 		}catch(Exception e){
 			logger.error(e.getMessage(), e);
@@ -139,7 +142,7 @@ public class FilterBolt extends AbstractConfigUpdateBolt {
 						for (String key : keySet) {
 							ActionCombinerValue expireValue  = combinerMap.remove(key);
 							try{
-								new TopActionsUpdateCallBack(key,expireValue).excute();
+								new CheckActionDetailCallBack(key,expireValue).excute();
 							}catch(Exception e){
 								logger.error(e.getMessage(), e);
 							}
@@ -164,100 +167,120 @@ public class FilterBolt extends AbstractConfigUpdateBolt {
 			}
 		}
 	}	
-
-	private class TopActionsUpdateCallBack implements MutiClientCallBack{
+	
+	private class CheckActionDetailCallBack implements MutiClientCallBack{
 		private final String key;
-		private final ActionCombinerValue values;
-
-		public TopActionsUpdateCallBack(String key, ActionCombinerValue values) {
-			this.key = key; 
-			this.values = values;								
+		private ActionCombinerValue value;
+		
+		public CheckActionDetailCallBack(String key,ActionCombinerValue expireValue) {
+			this.key = key ; 
+			this.value = expireValue;
 		}
 
 		public void excute() {
-			try{
-				UserActiveHistory oldValueHeap = null;
-			    SoftReference<UserActiveHistory> sr = cacheMap.get(key);
-			    if(sr != null){
-			    	oldValueHeap = sr.get();
-			    }
-			    
-				if( oldValueHeap != null){
-					UserActiveHistory.Builder mergeValueBuilder = Recommend.UserActiveHistory.newBuilder();
-					mergeToHeap(values,oldValueHeap,mergeValueBuilder);
-					Save(mergeValueBuilder);
-				}else{
-					ClientAttr clientEntry = mtClientList.get(0);		
-					TairOption opt = new TairOption(clientEntry.getTimeout());
-					Future<Result<byte[]>> future = clientEntry.getClient().getAsync((short)nsTableId,key.getBytes(),opt);
-					clientEntry.getClient().notifyFuture(future, this, clientEntry);	
-				}			
+			try {
 				
-			} catch (Exception e){
-				logger.error(e.toString());
+				
+				String checkKey = Utils.spliceStringBySymbol("#", key,"ActionDetail");
+				
+				if(key.indexOf("389687043") > 0){
+					logger.info("to tde,checkKey="+checkKey);
+				}
+				
+				ClientAttr clientEntry = mtClientList.get(0);		
+				TairOption opt = new TairOption(clientEntry.getTimeout());
+				Future<Result<byte[]>> future = clientEntry.getClient().getAsync((short)nsDetailTableId,checkKey.getBytes(),opt);
+				clientEntry.getClient().notifyFuture(future, this,clientEntry);	
+
+			} catch (Exception e) {
+				logger.error(e.getMessage(), e);
 			}
 		}
 		
-		private void mergeToHeap(ActionCombinerValue newValList,
-				UserActiveHistory oldVal,
-				UserActiveHistory.Builder updatedBuilder){	
-			HashSet<String> alreadyIn = new HashSet<String>();
-
-			List<Map.Entry<String, UserActiveHistory.ActiveRecord>> sortList =
-				    new ArrayList<Map.Entry<String, UserActiveHistory.ActiveRecord>>(newValList.getActRecodeMap().entrySet());
+		private float getFilterScoreByAct(Integer actType,Long count){
+			if(actType == 1 ){
+				return count*0.1F;
+			}else if(actType > 1){
+				return count*1.0F;
+			}else{
+				return 0.0F;
+			}
+		}
+		
+		private HashMap<String,Float> getFilterScore(UserActiveDetail oldValueHeap){
+			if(value.getActRecodeMap().size() <= 0 ){
+				return null;
+			}
 			
-			Collections.sort(sortList, new Comparator<Map.Entry<String, UserActiveHistory.ActiveRecord>>() {   
+			Long now = System.currentTimeMillis()/1000;
+			
+			HashMap<String,Float> scoreMap = new HashMap<String,Float>();
+			HashMap<String, ActiveRecord> itemMap = value.getActRecodeMap();
+			for(String itemId:itemMap.keySet()){
+				ActiveRecord actType = itemMap.get(itemId);
+				float newFilterScore = getFilterScoreByAct(actType.getActType(), 1L);
+				scoreMap.put(itemId, newFilterScore);
+			}
+			
+			for(UserActiveDetail.TimeSegment tsegs:oldValueHeap.getTsegsList()){
+				if(tsegs.getTimeId() >= Utils.getDateByTime(now - dataExpireTime)){
+					for(UserActiveDetail.TimeSegment.ItemInfo item: tsegs.getItemsList()){
+						for(ActType type: item.getActsList()){
+							float newFilterScore = getFilterScoreByAct(type.getActType(), type.getCount());
+							
+							if(scoreMap.containsKey(item.getItem())){
+								newFilterScore += scoreMap.get(item.getItem());
+							}
+
+							scoreMap.put(item.getItem(), newFilterScore);
+						}
+					}
+				}
+			}
+			return scoreMap;
+		}
+
+		private void refreshFilterTopList(HashMap<String,Float> newFilterScoreMap,
+				UserActiveHistory.Builder updatedBuilder){
+			List<Map.Entry<String, Float>> sortList =
+				    new ArrayList<Map.Entry<String, Float>>(newFilterScoreMap.entrySet());
+			
+			Collections.sort(sortList, new Comparator<Map.Entry<String, Float>>() {   
 				@Override
-				public int compare(Entry<String, ActiveRecord> arg0,
-						Entry<String, ActiveRecord> arg1) {
-					 return (int)(arg1.getValue().getActTime() - arg0.getValue().getActTime());
+				public int compare(Entry<String, Float> arg0,
+						Entry<String, Float> arg1) {
+					 return (int)(arg1.getValue() - arg0.getValue());
 				}
 			}); 
 			
-			for(Map.Entry<String, UserActiveHistory.ActiveRecord> sortItem: sortList){
+			for(Map.Entry<String, Float> sortItem: sortList){
 				if(updatedBuilder.getActRecordsCount() >= topNum){
 					break;
 				}
 				
-				if(!alreadyIn.contains(sortItem.getKey())){
-					updatedBuilder.addActRecords(sortItem.getValue());
-					alreadyIn.add(sortItem.getKey());
-				}
-			}
-			
-			if(oldVal != null){
-				for(Recommend.UserActiveHistory.ActiveRecord eachOldVal:oldVal.getActRecordsList()){
-					if(updatedBuilder.getActRecordsCount() >= topNum){
-						break;
-					}
-					
-					if(alreadyIn.contains(eachOldVal.getItem())){
-						continue;
-					}				
-
-					updatedBuilder.addActRecords(eachOldVal);
+				if(sortItem.getValue() > 0){
+					UserActiveHistory.ActiveRecord.Builder actBuilder =
+							UserActiveHistory.ActiveRecord.newBuilder();
+	
+					actBuilder.setItem(sortItem.getKey()).setWeight(sortItem.getValue());
+					updatedBuilder.addActRecords(actBuilder.build());
 				}
 			}
 		}
-
-		private void Save(UserActiveHistory.Builder mergeValueBuilder){	
-			/*logger.info("in save,size="+mergeValueBuilder.getActRecordsCount());
-			for(Recommend.UserActiveHistory.ActiveRecord act:mergeValueBuilder.getActRecordsList()){
-				logger.info("new itemId = "+act.getItem()+",time="+act.getActTime()+",type="+act.getActType());
-			}*/
-			
+		
+		private void save(String key ,UserActiveHistory.Builder mergeValueBuilder){	
 			UserActiveHistory putValue = mergeValueBuilder.build();
-			synchronized(cacheMap){
-				cacheMap.set(key, new SoftReference<UserActiveHistory>(putValue), cacheExpireTime);
+			
+			if(key.indexOf("389687043") > 0){
+				logger.info("save to tde");
 			}
 			
 			for(ClientAttr clientEntry:mtClientList ){
-				//logger.info("start in save,client="+clientEntry.getGroupname()+",key="+key);
 				TairOption putopt = new TairOption(clientEntry.getTimeout(),(short)0, dataExpireTime);
 				try {
 					Future<Result<Void>> future = 
-					clientEntry.getClient().putAsync((short)nsTableId, 
-										this.key.getBytes(), putValue.toByteArray(), putopt);
+					clientEntry.getClient().putAsync((short)nsFilterTableId, 
+										key.getBytes(), putValue.toByteArray(), putopt);
 					clientEntry.getClient().notifyFuture(future, putCallBack, 
 							new UpdateCallBackContext(clientEntry,key,putValue.toByteArray(),putopt));
 
@@ -273,26 +296,35 @@ public class FilterBolt extends AbstractConfigUpdateBolt {
 				}
 			}
 		}
-
+		
 		@Override
 		public void handle(Future<?> future, Object context) {			
 			@SuppressWarnings("unchecked")
 			Future<Result<byte[]>> afuture = (Future<Result<byte[]>>) future;
-			UserActiveHistory.Builder mergeValueBuilder = Recommend.UserActiveHistory.newBuilder();
-			UserActiveHistory oldValueHeap = null;
 			try {
-				Result<byte[]> res = afuture.get();
-				if(res.isSuccess() && res.getResult() != null)
-				{
-					oldValueHeap =	Recommend.UserActiveHistory.parseFrom(res.getResult());						
-				}							
+				Result<byte[]> result = afuture.get();	
+				if(result.isSuccess() && result.getResult()!=null){
+					if(key.indexOf("389687043") > 0){
+						logger.info("from tde");
+					}
+					UserActiveDetail oldValueHeap = UserActiveDetail.parseFrom(result.getResult());
+					HashMap<String,Float> newFilterScoreMap = getFilterScore(oldValueHeap);
+					UserActiveHistory.Builder updatedBuilder = UserActiveHistory.newBuilder();
+					if(key.indexOf("389687043") > 0){
+						logger.info("newFilterScoreMap.size="+newFilterScoreMap.size());
+					}
+					refreshFilterTopList(newFilterScoreMap,updatedBuilder);
+					
+					save(key,updatedBuilder);
+					
+				}
 			} catch (Exception e) {
 				logger.error(e.getMessage(), e);
 			}
-			
-			mergeToHeap(this.values,oldValueHeap,mergeValueBuilder);
-			Save(mergeValueBuilder);
+		
 		}
-	}
 	
+	}
+
+
 }

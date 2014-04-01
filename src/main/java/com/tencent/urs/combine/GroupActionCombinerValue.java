@@ -11,31 +11,31 @@ public class GroupActionCombinerValue implements Combiner<GroupActionCombinerVal
 	 */
 	private static final long serialVersionUID = 305886042186738812L;
 	private Long time;
-	private Recommend.ActiveType actType;
+	private Integer actType;
 	
 	public Long getTime(){
 		return this.time;
 	}
 	
-	public Recommend.ActiveType getType(){
+	public Integer getType(){
 		return this.actType;
 	}
 	
-	public GroupActionCombinerValue(Recommend.ActiveType actType,Long time){
+	public GroupActionCombinerValue(Integer actType,Long time){
 		this.time = time;
 		this.actType = actType;
 	}
 		
 	@Override
 	public void incrument(GroupActionCombinerValue newValue) {		
-		if(newValue.getType().getNumber() > this.getType().getNumber()){
+		if(newValue.getType() > this.getType()){
 			this.actType = newValue.getType();
 			this.time = newValue.getTime();
 		}
 	}
 	
 	public static void main(String[] args){
-		System.out.print(Recommend.ActiveType.Impress.getNumber());
+		//System.out.print(Recommend.ActiveType.Impress.getNumber());
 	}
 	
 }

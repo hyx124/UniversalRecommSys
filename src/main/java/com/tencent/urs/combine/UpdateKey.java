@@ -37,15 +37,8 @@ public class UpdateKey{
 	}
 	
 	//userPairKey = bid#item1#item2#uin
-	public String getUserPairKey(String otherItem){
+	public String getUserPairKey(){
 		StringBuffer getKey = new StringBuffer(bid);		
-		if(itemId.compareTo(otherItem) < 0){
-			getKey.append("#").append(itemId).append("#").append(otherItem);
-			
-		}else{
-			getKey.append("#").append(otherItem).append("#").append(itemId);
-		}
-		
 		getKey.append("#").append(uin);
 		return getKey.toString();
 	}
@@ -103,7 +96,7 @@ public class UpdateKey{
 		System.out.println(key.getDetailKey());
 		System.out.println(key.getUserCountKey());
 		System.out.println(key.getGroupCountKey());
-		System.out.println(key.getUserPairKey("34"));
+		System.out.println(key.getUserPairKey());
 		System.out.println(key.getGroupPairKey("345"));
 	}
 }

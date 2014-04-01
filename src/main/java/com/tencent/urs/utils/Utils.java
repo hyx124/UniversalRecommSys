@@ -1,10 +1,9 @@
 package com.tencent.urs.utils;
 
 import java.text.SimpleDateFormat;
+import java.util.HashMap;
 import java.util.HashSet;
 import java.util.Map;
-
-import com.tencent.urs.protobuf.Recommend.ActiveType;
 
 public class Utils {
 	
@@ -29,6 +28,30 @@ public class Utils {
 		groupIdSet.add(91);
 		groupIdSet.add(92);
 		groupIdSet.add(10);
+	}
+	
+	private static HashMap<Integer,Float> actWeightMap = new HashMap<Integer,Float>();
+	static{
+		actWeightMap.put(1, 0F);
+		actWeightMap.put(2, 1F);
+		actWeightMap.put(3, 1F);
+		actWeightMap.put(4, 1.5F);
+		actWeightMap.put(5, 2F);
+		actWeightMap.put(6, 2F);
+		actWeightMap.put(7, 2F);
+		actWeightMap.put(8, 2F);
+		actWeightMap.put(9, 2F);
+		actWeightMap.put(10, 2F);
+		actWeightMap.put(11, 2F);
+		actWeightMap.put(12, 2.5F);
+		actWeightMap.put(13, 2.5F);
+		
+		//spcial for news
+		actWeightMap.put(16, 1.5F);
+		actWeightMap.put(17, 1.5F);
+		actWeightMap.put(18, 1.5F);
+		actWeightMap.put(25, 2F);
+		actWeightMap.put(26, 2F);	
 	}
 	
 	public static String get(Map conf, String key, String default_value) {
@@ -62,27 +85,30 @@ public class Utils {
 	}
 	
 	public static boolean isItemIdValid(String itemId){
-		if(itemId.matches("[0-9]+") && !itemId.equals("0") ){
-			return true;
+		if(itemId.equals("")){
+			return false;
 		}
-		return false;
+		return true;
 	}
 	
 	
 	public static boolean isPageIdValid(String pageId){
-		if(pageId.matches("[0-9]+")){
-			return true;
+		if(pageId.equals("")){
+			return false;
 		}
-		return false;
+		return true;
 	}
 	
-	public static boolean isQNumValid(String qq){
-		if(!qq.matches("[0-9]+") || qq.equals("0") ){
+	public static boolean isQNumValid(String qq){	
+		if(!qq.matches("[0-9]+") || qq.equals("0") || qq.length() <= 4){
 			return false;
-		}else{
-			if(Long.valueOf(qq) <10000 || Long.valueOf(qq) > 4000000000L){
-				return false;
-			}
+		}
+		return true;
+	}
+	
+	public static boolean isActionTimeValid(String time){	
+		if(!time.matches("[0-9]+") || time.equals("0") || time.length() < 9){
+			return false;
 		}
 		return true;
 	}
@@ -100,40 +126,22 @@ public class Utils {
 
 	}
 
-	public static ActiveType getActionTypeByString(String actionType) {
-		if(actionType.equals("1")){
-			return ActiveType.Impress;
-		}else if(actionType.equals("2")){
-			return ActiveType.Click;
-		}else if(actionType.equals("3")){
-			return ActiveType.PageView;
-		}else if(actionType.equals("4")){
-			return ActiveType.Read;
-		}else if(actionType.equals("5")){
-			return ActiveType.Save;
-		}else if(actionType.equals("6")){
-			return ActiveType.BuyCart;
-		}else if(actionType.equals("7")){
-			return ActiveType.Deal;
-		}else if(actionType.equals("8")){
-			return ActiveType.Score;
-		}else if(actionType.equals("9")){
-			return ActiveType.Comments;
-		}else if(actionType.equals("10")){
-			return ActiveType.Reply;
-		}else if(actionType.equals("11")){
-			return ActiveType.Ups;
-		}else if(actionType.equals("12")){
-			return ActiveType.Praise;
-		}else if(actionType.equals("13")){
-			return ActiveType.Share;
+	public static Float getActionWeight(Integer actionType) {
+		if(actWeightMap.containsKey(actionType)){
+			return actWeightMap.get(actionType);
 		}else{
-			return ActiveType.Unknown;
+			return null;
 		}
 	}
 
+	public static boolean isRecommendAction(String actionType){
+		if(actionType.equals("1") || actionType.equals("2")){
+			return true;
+		}
+		return false;
+	}
+	
 	public static boolean isBidValid(String bid) {
-		// TODO Auto-generated method stub
 		return true;
 	}
 	
@@ -159,13 +167,35 @@ public class Utils {
 		return Long.valueOf(expireId);
 	}
 	
-
+	public static String spliceStringBySymbol(String symbol, String... args){
+		StringBuffer spliceRes = new StringBuffer();	
+		
+		for(int idx = 0;idx < args.length - 1; idx++){
+			spliceRes.append(args[idx]).append("#");
+		}
+		
+		return spliceRes.append(args[args.length-1]).toString();
+	}
+	
+	public static String getItemPairKey(String itemId1,String itemId2){
+		StringBuffer getKey = new StringBuffer();		
+		if(itemId1.compareTo(itemId2) < 0){
+			getKey.append(itemId1).append("#").append(itemId2);
+			
+		}else{
+			getKey.append(itemId2).append("#").append(itemId1);
+		}
+		
+		return getKey.toString();
+	}
 	
 	/**
 	 * @param args
 	 */
 	public static void main(String[] args) {
 		System.out.println(getDateByTime(1393743909L - 7*3600*24L));
+		String test = spliceStringBySymbol("#","a","b","c");
+		System.out.println(test);
 	}
 
 
