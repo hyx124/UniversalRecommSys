@@ -209,7 +209,7 @@ public class ItemPairStep1Bolt  extends AbstractConfigUpdateBolt{
 				}
 				
 				if(oldInfo != null){	
-					//next(oldInfo);
+					next(oldInfo);
 				}else{
 					ClientAttr clientEntry = mtClientList.get(0);		
 					TairOption opt = new TairOption(clientEntry.getTimeout());
@@ -396,7 +396,7 @@ public class ItemPairStep1Bolt  extends AbstractConfigUpdateBolt{
 			} catch (Exception e) {
 				logger.error(e.getMessage(), e);
 			}
-			//next(oldInfo);
+			next(oldInfo);
 		}
 		
 	}
