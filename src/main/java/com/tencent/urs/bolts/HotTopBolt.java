@@ -163,19 +163,19 @@ public class HotTopBolt extends AbstractConfigUpdateBolt{
 				Result<byte[]> res = afuture.get();	
 				if(res.isSuccess() && res.getResult()!=null){
 					GroupCountInfo weightInfo = GroupCountInfo.parseFrom(res.getResult());
-					//bid,key,item_id,weight,alg_name
 					Double weight = getWeight(weightInfo);
 					
-					String algKey1 = key.getBid()+"#0#"+key.getAdpos()+"#"+Constants.ht_alg_name+"#"+key.getGroupId();
-					String algKey2 = key.getBid()+"#"+categoryType+"#"+key.getAdpos()+"#"+Constants.cate_alg_name+"#"+key.getGroupId();
+					String algKey1 =  Utils.spliceStringBySymbol("#", key.getBid(),"0",key.getAdpos(),Constants.ht_alg_name,String.valueOf(key.getGroupId()));
+					String algKey2 =  Utils.spliceStringBySymbol("#", key.getBid(),categoryType,key.getAdpos(),Constants.cate_alg_name,String.valueOf(key.getGroupId()));
+
 					synchronized(collector){
 						collector.emit(Constants.alg_result_stream,new Values(key.getBid(),algKey1,key.getItemId(),weight,Constants.ht_alg_name));
 						collector.emit(Constants.alg_result_stream,new Values(key.getBid(),algKey2,key.getItemId(),weight,Constants.cate_alg_name));
 					}
 					
 					if(key.getGroupId() != 0){
-						String algKey3 =  key.getBid()+"#0#"+key.getAdpos()+"#"+Constants.ht_alg_name+"#0";
-						String algKey4 =  key.getBid()+"#"+categoryType+"#"+key.getAdpos()+"#"+Constants.cate_alg_name+"#0";
+						String algKey3 =  Utils.spliceStringBySymbol("#", key.getBid(),"0",key.getAdpos(),Constants.ht_nogroup_alg_name,"0");
+						String algKey4 =  Utils.spliceStringBySymbol("#", key.getBid(),categoryType,key.getAdpos(),Constants.cate_nogroup_alg_name,"0");
 						synchronized(collector){
 							collector.emit(Constants.alg_result_stream,new Values(key.getBid(),algKey3,key.getItemId(),weight,Constants.ht_alg_name));
 							collector.emit(Constants.alg_result_stream,new Values(key.getBid(),algKey4,key.getItemId(),weight,Constants.cate_alg_name));
@@ -198,7 +198,6 @@ public class HotTopBolt extends AbstractConfigUpdateBolt{
 					sumCount += ts.getCount();
 				}
 			}
-			
 			return sumCount;
 		}
 	}

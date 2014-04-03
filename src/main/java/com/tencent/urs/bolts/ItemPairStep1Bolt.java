@@ -34,6 +34,7 @@ import backtype.storm.task.TopologyContext;
 import backtype.storm.tuple.Tuple;
 import backtype.storm.tuple.Values;
 
+import com.tencent.monitor.MonitorEntry;
 import com.tencent.monitor.MonitorTools;
 
 import com.tencent.streaming.commons.bolts.config.AbstractConfigUpdateBolt;
@@ -56,14 +57,10 @@ public class ItemPairStep1Bolt  extends AbstractConfigUpdateBolt{
 	private static final long serialVersionUID = -3578535683081183276L;
 	private List<ClientAttr> mtClientList;	
 	private MonitorTools mt;
-	private DataCache<Recommend.UserPairInfo> userPairCache;
-	private UpdateCallBack putCallBack;
 	private ConcurrentHashMap<UpdateKey, GroupActionCombinerValue> combinerMap;
 
 	private int nsDetailTableId;
 	private int dataExpireTime;
-	private int cacheExpireTime;
-	private int nsUserPairTableId;
 	
 	private boolean debug;
 	private OutputCollector collector;
@@ -98,12 +95,10 @@ public class ItemPairStep1Bolt  extends AbstractConfigUpdateBolt{
 		super.prepare(conf, context, collector);
 		this.updateConfig(super.config);
 
-		this.userPairCache = new DataCache<Recommend.UserPairInfo>(conf);
 		this.mtClientList = TDEngineClientFactory.createMTClientList(conf);
 		this.mt = MonitorTools.getMonitorInstance(conf);
 		this.combinerMap = new ConcurrentHashMap<UpdateKey,GroupActionCombinerValue>(1024);
 				
-		this.putCallBack = new UpdateCallBack(mt, Constants.systemID, Constants.tde_send_interfaceID, this.getClass().getName());
 		this.collector = collector;
 		int combinerExpireTime = Utils.getInt(conf, "combiner.expireTime",5);
 		setCombinerTime(combinerExpireTime);
@@ -111,10 +106,8 @@ public class ItemPairStep1Bolt  extends AbstractConfigUpdateBolt{
 
 	@Override
 	public void updateConfig(XMLConfiguration config) {
-		nsUserPairTableId = config.getInt("user_pair_table",513);
 		nsDetailTableId = config.getInt("dependent_table",512);
 		dataExpireTime = config.getInt("data_expiretime",7*24*3600);
-		cacheExpireTime = config.getInt("cache_expiretime",3600);
 		debug = config.getBoolean("debug",false);
 	}
 
@@ -187,219 +180,6 @@ public class ItemPairStep1Bolt  extends AbstractConfigUpdateBolt{
 	private Float getWeightByType(Integer actionType){
 		return Utils.getActionWeight(actionType);
 	}
-
-	private class UserPairUpdateCallBack implements MutiClientCallBack{
-		
-		private UpdateKey key;
-		private HashMap<String,MidInfo> weightMap;
-		private String userPairKey;
-
-		public UserPairUpdateCallBack(UpdateKey key, HashMap<String,MidInfo> weightMap) {
-			this.key = key ; 
-			this.weightMap = weightMap;	
-			this.userPairKey = key.getUserPairKey();
-		}
-		
-		public void excute() {
-			try {
-				UserPairInfo oldInfo = null;
-				SoftReference<UserPairInfo> sr = userPairCache.get(userPairKey);	
-				if(sr != null){
-					oldInfo = sr.get();
-				}
-				
-				if(oldInfo != null){	
-					next(oldInfo);
-				}else{
-					ClientAttr clientEntry = mtClientList.get(0);		
-					TairOption opt = new TairOption(clientEntry.getTimeout());
-					Future<Result<byte[]>> future = clientEntry.getClient().getAsync((short)nsUserPairTableId,userPairKey.getBytes(),opt);
-					clientEntry.getClient().notifyFuture(future, this,clientEntry);	
-				}			
-				
-			} catch (Exception e) {
-				logger.error(e.getMessage(), e);
-			}
-		}
-		
-		private void next(UserPairInfo oldWeightInfo){
-			LinkedList<UserPairInfo.ItemPairs> newUserPairInfoList = new LinkedList<UserPairInfo.ItemPairs>();
-			
-			HashMap<String,HashMap<Long,MidInfo>> changeMap = new HashMap<String,HashMap<Long,MidInfo>>();
-			
-			HashSet<String> alreadyIn = new HashSet<String>();
-			Long now = System.currentTimeMillis()/1000;
-			if(oldWeightInfo != null){
-				for(UserPairInfo.ItemPairs ipairs:oldWeightInfo.getIpairsList()){
-					
-					if(this.weightMap.containsKey(ipairs.getItemPair())){
-						Long lastTimeId = ipairs.getLastTimeId();
-						float lastWeight = ipairs.getLastCount();
-						Long thisTimeId = weightMap.get(ipairs.getItemPair()).getTimeId();
-						float thisWeight = weightMap.get(ipairs.getItemPair()).getWeight();
-						
-						if(debug && key.getUin() == 389687043L){
-							logger.info("step2,add new info,key="+ipairs.getItemPair()
-									+",lastTimeId="+lastTimeId+",lastWeight="+lastWeight
-									+",thisTimeId="+thisTimeId+",thisWeight="+thisWeight);
-						}
-						
-						HashMap<Long,MidInfo> midMap = new HashMap<Long,MidInfo>();
-						
-						if(lastTimeId ==  thisTimeId ){
-							float changeWeight =  thisWeight - lastWeight;
-							if(changeWeight != 0){
-								MidInfo changeInfo = new MidInfo(thisTimeId, thisWeight - lastWeight);
-								midMap.put(thisTimeId, changeInfo);
-							}
-						}else if(lastTimeId !=  thisTimeId){
-							MidInfo changeLastInfo = new MidInfo(lastTimeId, 0 - lastWeight);
-							midMap.put(lastTimeId, changeLastInfo);
-							
-							MidInfo changeThisInfo = new MidInfo(thisTimeId, thisWeight - 0);
-							midMap.put(thisTimeId, changeThisInfo);
-							
-							
-						}	
-						changeMap.put(ipairs.getItemPair(), midMap);
-						
-						UserPairInfo.ItemPairs.Builder ipairsBuilder = UserPairInfo.ItemPairs.newBuilder();
-						ipairsBuilder.setItemPair(ipairs.getItemPair()).setLastTimeId(thisTimeId).setLastCount(thisWeight);
-						newUserPairInfoList.add(ipairsBuilder.build());
-						
-						alreadyIn.add(ipairs.getItemPair());
-					}else if(ipairs.getLastTimeId() >= Utils.getDateByTime(now -dataExpireTime) ){
-						newUserPairInfoList.add(ipairs);
-					}		
-				}
-			}
-
-			for(String leftKey : this.weightMap.keySet()){
-				if(alreadyIn.contains(leftKey)){
-					continue;
-				}
-			
-				Long thisTimeId = weightMap.get(leftKey).getTimeId();
-				float thisWeight = weightMap.get(leftKey).getWeight();
-				
-				MidInfo leftMidInfo = new MidInfo(thisTimeId, thisWeight);
-				
-				HashMap<Long,MidInfo> midMap = new HashMap<Long,MidInfo>();
-				midMap.put(thisTimeId, leftMidInfo);
-				changeMap.put(leftKey, midMap);
-				
-				
-				if(debug && key.getUin() == 389687043L){
-					logger.info("step2,not find old info, add new,key="+leftKey
-							+",thisTimeId="+thisTimeId+",thisWeight="+thisWeight);
-				}
-				
-				UserPairInfo.ItemPairs.Builder ipairsBuilder = UserPairInfo.ItemPairs.newBuilder();
-				ipairsBuilder.setItemPair(leftKey).setLastTimeId(thisTimeId).setLastCount(thisWeight);
-				newUserPairInfoList.add(ipairsBuilder.build());
-				
-				alreadyIn.add(leftKey);
-			}
-
-			Collections.sort(newUserPairInfoList, new Comparator<UserPairInfo.ItemPairs>() {   
-				@Override
-				public int compare(UserPairInfo.ItemPairs arg0,
-						UserPairInfo.ItemPairs arg1) {
-					 return (int)(arg1.getLastTimeId() - arg0.getLastTimeId());
-				}
-			}); 
-			
-			UserPairInfo.Builder newUserInfoBuiler = UserPairInfo.newBuilder();
-			for(UserPairInfo.ItemPairs ip: newUserPairInfoList){
-				if(newUserInfoBuiler.getIpairsCount() >= 500){
-					break;
-				}
-				newUserInfoBuiler.addIpairs(ip);
-			}
-			save(userPairKey,newUserInfoBuiler.build());	
-			
-			
-			for(String itemPairKey: changeMap.keySet()){
-				String groupKey = Utils.spliceStringBySymbol("#", String.valueOf(key.getBid()),
-						itemPairKey,String.valueOf(key.getGroupId()));
-				
-				String noGroupKey = Utils.spliceStringBySymbol("#", String.valueOf(key.getBid()),
-						itemPairKey,"0");
-				
-				HashMap<Long, MidInfo> midMap = changeMap.get(itemPairKey);
-					
-				for(Long timeId: midMap.keySet()){
-					Float weight = midMap.get(timeId).getWeight();
-					if(weight != null && weight != 0){
-						Values outputValues = new Values();		
-						outputValues.add(groupKey);
-						outputValues.add(timeId);
-						outputValues.add(weight);	
-						
-						synchronized(collector){
-							collector.emit(Constants.group_pair_stream,outputValues);
-						}
-						
-						
-						if(key.getGroupId() != 0){
-							Values noGroupOutputValues = new Values();		
-							noGroupOutputValues.add(noGroupKey);
-							noGroupOutputValues.add(timeId);
-							noGroupOutputValues.add(weight);	
-							synchronized(collector){
-								collector.emit(Constants.group_pair_stream,noGroupOutputValues);
-							}
-						}
-					}	
-				}
-			}
-		}
-		
-		private void save(String userPairKey,UserPairInfo newInfo){
-			Future<Result<Void>> future = null;
-			synchronized(userPairCache){
-				userPairCache.set(userPairKey, new SoftReference<UserPairInfo>(newInfo), cacheExpireTime);
-			}
-			
-			for(ClientAttr clientEntry:mtClientList ){
-				TairOption putopt = new TairOption(clientEntry.getTimeout(),(short)0, dataExpireTime);
-				try {
-					future = clientEntry.getClient().putAsync((short)nsUserPairTableId, userPairKey.getBytes(),newInfo.toByteArray(), putopt);
-					clientEntry.getClient().notifyFuture(future, putCallBack, 
-							new UpdateCallBackContext(clientEntry,userPairKey,newInfo.toByteArray(),putopt));
-					
-					/*
-					if(mt!=null){
-						MonitorEntry mEntryPut = new MonitorEntry(Constants.SUCCESSCODE,Constants.SUCCESSCODE);
-						mEntryPut.addExtField("TDW_IDC", clientEntry.getGroupname());
-						mEntryPut.addExtField("tbl_name", "FIFO1");
-						mt.addCountEntry(Constants.systemID, Constants.tde_put_interfaceID, mEntryPut, 1);
-					}*/
-				} catch (Exception e){
-					logger.error(e.getMessage(), e);
-				}
-				break;
-			}
-		}
-			
-		@Override
-		public void handle(Future<?> future, Object arg1) {
-			// TODO Auto-generated method stub
-			@SuppressWarnings("unchecked")
-			Future<Result<byte[]>> afuture = (Future<Result<byte[]>>) future;
-			UserPairInfo oldInfo = null;
-			try {
-				Result<byte[]> res = afuture.get();
-				if(res.isSuccess() && res.getResult()!=null){
-					oldInfo = UserPairInfo.parseFrom(res.getResult());
-				}	
-			} catch (Exception e) {
-				logger.error(e.getMessage(), e);
-			}
-			next(oldInfo);
-		}
-		
-	}
 	
 	private class ActionDetailCallBack implements MutiClientCallBack{
 		private final UpdateKey key;
@@ -412,7 +192,7 @@ public class ItemPairStep1Bolt  extends AbstractConfigUpdateBolt{
 			this.checkKey =  key.getDetailKey();
 		}
 
-		private void next(String item, HashMap<String,MidInfo> weightMap){
+		private void next(HashMap<String,MidInfo> weightMap){
 			if(weightMap != null){
 				if(debug && key.getUin() == 389687043L){
 					for(String sendKey: weightMap.keySet()){
@@ -420,10 +200,39 @@ public class ItemPairStep1Bolt  extends AbstractConfigUpdateBolt{
 								+",timeId="+weightMap.get(sendKey).getTimeId());
 					}
 				}
-				new UserPairUpdateCallBack(key, weightMap).excute();
-			}else{
-				if(debug && key.getUin() == 389687043L){
-					logger.info("step1,not found this key ,stop at here");
+				
+				List<Map.Entry<String, MidInfo>> sortList =
+					    new ArrayList<Map.Entry<String, MidInfo>>(weightMap.entrySet());
+				
+				Collections.sort(sortList, new Comparator<Map.Entry<String, MidInfo>>() {   
+					@Override
+					public int compare(Entry<String, MidInfo> arg0,
+							Entry<String, MidInfo> arg1) {
+						 return (int)(arg1.getValue().getTimeId() - arg0.getValue().getTimeId());
+					}
+				}); 
+				
+				StringBuffer mergeItems = new StringBuffer();		
+				int count = 0;
+				for(Entry<String, MidInfo> sortItem: sortList){
+					if(count >= 50){
+						break;
+					}
+					
+					mergeItems.append(sortItem.getKey()).append(",")
+								.append(sortItem.getValue().getTimeId()).append(",")
+								.append(sortItem.getValue().getWeight()).append(";");
+					
+					count ++;
+				}
+				
+				Values outputValues = new Values();		
+				outputValues.add(key.getBid());
+				outputValues.add(String.valueOf(key.getUin()));
+				outputValues.add(String.valueOf(key.getGroupId()));
+				outputValues.add(mergeItems.toString());
+				synchronized(collector){
+					collector.emit(Constants.user_pair_stream,outputValues);
 				}
 			}
 		}
@@ -448,7 +257,7 @@ public class ItemPairStep1Bolt  extends AbstractConfigUpdateBolt{
 				if(res.isSuccess() && res.getResult()!=null){
 					UserActiveDetail oldValueHeap = UserActiveDetail.parseFrom(res.getResult());
 					HashMap<String,MidInfo> weightMap = getPairItems(oldValueHeap , values);
-					next(key.getItemId(),weightMap);
+					next(weightMap);
 				}
 			} catch (Exception e) {
 				logger.error(e.getMessage(), e);

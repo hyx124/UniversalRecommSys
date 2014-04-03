@@ -150,10 +150,12 @@ public class TxNewsSpout extends TdbankSpout {
 		String actionTime = msg_array[12];
 		String actionResult = msg_array[15];
 
-		if(qq.equals("389687043")){
+		if(qq.equals("389687043") || qq.equals("475182144")){
+			StringBuffer outputString = new StringBuffer(qq);		
 			for(String each:msg_array){
-				logger.info("-----"+each);
-			}
+				outputString.append(",").append(each);
+			}		
+			logger.info("-----"+outputString.toString());
 		}
 		
 		String hashKey = genHashKey(qq,uid);
@@ -210,7 +212,12 @@ public class TxNewsSpout extends TdbankSpout {
 		outputValues.add(platform);
 		outputValues.add(lbsInfo);
 
+		
 		if(Utils.isRecommendAction(actType)){
+			if(qq.equals("389687043") || qq.equals("475182144")){
+				logger.info("-----qq="+qq+",send to "+Constants.recommend_action_stream);
+			}
+			
 			this.collector.emit(Constants.recommend_action_stream,outputValues);	
 			if(this.mt!=null){
 				MonitorEntry mEntryPut = new MonitorEntry(Constants.SUCCESSCODE,Constants.SUCCESSCODE);
@@ -220,6 +227,11 @@ public class TxNewsSpout extends TdbankSpout {
 				this.mt.addCountEntry(Constants.systemID, Constants.tdbank_interfaceID, mEntryPut, 1);
 			}
 		}else{
+			
+			if(qq.equals("389687043") || qq.equals("475182144")){
+				logger.info("-----qq="+qq+",send to "+Constants.actions_stream);
+			}
+			
 			this.collector.emit(Constants.actions_stream,outputValues);	
 			if(this.mt!=null){
 				MonitorEntry mEntryPut = new MonitorEntry(Constants.SUCCESSCODE,Constants.SUCCESSCODE);

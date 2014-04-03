@@ -17,18 +17,23 @@ public class Constants {
 	public static String action_weight_stream = "action_weight_info";
 	public static String alg_result_stream = "computer_result";
 	
+	public static String user_pair_stream = "user_pair";
 	public static String group_pair_stream = "group_pair";
 	
 	public static String config_stream = "config";
 
 	public static String topN_alg_name = "D1";
-	public static String ctr_alg_name = "B1001";
+	public static String ctr_alg_name = "A1001";
+	
 	public static String cf_alg_name = "C1001";
-	public static String ar_alg_name = "C2001";
+	public static String cf_nogroup_alg_name = "B1001";
+	
+	public static String cate_alg_name = "C2001";
+	public static String cate_nogroup_alg_name = "B2001";
+	
 	public static String ht_alg_name = "C3001";
-	public static String cate_alg_name = "B2001";
-	
-	
+	public static String ht_nogroup_alg_name = "B3001";
+
 	public static final	String systemID = "1057710";
 	public static final String tdbank_interfaceID = "1";
 	public static final String tde_send_interfaceID = "2";

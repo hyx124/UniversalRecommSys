@@ -72,7 +72,8 @@ public class TopActionBolt extends AbstractConfigUpdateBolt {
 		this.mtClientList = TDEngineClientFactory.createMTClientList(conf);
 		this.mt = MonitorTools.getMonitorInstance(conf);
 		this.combinerMap = new ConcurrentHashMap<String,ActionCombinerValue>(1024);
-		this.putCallBack = new UpdateCallBack(mt, Constants.systemID, Constants.tde_send_interfaceID, "TopActions");	
+		this.putCallBack = new UpdateCallBack(mt, Constants.systemID, Constants.tde_send_interfaceID, 
+				String.valueOf(this.nsTableId));	
 		this.cacheMap = new DataCache<UserActiveHistory>(conf);
 		
 		int combinerExpireTime = Utils.getInt(conf, "combiner.expireTime",5);
@@ -91,7 +92,6 @@ public class TopActionBolt extends AbstractConfigUpdateBolt {
 	@Override
 	public void processEvent(String sid, Tuple tuple) {
 		try{
-			// [1, UserAction, 389687043, 17139104, 0, 5, 1389657189, 0, , , , , 389687043, 51]
 			String bid = tuple.getStringByField("bid");
 			String qq = tuple.getStringByField("qq");
 			String itemId = tuple.getStringByField("item_id");
@@ -113,6 +113,10 @@ public class TopActionBolt extends AbstractConfigUpdateBolt {
 			
 			if(Utils.isRecommendAction(actionType)){
 				return;
+			}
+			
+			if(qq.equals("389687043") || qq.equals("475182144")){
+				logger.info("--input to combiner---"+tuple.toString());
 			}
 			
 			Recommend.UserActiveHistory.ActiveRecord.Builder actBuilder =
@@ -140,7 +144,6 @@ public class TopActionBolt extends AbstractConfigUpdateBolt {
 					while (true) {
 						Thread.sleep(second * 1000);
 						Set<String> keySet = combinerMap.keySet();
-						//logger.info("deal with="+ keySet.size()+",left size="+combinerMap.size());
 						for (String key : keySet) {
 							ActionCombinerValue expireValue  = combinerMap.remove(key);
 							try{
@@ -268,14 +271,6 @@ public class TopActionBolt extends AbstractConfigUpdateBolt {
 										this.key.getBytes(), putValue.toByteArray(), putopt);
 					clientEntry.getClient().notifyFuture(future, putCallBack, 
 							new UpdateCallBackContext(clientEntry,key,putValue.toByteArray(),putopt));
-
-					/*
-					if(mt!=null){
-						MonitorEntry mEntryPut = new MonitorEntry(Constants.SUCCESSCODE,Constants.SUCCESSCODE);
-						mEntryPut.addExtField("TDW_IDC", clientEntry.getGroupname());
-						mEntryPut.addExtField("tbl_name", "TopActions");
-						mt.addCountEntry(Constants.systemID, Constants.tde_put_interfaceID, mEntryPut, 1);
-					}*/
 				} catch (Exception e){
 					logger.error(e.getMessage(), e);
 				}

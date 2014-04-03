@@ -160,16 +160,6 @@ public class ARCFBolt extends AbstractConfigUpdateBolt{
 				logger.error(e.getMessage(), e);
 			}
 		}
-
-		public Double computeARWeight(Float itemCount1, Float itemCount2,
-				Float pairCount) {	
-			if(itemCount2 == 0 || pairCount == 0){
-				return 0D;
-			}
-			
-			Double simAR = (double) (pairCount/itemCount2);
-			return simAR;
-		}
 		
 		public Double computeCFWeight(Float itemCount1, Float itemCount2,
 				Float pairCount) {	
@@ -198,17 +188,15 @@ public class ARCFBolt extends AbstractConfigUpdateBolt{
 			Float pairCount = getWeight(weightInfo);
 			
 			if(debug){
-				logger.info("step3,key"+getKey+"item1="+key.getItemId()+",item2="+otherItem+"itemcount1="+itemCount1+",itemcount2="+itemCount2+",paircount="+pairCount);
+				logger.info("step3,key"+getKey+"item1="+key.getItemId()+
+						",item2="+otherItem+"itemcount1="+itemCount1+
+						",itemcount2="+itemCount2+",paircount="+pairCount);
 			}
 			Double cf12Weight = computeCFWeight(itemCount1,itemCount2,pairCount);
 			Double cf21Weight = computeCFWeight(itemCount2,itemCount1,pairCount);
-			Double ar12Weight = computeARWeight(itemCount1,itemCount2,pairCount);
-			Double ar21Weight = computeARWeight(itemCount2,itemCount1,pairCount);
 			
-			doEmit(key.getBid(),key.getItemId(),key.getAdpos(),otherItem,Constants.cf_alg_name,String.valueOf(key.getGroupId()),cf12Weight);
-			doEmit(key.getBid(),otherItem,key.getAdpos(),key.getItemId(),Constants.cf_alg_name,String.valueOf(key.getGroupId()),cf21Weight);
-			doEmit(key.getBid(),key.getItemId(),key.getAdpos(),otherItem,Constants.cf_alg_name,String.valueOf(key.getGroupId()),ar12Weight);
-			doEmit(key.getBid(),otherItem,key.getAdpos(),key.getItemId(),Constants.ar_alg_name,String.valueOf(key.getGroupId()),ar21Weight);	
+			doEmit(key.getBid(),key.getItemId(),key.getAdpos(),otherItem,String.valueOf(key.getGroupId()),cf12Weight);
+			doEmit(key.getBid(),otherItem,key.getAdpos(),key.getItemId(),String.valueOf(key.getGroupId()),cf21Weight);
 		}
 		
 		private Float getWeight(GroupPairInfo weightInfo){
@@ -225,15 +213,15 @@ public class ARCFBolt extends AbstractConfigUpdateBolt{
 			return sumCount;
 		}
 		
-		private void doEmit(String bid,String itemId,String adpos,String otherItem,  String algName, String groupId, double weight){
+		private void doEmit(String bid,String itemId,String adpos,String otherItem, String groupId, double weight){
 			
 			if(weight <= 0){
 				return;
 			}
 			
 			
-			String resultKey = Utils.getAlgKey(bid,itemId, adpos, algName, groupId);	
-			Values values = new Values(bid,resultKey,otherItem,weight,algName);
+			String resultKey = Utils.getAlgKey(bid,itemId, adpos, Constants.cf_alg_name, groupId);	
+			Values values = new Values(bid,resultKey,otherItem,weight,Constants.cf_alg_name);
 			if(debug){
 				logger.info("step3,output result,key"+resultKey+",otherItem="+otherItem+",weight="+weight);
 			}
@@ -243,8 +231,8 @@ public class ARCFBolt extends AbstractConfigUpdateBolt{
 			}
 			
 			if(!groupId.equals("0")){
-				String resultKey2 = Utils.getAlgKey(bid,itemId, adpos, algName, "0");		
-				Values values2 = new Values(bid,resultKey2,otherItem,weight,algName);
+				String resultKey2 = Utils.getAlgKey(bid,itemId, adpos, Constants.cf_nogroup_alg_name, "0");		
+				Values values2 = new Values(bid,resultKey2,otherItem,weight,Constants.cf_nogroup_alg_name);
 				synchronized(collector){
 					collector.emit(Constants.alg_result_stream,values2);	
 				}

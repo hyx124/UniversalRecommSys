@@ -34,10 +34,15 @@ import com.tencent.streaming.commons.bolts.config.AbstractConfigUpdateBolt;
 import com.tencent.streaming.commons.spouts.tdbank.Output;
 import com.tencent.tde.client.Result;
 import com.tencent.tde.client.TairClient.TairOption;
+import com.tencent.tde.client.error.TairFlowLimit;
+import com.tencent.tde.client.error.TairRpcError;
+import com.tencent.tde.client.error.TairTimeout;
 import com.tencent.tde.client.impl.MutiThreadCallbackClient.MutiClientCallBack;
 import com.tencent.urs.asyncupdate.UpdateCallBack;
 import com.tencent.urs.asyncupdate.UpdateCallBackContext;
 
+import com.tencent.urs.protobuf.Recommend;
+import com.tencent.urs.protobuf.Recommend.UserActiveHistory;
 import com.tencent.urs.tdengine.TDEngineClientFactory;
 import com.tencent.urs.tdengine.TDEngineClientFactory.ClientAttr;
 import com.tencent.urs.utils.Constants;
@@ -50,6 +55,7 @@ public class CBBolt extends AbstractConfigUpdateBolt{
 	private MonitorTools mt;
 	private DataCache<NewsApp.Newsapp.NewsAttr> itemAttrCache;
 	private DataCache<UserFace> qqProfileCache;
+	private DataCache<NewsIndex> itemIndexCache;
 
 	private ConcurrentHashMap<String, HashSet<String>> combinerMap;
 	private NewsClassifier classifier;
@@ -177,9 +183,7 @@ public class CBBolt extends AbstractConfigUpdateBolt{
 			
 			if(topic.equals(Constants.item_info_stream) ){
 				String checkKey = bid+"#"+itemId;
-				if(itemAttrCache.hasKey(checkKey)){
-					return;
-				}
+				
 				
 				String bigType = tuple.getStringByField("cate_id1");
 				String midType = tuple.getStringByField("cate_id2");
@@ -194,54 +198,44 @@ public class CBBolt extends AbstractConfigUpdateBolt{
 					return;
 				}
 				
-				if(debug){
-					logger.info("input data, cate1="+bigTypeName+",cate2="+midTypeName+",cate3="+smallTypeName);
-				}
-				
 				ByteString bigTypeNameStr = ByteString.copyFrom(bigTypeName,"UTF-8");
 				ByteString midTypeNameStr = ByteString.copyFrom(midTypeName,"UTF-8");
 				ByteString smallTypeNameStr = ByteString.copyFrom(smallTypeName,"UTF-8");
 				ByteString textStr = ByteString.copyFrom(text,"UTF-8");
 				
-				
-				
-				
+	
 				NewsAttr.Builder cbAppBuilder = NewsAttr.newBuilder();
 				genInputPbBuilder(cbAppBuilder,itemId,Long.valueOf(bigType),Long.valueOf(midType),Long.valueOf(smallType)
 						,bigTypeNameStr,midTypeNameStr,smallTypeNameStr,textStr);
-				
+				cbAppBuilder.setIndexScore(Long.valueOf(itemTime));
 				cbAppBuilder.setFreshnessScore(Long.valueOf(itemTime));
 				
 				classifier.HierarchicalClassify(cbAppBuilder);
 				
-				if(debug){
-					logger.info("get data from classifier");
+				boolean isSend = false;
+				if(!itemIndexCache.hasKey(checkKey)){
+					for(NewsApp.Newsapp.NewsCategory cs:cbAppBuilder.getCategoryList()){
+						String tag = cs.getName().toStringUtf8();
+						if(cs.getName().isEmpty() || tag.equals("")){
+							continue;
+						}
+						
+						String tagKey = Utils.spliceStringBySymbol("#", bid,tag); 		
+						cbAppBuilder.setTagScore(cs.getWeight());
+						
+						doReIndexsCallBack(tagKey,cbAppBuilder.build());
+						isSend =true;
+					}
+				}else{
+					logger.info("do indexs ,is already in cache,item="+checkKey);
 				}
 				
-				for(NewsApp.Newsapp.NewsCategory cs:cbAppBuilder.getCategoryList()){
-					String tag = cs.getName().toStringUtf8();
-					if(cs.getName().isEmpty() || tag.equals("")){
-						continue;
-					}
-					
-					String tagKey = Utils.spliceStringBySymbol("#", bid,tag); 
-					if(debug){
-						logger.info("send change to index ,tagKey="+tagKey+",tag.size="+tag.length());
-					}
-					cbAppBuilder.setTagScore(cs.getWeight());
-					
-					new doReIndexsCallBack(tagKey,cbAppBuilder.build()).excute();
-					
-					
-					String tagKey2 = Utils.spliceStringBySymbol("#", bid,"for_test"); 
-					new doReIndexsCallBack(tagKey2,cbAppBuilder.build()).excute();
-				}
-				
+				Long date = Utils.getDateByTime(Long.valueOf(itemTime));
 				String inTdeKey = Utils.spliceStringBySymbol("#", bid,itemId);
-				saveNewsAttrInTde(inTdeKey, cbAppBuilder.build());
-				if(debug){
-					logger.info("save attr in tde for cache ,inTdeKey="+inTdeKey);
+				if(isSend){
+					logger.info("do indexs ,for item="+inTdeKey+",date="+date+",tag_count="+cbAppBuilder.getCategoryCount());
 				}
+				saveNewsAttrInTde(inTdeKey, cbAppBuilder.build());
 			}else if(topic.equals(Constants.actions_stream)){
 				String qq = tuple.getStringByField("qq");
 				String actionType = tuple.getStringByField("action_type");
@@ -257,6 +251,10 @@ public class CBBolt extends AbstractConfigUpdateBolt{
 	}
 
 	private void saveNewsAttrInTde(String key, NewsAttr value){
+		synchronized(itemAttrCache){
+			itemAttrCache.set(key, new SoftReference<NewsApp.Newsapp.NewsAttr>(value), cacheExpireTime);
+		}
+		
 		for(ClientAttr clientEntry:mtClientList ){
 			TairOption putopt = new TairOption(clientEntry.getTimeout(),(short)0, dataExpireTime);
 			try {
@@ -447,7 +445,10 @@ public class CBBolt extends AbstractConfigUpdateBolt{
 				@Override
 				public int compare(UserFace.UserPreference arg0,
 						UserFace.UserPreference arg1) {
-					 return (int)(arg1.getWeight() - arg0.getWeight());
+					if(arg0.getWeight() > arg1.getWeight()){
+						return -1;
+					}
+					return 1;
 				}
 			}); 
 			
@@ -460,6 +461,7 @@ public class CBBolt extends AbstractConfigUpdateBolt{
 		
 		private float computerWeight(float level, float time_loss, String actionType){
 			Float typeWeight = Utils.getActionWeight(Integer.valueOf(actionType));
+			
 			if(typeWeight != null){
 				return level*time_loss*typeWeight;
 			}else{
@@ -473,6 +475,10 @@ public class CBBolt extends AbstractConfigUpdateBolt{
 			}
 			
 			if(debug && key.indexOf("389687043")>0){
+				logger.info("user face,count="+value.getPreferenceCount());
+			}
+			
+			if(debug && key.indexOf("475182144")>0){
 				logger.info("user face,count="+value.getPreferenceCount());
 			}
 			
@@ -499,151 +505,151 @@ public class CBBolt extends AbstractConfigUpdateBolt{
 		}
 	}
 	
-	public class doReIndexsCallBack implements MutiClientCallBack{
-		private String tagKey;
-		private NewsApp.Newsapp.NewsAttr itemAttr;
+	private void doReIndexsCallBack(String tagKey,NewsAttr newItemAttr){
+		ClientAttr clientEntry = mtClientList.get(0);		
+		TairOption opt = new TairOption(clientEntry.getTimeout());
 		
-		public doReIndexsCallBack(String tagKey, NewsApp.Newsapp.NewsAttr itemAttr){
-			this.tagKey = tagKey;
-			this.itemAttr = itemAttr;
-		}
-		
-		private void insertNewValueToList(NewsIndex oldNewsList, NewsIndex.Builder newListBuilder){
-			HashSet<String> alreadyIn = new HashSet<String>();
-			
-			Long now = System.currentTimeMillis()/1000;
-			newListBuilder.setCreateTime(now);
-			newListBuilder.setUpdateTime(now);
-			
-			if(oldNewsList != null){
-				newListBuilder.setCreateTime(oldNewsList.getCreateTime());
-				for(NewsAttr eachNews :oldNewsList.getNewsListList()){
-					if(newListBuilder.getNewsListCount() > topNum){
-						break;
-					}
-															
-					if(!alreadyIn.contains(itemAttr.getNewsId()) && itemAttr.getIndexScore() >= eachNews.getIndexScore()){
-						newListBuilder.addNewsList(itemAttr);
-						alreadyIn.add(itemAttr.getNewsId());
-					}
-						
-					if(!alreadyIn.contains(eachNews.getNewsId()) 
-							&& !eachNews.getNewsId().equals(itemAttr.getNewsId())){
-
-						newListBuilder.addNewsList(eachNews);
-						alreadyIn.add(eachNews.getNewsId());
-					}
-				}
+		NewsIndex oldNewsList = null;
+		try {
+			Result<byte[]> res = clientEntry.getClient().get((short)nsCbIndexTableId, tagKey.getBytes(), opt);
+			if(res.isSuccess() && res.getResult() != null){
+				oldNewsList = NewsIndex.parseFrom(res.getResult());
 			}
-				
-			if(!alreadyIn.contains(itemAttr.getNewsId())  
-					&& newListBuilder.getNewsListCount() < topNum){
-				newListBuilder.addNewsList(itemAttr);
-				alreadyIn.add(itemAttr.getNewsId());
-			}
+		} catch(Exception e){
 		}
 		
-		private void save(String key, NewsIndex value){
-			
-			for(ClientAttr clientEntry:mtClientList ){
-				TairOption putopt = new TairOption(clientEntry.getTimeout(),(short)0, dataExpireTime);
-				try {
-					UpdateCallBack putCallBack = new UpdateCallBack(mt, Constants.systemID, Constants.tde_send_interfaceID, key);
-					Future<Result<Void>> future = clientEntry.getClient().putAsync((short)nsCbIndexTableId, 
-										key.getBytes("UTF-8"), value.toByteArray(), putopt);
-					clientEntry.getClient().notifyFuture(future, putCallBack, 
-							new UpdateCallBackContext(clientEntry,key,value.toByteArray(),putopt));
-					
-					
-					/*if(mt!=null){
-						MonitorEntry mEntryPut = new MonitorEntry(Constants.SUCCESSCODE,Constants.SUCCESSCODE);
-						mEntryPut.addExtField("TDW_IDC", clientEntry.getGroupname());
-						mEntryPut.addExtField("tbl_name", algName);
-						mt.addCountEntry(Constants.systemID, Constants.tde_put_interfaceID, mEntryPut, 1);
-					}*/
-				} catch (Exception e){
-					logger.error(e.getMessage(), e);
-				}
-			}
-		}
-		
-		@Override
-		public void handle(Future<?> future, Object context) {
-			Future<Result<byte[]>> afuture = (Future<Result<byte[]>>) future;
-			NewsIndex oldNewsList = null;
-			try {
-				Result<byte[]> res = afuture.get();
-				if(res.isSuccess() && res.getResult() != null){
-					oldNewsList = NewsIndex.parseFrom(res.getResult());
-				}
-			} catch (Exception e) {
-				logger.error(e.getMessage(), e);
-			}	
-			
-			NewsIndex.Builder newListBuilder = NewsIndex.newBuilder();
-			insertNewValueToList(oldNewsList,newListBuilder);
-			save(this.tagKey,newListBuilder.build());
-		}
-
-		public void excute() {
-			try{
-				ClientAttr clientEntry = mtClientList.get(0);		
-				TairOption opt = new TairOption(clientEntry.getTimeout());
-				Future<Result<byte[]>> future = clientEntry.getClient().getAsync((short)nsCbIndexTableId,tagKey.getBytes(),opt);
-				clientEntry.getClient().notifyFuture(future, this,clientEntry);	
-			}catch(Exception e){
-				logger.error(e.getMessage(), e);
-			}
-		}
+		NewsIndex.Builder newListBuilder = NewsIndex.newBuilder();
+		insertNewValueToList(oldNewsList,newListBuilder,newItemAttr);
+		save(tagKey, newListBuilder.build());
 
 	}
+	
+	private void insertNewValueToList(NewsIndex oldNewsList, NewsIndex.Builder newListBuilder, NewsAttr newItemAttr){
+		HashSet<String> alreadyIn = new HashSet<String>();
+		
+		Long now = System.currentTimeMillis()/1000;
+		newListBuilder.setCreateTime(now);
+		newListBuilder.setUpdateTime(now);
+		
+		if(oldNewsList != null){
+			newListBuilder.setCreateTime(oldNewsList.getCreateTime());
+			for(NewsAttr eachNews :oldNewsList.getNewsListList()){
+				if(newListBuilder.getNewsListCount() > topNum){
+					break;
+				}
+														
+				if(!alreadyIn.contains(newItemAttr.getNewsId()) 
+						&& newItemAttr.getFreshnessScore() >= eachNews.getFreshnessScore()){
+					newListBuilder.addNewsList(newItemAttr);
+					alreadyIn.add(newItemAttr.getNewsId());
+				}
+					
+				if(!alreadyIn.contains(eachNews.getNewsId()) 
+						&& !eachNews.getNewsId().equals(newItemAttr.getNewsId())){
 
-	public static void main(String[] args){
-		
-		String bigType = "1";
-		String midType = "2";
-		String smallType = "3";
-		String bigTypeName = "新闻";
-		String midTypeName = "新闻";
-		String smallTypeName = "要闻";
-		String text = "门男子酒后强奸同村妇女##和他人喝酒后将同村一妇女强奸，潜逃11年后在吉林被抓获。##11年前，肖某因酒后强奸妇女潜逃，前日凌晨2时，天门市公安局九真派出所民警终将其从吉林省延吉市押回天门。  2003年3月2日晚，天门九真镇新河村村民肖某和陈某喝酒后将同村的一名妇女强奸。案发后，两人潜逃，陈某于2011年投案自首。20日，天门警方了解到肖某已潜逃至吉林省延吉市的信息，遂与延吉警方联系。经延吉警方多日蹲守，终将肖某抓获。";
-		
-		try {
-			ByteString bigTypeNameStr = ByteString.copyFrom(bigTypeName,"UTF-8");
-			ByteString midTypeNameStr = ByteString.copyFrom(midTypeName,"UTF-8");
-			ByteString smallTypeNameStr = ByteString.copyFrom(smallTypeName,"UTF-8");
-			ByteString textStr = ByteString.copyFrom(text,"UTF-8");
-			
-			NewsApp.Newsapp.NewsAttr.Builder cbAppBuilder = NewsApp.Newsapp.NewsAttr.newBuilder();
-			genInputPbBuilder(cbAppBuilder,"1234",Long.valueOf(bigType),Long.valueOf(midType),Long.valueOf(smallType)
-					,bigTypeNameStr,midTypeNameStr,smallTypeNameStr,textStr);
-			
-			NewsClassifier classifier = new NewsClassifier();
-			classifier.HierarchicalClassify(cbAppBuilder);
-			
-			for(NewsCategory cs:cbAppBuilder.getCategoryList()){
-				//ByteString smallTypeNameStr = ByteString.copyFrom(smallTypeName.getBytes());
-				ByteString tag = cs.getName();
-				String tagKey = Utils.spliceStringBySymbol("#", "10040001",tag.toStringUtf8()); 
-	
-				
-				System.out.println(",csName="+cs.getName().toStringUtf8()
-						+"\n,title="+cbAppBuilder.getTitle().toStringUtf8()
-						+"\n,content="+cbAppBuilder.getContent().toStringUtf8()
-						+"\n,tagKey="+tagKey+"\n\n\n");
+					newListBuilder.addNewsList(eachNews);
+					alreadyIn.add(eachNews.getNewsId());
+				}
 			}
-		} catch (UnsupportedEncodingException e1) {
-			
-			return;
 		}
+			
+		if(!alreadyIn.contains(newItemAttr.getNewsId())  
+				&& newListBuilder.getNewsListCount() < topNum){
+			newListBuilder.addNewsList(newItemAttr);
+			alreadyIn.add(newItemAttr.getNewsId());
+		}
+	}
 	
+	private void save(String key, NewsIndex value){		
+		synchronized(itemIndexCache){
+			itemIndexCache.set(key, new SoftReference<NewsIndex>(value), cacheExpireTime);
+		}
 		
-		Double simCF = (double) (1.5/(Math.sqrt(4.5) * Math.sqrt(540.5)));
-		System.out.println("simCF="+simCF);
+		for(ClientAttr clientEntry:mtClientList ){
+			TairOption putopt = new TairOption(clientEntry.getTimeout(),(short)0, dataExpireTime);
+			try { 
+				clientEntry.getClient().put((short)nsCbIndexTableId, key.getBytes("UTF-8"), value.toByteArray(), putopt);
+			} catch(Exception e){
+				logger.error(e.getMessage(), e);
+			}
+		}
+	}
+
+	public static void main(String[] args) throws UnsupportedEncodingException{
 		
-		String itemId = "20140322A000E7#1";
-		itemId = itemId.substring(0,itemId.length()-2);
-		System.out.print(itemId);
+		
+		
+		NewsAttr.Builder oldItemAttr = NewsAttr.newBuilder();
+		
+		
+		NewsCategory.Builder value = NewsCategory.newBuilder();
+		String name = "1";
+		ByteString s = ByteString.copyFrom(name.getBytes());
+		value.setId(1).setLevel(1).setName(s ).setWeight(1.0F);
+		
+		oldItemAttr.setFreshnessScore(System.currentTimeMillis()/1000).addCategory( value.build()).setNewsId("1")
+					.setIndexScore(System.currentTimeMillis()/1000);
+		
+		NewsIndex.Builder oldNewsListBuilder = NewsIndex.newBuilder() ;
+		
+		NewsIndex oldNewsList = oldNewsListBuilder.addNewsList(oldItemAttr.build())
+							.setCreateTime(System.currentTimeMillis()/1000)
+							.setUpdateTime(System.currentTimeMillis()/1000).build();
+		
+		NewsCategory.Builder value2 = NewsCategory.newBuilder();
+		String name2 = "2";
+		ByteString s2 = ByteString.copyFrom(name2.getBytes());
+		value2.setId(1).setLevel(1).setName(s2 ).setWeight(2.0F);
+		
+		NewsAttr newItemAttr = NewsAttr.newBuilder()
+							.addCategory(value2.build()).setNewsId("2").build();
+		
+		NewsIndex.Builder newListBuilder =  NewsIndex.newBuilder();
+		
+		
+		
+		
+		
+		HashSet<String> alreadyIn = new HashSet<String>();
+		
+		Long now = System.currentTimeMillis()/1000;
+		newListBuilder.setCreateTime(now);
+		newListBuilder.setUpdateTime(now);
+		
+		if(oldNewsList != null){
+			newListBuilder.setCreateTime(oldNewsList.getCreateTime());
+			for(NewsAttr eachNews :oldNewsList.getNewsListList()){
+				if(newListBuilder.getNewsListCount() > 100){
+					break;
+				}
+				
+				if(Utils.getDateByTime((long) eachNews.getIndexScore()) <= 20140401){
+					System.out.println(Utils.getDateByTime((long) eachNews.getIndexScore()));
+					continue;
+				}
+														
+				if(!alreadyIn.contains(newItemAttr.getNewsId()) 
+						&& newItemAttr.getIndexScore() >= eachNews.getIndexScore()){
+					newListBuilder.addNewsList(newItemAttr);
+					alreadyIn.add(newItemAttr.getNewsId());
+				}
+					
+				if(!alreadyIn.contains(eachNews.getNewsId()) 
+						&& !eachNews.getNewsId().equals(newItemAttr.getNewsId())){
+
+					newListBuilder.addNewsList(eachNews);
+					alreadyIn.add(eachNews.getNewsId());
+				}
+			}
+		}
+			
+		if(!alreadyIn.contains(newItemAttr.getNewsId())  
+				&& newListBuilder.getNewsListCount() < 100){
+			newListBuilder.addNewsList(newItemAttr);
+			alreadyIn.add(newItemAttr.getNewsId());
+		}
+		
+		System.out.println(newListBuilder.getNewsListCount());
 	}
 	
 }

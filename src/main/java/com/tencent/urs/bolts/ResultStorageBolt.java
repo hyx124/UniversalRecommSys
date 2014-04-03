@@ -43,8 +43,8 @@ public class ResultStorageBolt extends AbstractConfigUpdateBolt {
 	private List<ClientAttr> mtClientList;	
 	private DataCache<RecommendResult> resCache;
 	private MonitorTools mt;
-	//private ConcurrentHashMap<String, RecommendResult> combinerMap;
 	private int dataExpireTime;
+	private int itemExpireTime;
 	private int nsTableId;
 	private int cacheExpireTime;
 	private int topNum;
@@ -77,6 +77,7 @@ public class ResultStorageBolt extends AbstractConfigUpdateBolt {
 	public void updateConfig(XMLConfiguration config) {
 		nsTableId = config.getInt("storage_table",520);
 		dataExpireTime = config.getInt("data_expiretime",10*24*3600);
+		itemExpireTime = config.getInt("item_expiretime",1*24*3600);
 		cacheExpireTime = config.getInt("cache_expiretime",3600);
 		topNum = config.getInt("top_num",100);
 	}
@@ -228,7 +229,7 @@ public class ResultStorageBolt extends AbstractConfigUpdateBolt {
 						
 						if(!alreadyIn.contains(eachItem.getItem()) 
 								&& !eachItem.getItem().equals(eachNewValue.getItem())
-								&& (eachItem.getUpdateTime() - eachNewValue.getUpdateTime()) < dataExpireTime
+								&& (eachItem.getUpdateTime() - eachNewValue.getUpdateTime()) < itemExpireTime
 								&& eachItem.getWeight() > 0){
 
 								mergeValueBuilder.addResults(eachItem);
