@@ -30,7 +30,6 @@ public class BaseInfoBolt extends AbstractConfigUpdateBolt{
 	private static final long serialVersionUID = -1302335947421120663L;
 	private List<ClientAttr> mtClientList;	
 	private MonitorTools mt;
-	private UpdateCallBack putCallBack;
 	private int nsItemDetailTableId;
 	private int nsUserDetailTableId;
 	private int nsActionWeightTableId;
@@ -54,17 +53,16 @@ public class BaseInfoBolt extends AbstractConfigUpdateBolt{
 				
 		this.mtClientList = TDEngineClientFactory.createMTClientList(conf);
 		this.mt = MonitorTools.getMonitorInstance(conf);
-		this.putCallBack = new UpdateCallBack(mt, Constants.systemID, Constants.tde_send_interfaceID, this.getClass().getName());
 	}
 	
 	private void save(short tableId,String key,byte[] values) {
 		if(values != null){
-			if(debug){
-				logger.info("key="+key+",tableId="+tableId);
-			}
 			for(ClientAttr clientEntry:mtClientList){
 				TairOption putopt = new TairOption(clientEntry.getTimeout(),(short)0, dataExpireTime);				
 				try {
+					
+					UpdateCallBack putCallBack = new UpdateCallBack(mt, Integer.valueOf(tableId), debug);
+					
 					Future<Result<Void>> future = clientEntry.getClient().putAsync(tableId, 
 										key.getBytes(), values, putopt);
 					

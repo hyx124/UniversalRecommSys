@@ -94,7 +94,7 @@ public class TxNewsSpout extends TdbankSpout {
 
 		if(this.mt!=null){
 			MonitorEntry mEntryPut = new MonitorEntry(Constants.SUCCESSCODE,Constants.SUCCESSCODE);
-			mEntryPut.addExtField("BusinessCode", Constants.bid);
+			mEntryPut.addExtField("business_Name", Constants.bid);
 			mEntryPut.addExtField("TDW_IDC", "tdbank");
 			mEntryPut.addExtField("tbl_name", categoryId);
 			this.mt.addCountEntry(Constants.systemID, Constants.tdbank_interfaceID, mEntryPut, 1);
@@ -221,7 +221,7 @@ public class TxNewsSpout extends TdbankSpout {
 			this.collector.emit(Constants.recommend_action_stream,outputValues);	
 			if(this.mt!=null){
 				MonitorEntry mEntryPut = new MonitorEntry(Constants.SUCCESSCODE,Constants.SUCCESSCODE);
-				mEntryPut.addExtField("BusinessCode", Constants.bid);
+				mEntryPut.addExtField("business_Name", Constants.bid);
 				mEntryPut.addExtField("TDW_IDC", "tdprocess");
 				mEntryPut.addExtField("tbl_name", Constants.recommend_action_stream);
 				this.mt.addCountEntry(Constants.systemID, Constants.tdbank_interfaceID, mEntryPut, 1);
@@ -235,7 +235,7 @@ public class TxNewsSpout extends TdbankSpout {
 			this.collector.emit(Constants.actions_stream,outputValues);	
 			if(this.mt!=null){
 				MonitorEntry mEntryPut = new MonitorEntry(Constants.SUCCESSCODE,Constants.SUCCESSCODE);
-				mEntryPut.addExtField("BusinessCode", Constants.bid);
+				mEntryPut.addExtField("business_Name", Constants.bid);
 				mEntryPut.addExtField("TDW_IDC", "tdprocess");
 				mEntryPut.addExtField("tbl_name", Constants.actions_stream);
 				this.mt.addCountEntry(Constants.systemID, Constants.tdbank_interfaceID, mEntryPut, 1);
@@ -282,7 +282,7 @@ public class TxNewsSpout extends TdbankSpout {
 		this.collector.emit(Constants.item_info_stream,outputValues);
 		if(this.mt!=null){
 			MonitorEntry mEntryPut = new MonitorEntry(Constants.SUCCESSCODE,Constants.SUCCESSCODE);
-			mEntryPut.addExtField("BusinessCode", Constants.bid);
+			mEntryPut.addExtField("business_Name", Constants.bid);
 			mEntryPut.addExtField("TDW_IDC", "tdprocess");
 			mEntryPut.addExtField("tbl_name", Constants.item_info_stream);
 			this.mt.addCountEntry(Constants.systemID, Constants.tdbank_interfaceID, mEntryPut, 1);
@@ -314,7 +314,7 @@ public class TxNewsSpout extends TdbankSpout {
 		this.collector.emit(Constants.user_info_stream,outputValues);	
 		if(this.mt!=null){
 			MonitorEntry mEntryPut = new MonitorEntry(Constants.SUCCESSCODE,Constants.SUCCESSCODE);
-			mEntryPut.addExtField("BusinessCode", Constants.bid);
+			mEntryPut.addExtField("business_Name", Constants.bid);
 			mEntryPut.addExtField("TDW_IDC", "tdprocess");
 			mEntryPut.addExtField("tbl_name", Constants.user_info_stream);
 			this.mt.addCountEntry(Constants.systemID, Constants.tdbank_interfaceID, mEntryPut, 1);
@@ -338,7 +338,7 @@ public class TxNewsSpout extends TdbankSpout {
 		this.collector.emit(Constants.action_weight_stream,outputValues);
 		if(this.mt!=null){
 			MonitorEntry mEntryPut = new MonitorEntry(Constants.SUCCESSCODE,Constants.SUCCESSCODE);
-			mEntryPut.addExtField("BusinessCode", Constants.bid);
+			mEntryPut.addExtField("business_Name", Constants.bid);
 			mEntryPut.addExtField("TDW_IDC", "tdprocess");
 			mEntryPut.addExtField("tbl_name", Constants.action_weight_stream);
 			this.mt.addCountEntry(Constants.systemID, Constants.tdbank_interfaceID, mEntryPut, 1);
@@ -364,7 +364,7 @@ public class TxNewsSpout extends TdbankSpout {
 		this.collector.emit(Constants.category_level_stream,outputValues);
 		if(this.mt!=null){
 			MonitorEntry mEntryPut = new MonitorEntry(Constants.SUCCESSCODE,Constants.SUCCESSCODE);
-			mEntryPut.addExtField("BusinessCode", Constants.bid);
+			mEntryPut.addExtField("business_Name", Constants.bid);
 			mEntryPut.addExtField("TDW_IDC", "tdprocess");
 			mEntryPut.addExtField("tbl_name", Constants.category_level_stream);
 			this.mt.addCountEntry(Constants.systemID, Constants.tdbank_interfaceID, mEntryPut, 1);

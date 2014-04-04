@@ -51,6 +51,7 @@ public class FilterBolt extends AbstractConfigUpdateBolt {
 	private int nsDetailTableId;
 	private int dataExpireTime;
 	private int topNum;
+	private boolean debug;
 
 
 	private static Logger logger = LoggerFactory
@@ -69,7 +70,7 @@ public class FilterBolt extends AbstractConfigUpdateBolt {
 		this.mtClientList = TDEngineClientFactory.createMTClientList(conf);
 		this.mt = MonitorTools.getMonitorInstance(conf);
 		this.combinerMap = new ConcurrentHashMap<String,ActionCombinerValue>(1024);
-		this.putCallBack = new UpdateCallBack(mt, Constants.systemID, Constants.tde_send_interfaceID, "TopActions");	
+		this.putCallBack = new UpdateCallBack(mt, this.nsFilterTableId ,debug);	
 		
 		int combinerExpireTime = Utils.getInt(conf, "combiner.expireTime",5);
 		setCombinerTime(combinerExpireTime);
@@ -81,6 +82,7 @@ public class FilterBolt extends AbstractConfigUpdateBolt {
 		nsDetailTableId = config.getInt("detail_table",512);
 		dataExpireTime = config.getInt("data_expiretime",180*24*3600);
 		topNum = config.getInt("top_num",100);
+		debug = config.getBoolean("debug",false);
 	}
 
 	@Override

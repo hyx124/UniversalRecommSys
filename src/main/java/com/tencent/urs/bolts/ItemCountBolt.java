@@ -109,7 +109,7 @@ public class ItemCountBolt extends AbstractConfigUpdateBolt{
 		
 		this.combinerMap = new ConcurrentHashMap<UpdateKey,GroupActionCombinerValue>(1024);
 				
-		this.putCallBack = new UpdateCallBack(mt, Constants.systemID, Constants.tde_send_interfaceID, this.getClass().getName());
+		this.putCallBack = new UpdateCallBack(mt, this.nsUserCountTableId ,debug);
 		
 		int combinerExpireTime = Utils.getInt(conf, "combiner.expireTime",5);
 		setCombinerTime(combinerExpireTime);

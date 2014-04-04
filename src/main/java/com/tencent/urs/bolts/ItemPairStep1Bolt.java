@@ -193,14 +193,7 @@ public class ItemPairStep1Bolt  extends AbstractConfigUpdateBolt{
 		}
 
 		private void next(HashMap<String,MidInfo> weightMap){
-			if(weightMap != null){
-				if(debug && key.getUin() == 389687043L){
-					for(String sendKey: weightMap.keySet()){
-						logger.info("step1,end to step2,uin="+key.getUin()+", key="+sendKey+",weight="+weightMap.get(sendKey).getWeight()
-								+",timeId="+weightMap.get(sendKey).getTimeId());
-					}
-				}
-				
+			if(weightMap != null){			
 				List<Map.Entry<String, MidInfo>> sortList =
 					    new ArrayList<Map.Entry<String, MidInfo>>(weightMap.entrySet());
 				
@@ -236,7 +229,7 @@ public class ItemPairStep1Bolt  extends AbstractConfigUpdateBolt{
 				}
 			}
 		}
-		
+	
 		public void excute() {
 			try {			
 				ClientAttr clientEntry = mtClientList.get(0);		
@@ -281,8 +274,29 @@ public class ItemPairStep1Bolt  extends AbstractConfigUpdateBolt{
 					continue;
 				}
 			
-				for(ItemInfo item:ts.getItemsList()){			
+				for(ItemInfo item:ts.getItemsList()){		
+					//过滤掉无效的行为
+					if(item.getItem().equals(key.getItemId())){
+						Float maxWeight = 0F;
+						long maxActCount = 0;
+						for(ActType act: item.getActsList()){	
+							Float actWeight = getWeightByType(act.getActType());
+							if(maxWeight < actWeight){
+								maxWeight = actWeight;
+								maxActCount = act.getCount();
+							}
+						}
+						if(thisItemWeight == maxWeight && maxActCount > 1){
+							return null;
+						}else if(thisItemWeight < maxWeight){
+							return null;
+						}						
+					}
+					
+					
+					
 					String itemPairKey = Utils.getItemPairKey(key.getItemId(),item.getItem());
+					
 					for(ActType act: item.getActsList()){	
 						Float actWeight = getWeightByType(act.getActType());
 						if(weightMap.containsKey(itemPairKey)){	

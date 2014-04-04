@@ -72,8 +72,7 @@ public class TopActionBolt extends AbstractConfigUpdateBolt {
 		this.mtClientList = TDEngineClientFactory.createMTClientList(conf);
 		this.mt = MonitorTools.getMonitorInstance(conf);
 		this.combinerMap = new ConcurrentHashMap<String,ActionCombinerValue>(1024);
-		this.putCallBack = new UpdateCallBack(mt, Constants.systemID, Constants.tde_send_interfaceID, 
-				String.valueOf(this.nsTableId));	
+		this.putCallBack = new UpdateCallBack(mt, this.nsTableId, debug);	
 		this.cacheMap = new DataCache<UserActiveHistory>(conf);
 		
 		int combinerExpireTime = Utils.getInt(conf, "combiner.expireTime",5);

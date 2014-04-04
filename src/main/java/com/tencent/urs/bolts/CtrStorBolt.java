@@ -104,7 +104,7 @@ public class CtrStorBolt extends AbstractConfigUpdateBolt{
 		this.mtClientList = TDEngineClientFactory.createMTClientList(conf);
 		this.mt = MonitorTools.getMonitorInstance(conf);
 		this.combinerMap = new ConcurrentHashMap<String,CtrCombinerValue>(1024);
-		this.putCallBack = new UpdateCallBack(mt, Constants.systemID, Constants.tde_send_interfaceID, this.getClass().getName());
+		this.putCallBack = new UpdateCallBack(mt, this.nsTableId, false);
 		this.ctrCache = new DataCache<CtrInfo>(conf);
 		
 		int combinerExpireTime = Utils.getInt(conf, "combiner.expireTime",5);

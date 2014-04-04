@@ -266,7 +266,7 @@ public class ResultStorageBolt extends AbstractConfigUpdateBolt {
 			for(ClientAttr clientEntry:mtClientList ){
 				TairOption putopt = new TairOption(clientEntry.getTimeout(),(short)0, dataExpireTime);
 				try {
-					UpdateCallBack putCallBack = new UpdateCallBack(mt, Constants.systemID, Constants.tde_send_interfaceID, key);
+					UpdateCallBack putCallBack = new UpdateCallBack(mt, key, false);
 					future = clientEntry.getClient().putAsync((short)nsTableId, 
 										key.getBytes(), putValue.toByteArray(), putopt);
 					clientEntry.getClient().notifyFuture(future, putCallBack, 

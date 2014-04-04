@@ -2,7 +2,6 @@ package com.tencent.urs.bolts;
 
 import java.io.UnsupportedEncodingException;
 import java.lang.ref.SoftReference;
-import java.nio.charset.Charset;
 import java.util.Collections;
 import java.util.Comparator;
 import java.util.HashSet;
@@ -34,15 +33,11 @@ import com.tencent.streaming.commons.bolts.config.AbstractConfigUpdateBolt;
 import com.tencent.streaming.commons.spouts.tdbank.Output;
 import com.tencent.tde.client.Result;
 import com.tencent.tde.client.TairClient.TairOption;
-import com.tencent.tde.client.error.TairFlowLimit;
-import com.tencent.tde.client.error.TairRpcError;
-import com.tencent.tde.client.error.TairTimeout;
+
 import com.tencent.tde.client.impl.MutiThreadCallbackClient.MutiClientCallBack;
 import com.tencent.urs.asyncupdate.UpdateCallBack;
 import com.tencent.urs.asyncupdate.UpdateCallBackContext;
 
-import com.tencent.urs.protobuf.Recommend;
-import com.tencent.urs.protobuf.Recommend.UserActiveHistory;
 import com.tencent.urs.tdengine.TDEngineClientFactory;
 import com.tencent.urs.tdengine.TDEngineClientFactory.ClientAttr;
 import com.tencent.urs.utils.Constants;
@@ -55,7 +50,6 @@ public class CBBolt extends AbstractConfigUpdateBolt{
 	private MonitorTools mt;
 	private DataCache<NewsApp.Newsapp.NewsAttr> itemAttrCache;
 	private DataCache<UserFace> qqProfileCache;
-	private DataCache<NewsIndex> itemIndexCache;
 
 	private ConcurrentHashMap<String, HashSet<String>> combinerMap;
 	private NewsClassifier classifier;
@@ -65,7 +59,8 @@ public class CBBolt extends AbstractConfigUpdateBolt{
 	private int cacheExpireTime;
 	private int topNum;
 	private boolean debug;
-	private UpdateCallBack putCallBack;
+	private UpdateCallBack userFaceCallBack;
+	private UpdateCallBack itemIndexCallBack;
 		
 	public CBBolt(String config, ImmutableList<Output> outputField) {
 		super(config, outputField, Constants.config_stream);
@@ -92,7 +87,8 @@ public class CBBolt extends AbstractConfigUpdateBolt{
 		this.qqProfileCache = new DataCache<UserFace>(conf);
 		
 		this.combinerMap = new ConcurrentHashMap<String,HashSet<String>>(1024);			
-		this.putCallBack = new UpdateCallBack(mt, Constants.systemID, Constants.tde_send_interfaceID, this.getClass().getName());
+		this.userFaceCallBack = new UpdateCallBack(mt, this.nsCbIndexTableId,debug);
+		this.itemIndexCallBack = new UpdateCallBack(mt, this.nsCbIndexTableId,debug);
 		
 		this.classifier = new NewsClassifier();
 		int combinerExpireTime = Utils.getInt(conf, "combiner.expireTime",5);
@@ -182,9 +178,6 @@ public class CBBolt extends AbstractConfigUpdateBolt{
 			String itemId = tuple.getStringByField("item_id");
 			
 			if(topic.equals(Constants.item_info_stream) ){
-				String checkKey = bid+"#"+itemId;
-				
-				
 				String bigType = tuple.getStringByField("cate_id1");
 				String midType = tuple.getStringByField("cate_id2");
 				String smallType = tuple.getStringByField("cate_id3");
@@ -213,21 +206,17 @@ public class CBBolt extends AbstractConfigUpdateBolt{
 				classifier.HierarchicalClassify(cbAppBuilder);
 				
 				boolean isSend = false;
-				if(!itemIndexCache.hasKey(checkKey)){
-					for(NewsApp.Newsapp.NewsCategory cs:cbAppBuilder.getCategoryList()){
-						String tag = cs.getName().toStringUtf8();
-						if(cs.getName().isEmpty() || tag.equals("")){
-							continue;
-						}
-						
-						String tagKey = Utils.spliceStringBySymbol("#", bid,tag); 		
-						cbAppBuilder.setTagScore(cs.getWeight());
-						
-						doReIndexsCallBack(tagKey,cbAppBuilder.build());
-						isSend =true;
+				for(NewsApp.Newsapp.NewsCategory cs:cbAppBuilder.getCategoryList()){
+					String tag = cs.getName().toStringUtf8();
+					if(cs.getName().isEmpty() || tag.equals("")){
+						continue;
 					}
-				}else{
-					logger.info("do indexs ,is already in cache,item="+checkKey);
+						
+					String tagKey = Utils.spliceStringBySymbol("#", bid,tag); 		
+					cbAppBuilder.setTagScore(cs.getWeight());
+						
+					doReIndexsCallBack(tagKey,cbAppBuilder.build());
+					isSend =true;
 				}
 				
 				Long date = Utils.getDateByTime(Long.valueOf(itemTime));
@@ -261,7 +250,7 @@ public class CBBolt extends AbstractConfigUpdateBolt{
 				Future<Result<Void>> future = 
 				clientEntry.getClient().putAsync((short)nsCbIndexTableId, 
 									key.getBytes(), value.toByteArray(), putopt);
-				clientEntry.getClient().notifyFuture(future, putCallBack, 
+				clientEntry.getClient().notifyFuture(future, this.itemIndexCallBack, 
 						new UpdateCallBackContext(clientEntry,key,value.toByteArray(),putopt));
 			}catch(Exception e){
 				logger.error(e.getMessage(), e);
@@ -488,7 +477,7 @@ public class CBBolt extends AbstractConfigUpdateBolt{
 					Future<Result<Void>> future = 
 					clientEntry.getClient().putAsync((short)nsUserFaceTableId, 
 										this.key.getBytes(), value.toByteArray(), putopt);
-					clientEntry.getClient().notifyFuture(future, putCallBack, 
+					clientEntry.getClient().notifyFuture(future, userFaceCallBack, 
 							new UpdateCallBackContext(clientEntry,key,value.toByteArray(),putopt));
 
 					/*
@@ -511,7 +500,7 @@ public class CBBolt extends AbstractConfigUpdateBolt{
 		
 		NewsIndex oldNewsList = null;
 		try {
-			Result<byte[]> res = clientEntry.getClient().get((short)nsCbIndexTableId, tagKey.getBytes(), opt);
+			Result<byte[]> res = clientEntry.getClient().get((short)nsCbIndexTableId, tagKey.getBytes("UTF-8"), opt);
 			if(res.isSuccess() && res.getResult() != null){
 				oldNewsList = NewsIndex.parseFrom(res.getResult());
 			}
@@ -537,7 +526,11 @@ public class CBBolt extends AbstractConfigUpdateBolt{
 				if(newListBuilder.getNewsListCount() > topNum){
 					break;
 				}
-														
+				
+				if(Utils.getDateByTime((long) eachNews.getFreshnessScore() )<= 20140401){
+					continue;
+				}
+				
 				if(!alreadyIn.contains(newItemAttr.getNewsId()) 
 						&& newItemAttr.getFreshnessScore() >= eachNews.getFreshnessScore()){
 					newListBuilder.addNewsList(newItemAttr);
@@ -561,10 +554,6 @@ public class CBBolt extends AbstractConfigUpdateBolt{
 	}
 	
 	private void save(String key, NewsIndex value){		
-		synchronized(itemIndexCache){
-			itemIndexCache.set(key, new SoftReference<NewsIndex>(value), cacheExpireTime);
-		}
-		
 		for(ClientAttr clientEntry:mtClientList ){
 			TairOption putopt = new TairOption(clientEntry.getTimeout(),(short)0, dataExpireTime);
 			try { 

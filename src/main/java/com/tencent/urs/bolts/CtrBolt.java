@@ -57,7 +57,7 @@ public class CtrBolt extends AbstractConfigUpdateBolt{
 	private static final long serialVersionUID = 2177325954880418605L;
 	private List<ClientAttr> mtClientList;	
 	private MonitorTools mt;
-	private UpdateCallBack putCallBack;
+	//private UpdateCallBack putCallBack;
 	//private ConcurrentHashMap<String, ActionCombinerValue> combinerMap;
 	private ConcurrentHashMap<CtrCombinerKey,Long> combinerMap;
 	private int nsTableId;
@@ -150,7 +150,7 @@ public class CtrBolt extends AbstractConfigUpdateBolt{
 		this.combinerMap = new ConcurrentHashMap<CtrCombinerKey,Long>();
 				
 		
-		this.putCallBack = new UpdateCallBack(mt, Constants.systemID, Constants.tde_send_interfaceID, this.getClass().getName());
+		//this.putCallBack = new UpdateCallBack(mt,this.nsTableId,debug);
 		
 		int combinerExpireTime = Utils.getInt(conf, "combiner.expireTime",5)+3;
 		setCombinerTime(combinerExpireTime);

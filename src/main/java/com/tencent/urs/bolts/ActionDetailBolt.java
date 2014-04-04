@@ -87,7 +87,7 @@ public class ActionDetailBolt extends AbstractConfigUpdateBolt{
 		this.mt = MonitorTools.getMonitorInstance(conf);
 		this.cacheMap = new DataCache<Recommend.UserActiveDetail>(conf);
 		this.combinerMap = new ConcurrentHashMap<String,ActionCombinerValue>(1024);
-		this.putCallBack = new UpdateCallBack(mt, Constants.systemID, Constants.tde_send_interfaceID, "ActionDetail");
+		this.putCallBack = new UpdateCallBack(mt, this.nsTableId, debug);
 		
 		int combinerExpireTime = Utils.getInt(conf, "combiner.expireTime",5);
 		setCombinerTime(combinerExpireTime);
@@ -96,12 +96,8 @@ public class ActionDetailBolt extends AbstractConfigUpdateBolt{
 	@Override
 	public void processEvent(String sid, Tuple tuple) {
 		try{
-			//bid,topic,adpos,action_type,action_time,item_id,action_result,imei,platform,lbs_info,qq,group_id
-			//[2, user_action, 0, 3, 1393389425, 0, , , , , 191069, 61]
 			String bid = tuple.getStringByField("bid");
-			
-			String adpos = Constants.DEFAULT_ADPOS;;
-			
+			String adpos = Constants.DEFAULT_ADPOS;		
 			String qq = tuple.getStringByField("qq");
 			String itemId = tuple.getStringByField("item_id");
 			

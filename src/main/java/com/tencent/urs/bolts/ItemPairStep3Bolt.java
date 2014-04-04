@@ -75,8 +75,7 @@ public class ItemPairStep3Bolt  extends AbstractConfigUpdateBolt{
 		this.mt = MonitorTools.getMonitorInstance(conf);
 		this.combinerMap = new ConcurrentHashMap<String,HashMap<Long,Float>>(1024);
 				
-		this.putCallBack = new UpdateCallBack(mt, Constants.systemID, Constants.tde_send_interfaceID, 
-				String.valueOf(this.nsGroupPairTableId));
+		this.putCallBack = new UpdateCallBack(mt,this.nsGroupPairTableId,debug);
 		
 		int combinerExpireTime = Utils.getInt(conf, "combiner.expireTime",5);
 		setCombinerTime(combinerExpireTime);
@@ -97,9 +96,9 @@ public class ItemPairStep3Bolt  extends AbstractConfigUpdateBolt{
 			String key = tuple.getStringByField("group_pair_key");
 			Long timeId = tuple.getLongByField("time_id");
 			Float weight = tuple.getFloatByField("weight");	
-			
-			combinerKeys(key,timeId,weight);
-
+			if(weight > 0){
+				combinerKeys(key,timeId,weight);
+			}
 		}catch(Exception e){
 			logger.error(e.getMessage(), e);
 		}
@@ -136,13 +135,17 @@ public class ItemPairStep3Bolt  extends AbstractConfigUpdateBolt{
 			if(combinerMap.containsKey(key)){
 				HashMap<Long,Float> oldValue = combinerMap.get(key);
 				if(oldValue.containsKey(timeId)){
-					oldValue.put(timeId, oldValue.get(timeId) + weight);
-					combinerMap.put(key, oldValue);
-				}
+					oldValue.put(timeId, oldValue.get(timeId) + weight);	
+				}else{
+					oldValue.put(timeId, weight);
+				}	
+				combinerMap.put(key, oldValue);
 			}else{
 				HashMap<Long,Float> newValue = new HashMap<Long,Float>();
+				newValue.put(timeId, weight);
 				combinerMap.put(key, newValue);
 			}
+			
 		}
 	}	
 
@@ -190,14 +193,7 @@ public class ItemPairStep3Bolt  extends AbstractConfigUpdateBolt{
 					future = clientEntry.getClient().putAsync((short)nsGroupPairTableId, key.getBytes(),newInfo.toByteArray(), putopt);
 					clientEntry.getClient().notifyFuture(future, putCallBack, 
 							new UpdateCallBackContext(clientEntry,key,newInfo.toByteArray(),putopt));
-					
-					/*
-					if(mt!=null){
-						MonitorEntry mEntryPut = new MonitorEntry(Constants.SUCCESSCODE,Constants.SUCCESSCODE);
-						mEntryPut.addExtField("TDW_IDC", clientEntry.getGroupname());
-						mEntryPut.addExtField("tbl_name", "FIFO1");
-						mt.addCountEntry(Constants.systemID, Constants.tde_put_interfaceID, mEntryPut, 1);
-					}*/
+
 				} catch (Exception e){
 					logger.error(e.getMessage(), e);
 				}
