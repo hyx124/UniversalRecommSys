@@ -35,6 +35,7 @@ import com.tencent.tde.client.impl.MutiThreadCallbackClient;
 import com.tencent.tde.client.impl.MutiThreadCallbackClient.MutiClientCallBack;
 import com.tencent.urs.asyncupdate.UpdateCallBack;
 import com.tencent.urs.asyncupdate.UpdateCallBackContext;
+import com.tencent.urs.combine.ActionCombinerValue;
 import com.tencent.urs.combine.GroupActionCombinerValue;
 import com.tencent.urs.combine.UpdateKey;
 import com.tencent.urs.tdengine.TDEngineClientFactory;
@@ -50,8 +51,7 @@ public class ItemCountBolt extends AbstractConfigUpdateBolt{
 	private DataCache<GroupCountInfo> groupCountCache;
 	private DataCache<UserCountInfo> userCountCache;
 
-	private ConcurrentHashMap<UpdateKey, GroupActionCombinerValue> combinerMap;
-	private ConcurrentHashMap<Integer, Float> actWeightMap;
+	private HashMap<UpdateKey, GroupActionCombinerValue> liveCombinerMap;
 	private UpdateCallBack putCallBack;	
 	
 	private int nsUserCountTableId;
@@ -104,10 +104,8 @@ public class ItemCountBolt extends AbstractConfigUpdateBolt{
 		this.mt = MonitorTools.getMonitorInstance(conf);
 		this.groupCountCache = new DataCache<GroupCountInfo>(conf);
 		this.userCountCache = new DataCache<UserCountInfo>(conf);
-		
-		this.actWeightMap = new ConcurrentHashMap<Integer, Float>(20);
-		
-		this.combinerMap = new ConcurrentHashMap<UpdateKey,GroupActionCombinerValue>(1024);
+				
+		this.liveCombinerMap = new HashMap<UpdateKey,GroupActionCombinerValue>(1024);
 				
 		this.putCallBack = new UpdateCallBack(mt, this.nsUserCountTableId ,debug);
 		
@@ -153,15 +151,23 @@ public class ItemCountBolt extends AbstractConfigUpdateBolt{
 				try {
 					while (true) {
 						Thread.sleep(second * 1000);
-						Set<UpdateKey> keySet = combinerMap.keySet();
+						HashMap<UpdateKey,GroupActionCombinerValue> deadCombinerMap = null;
+						synchronized (liveCombinerMap) {
+							deadCombinerMap = liveCombinerMap;
+							liveCombinerMap = new HashMap<UpdateKey,GroupActionCombinerValue>(1024);
+						}
+						
+						Set<UpdateKey> keySet = deadCombinerMap.keySet();
 						for (UpdateKey key : keySet) {
-							GroupActionCombinerValue expireTimeValue  = combinerMap.remove(key);
+							GroupActionCombinerValue expireTimeValue  = deadCombinerMap.get(key);
 							try{
 								new ActionDetailCallBack(key,expireTimeValue).excute();
 							}catch(Exception e){
-								//mt.addCountEntry(systemID, interfaceID, item, count)
+								logger.error(e.getMessage(), e);
 							}
 						}
+						deadCombinerMap.clear();
+						deadCombinerMap = null;
 					}
 				} catch (Exception e) {
 					logger.error("Schedule thread error:" + e, e);
@@ -171,13 +177,13 @@ public class ItemCountBolt extends AbstractConfigUpdateBolt{
 	}
 	
 	private void combinerKeys(UpdateKey key,GroupActionCombinerValue value) {		
-		synchronized(combinerMap){
-			if(combinerMap.containsKey(key)){
-				GroupActionCombinerValue oldValue = combinerMap.get(key);
+		synchronized(liveCombinerMap){
+			if(liveCombinerMap.containsKey(key)){
+				GroupActionCombinerValue oldValue = liveCombinerMap.get(key);
 				oldValue.incrument(value);
-				combinerMap.put(key, oldValue);				
+				liveCombinerMap.put(key, oldValue);				
 			}else{
-				combinerMap.put(key, value);			
+				liveCombinerMap.put(key, value);			
 			}
 		}
 	}	

@@ -124,7 +124,6 @@ public class CtrBolt extends AbstractConfigUpdateBolt{
 								new CtrUpdateCallBack(key,value).excute();
 							}catch(Exception e){
 								logger.error(e.getMessage(), e);
-								//mt.addCountEntry(systemID, interfaceID, item, count)
 							}
 						}
 					}
@@ -148,10 +147,7 @@ public class CtrBolt extends AbstractConfigUpdateBolt{
 		this.mtClientList = TDEngineClientFactory.createMTClientList(conf);
 		this.mt = MonitorTools.getMonitorInstance(conf);
 		this.combinerMap = new ConcurrentHashMap<CtrCombinerKey,Long>();
-				
-		
-		//this.putCallBack = new UpdateCallBack(mt,this.nsTableId,debug);
-		
+					
 		int combinerExpireTime = Utils.getInt(conf, "combiner.expireTime",5)+3;
 		setCombinerTime(combinerExpireTime);
 	}

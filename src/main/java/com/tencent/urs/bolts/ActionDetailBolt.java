@@ -3,14 +3,11 @@ package com.tencent.urs.bolts;
 import com.google.common.collect.ImmutableList;
 import com.tencent.urs.protobuf.Recommend;
 import com.tencent.urs.protobuf.Recommend.UserActiveDetail;
-import com.tencent.urs.protobuf.Recommend.UserActiveHistory;
 import com.tencent.urs.protobuf.Recommend.UserActiveDetail.TimeSegment.ItemInfo.ActType;
 import com.tencent.urs.protobuf.Recommend.UserActiveDetail.Builder;
 import com.tencent.urs.protobuf.Recommend.UserActiveHistory.ActiveRecord;
 
 import java.lang.ref.SoftReference;
-import java.lang.reflect.Array;
-import java.text.SimpleDateFormat;
 import java.util.ArrayList;
 import java.util.Collections;
 import java.util.Comparator;
@@ -18,7 +15,6 @@ import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
 import java.util.Set;
-import java.util.Map.Entry;
 import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.Future;
 
@@ -53,8 +49,8 @@ public class ActionDetailBolt extends AbstractConfigUpdateBolt{
 	private MonitorTools mt;
 	private DataCache<Recommend.UserActiveDetail> cacheMap;
 	private UpdateCallBack putCallBack;
-	private ConcurrentHashMap<String, ActionCombinerValue> combinerMap;
-
+	private HashMap<String,ActionCombinerValue> liveCombinerMap;
+	
 	private int nsTableId;
 	private int dataExpireTime;
 	private int cacheExpireTime;
@@ -86,7 +82,7 @@ public class ActionDetailBolt extends AbstractConfigUpdateBolt{
 		this.mtClientList = TDEngineClientFactory.createMTClientList(conf);
 		this.mt = MonitorTools.getMonitorInstance(conf);
 		this.cacheMap = new DataCache<Recommend.UserActiveDetail>(conf);
-		this.combinerMap = new ConcurrentHashMap<String,ActionCombinerValue>(1024);
+		this.liveCombinerMap = new HashMap<String,ActionCombinerValue>(1024);
 		this.putCallBack = new UpdateCallBack(mt, this.nsTableId, debug);
 		
 		int combinerExpireTime = Utils.getInt(conf, "combiner.expireTime",5);
@@ -103,6 +99,10 @@ public class ActionDetailBolt extends AbstractConfigUpdateBolt{
 			
 			if(!Utils.isItemIdValid(itemId) || !Utils.isQNumValid(qq)){
 				return;
+			}
+			
+			if(qq.equals("389687043") || qq.equals("475182144")){
+				logger.info("--input to combiner---"+tuple.toString());
 			}
 			
 			String actionType = tuple.getStringByField("action_type");
@@ -133,16 +133,25 @@ public class ActionDetailBolt extends AbstractConfigUpdateBolt{
 				try {
 					while (true) {
 						Thread.sleep(second * 1000);
-						Set<String> keySet = combinerMap.keySet();
+						
+						HashMap<String,ActionCombinerValue> deadCombinerMap = null;
+						synchronized (liveCombinerMap) {
+							deadCombinerMap = liveCombinerMap;
+							liveCombinerMap = new HashMap<String,ActionCombinerValue>(1024);
+						}
+						
+						
+						Set<String> keySet = deadCombinerMap.keySet();
 						for (String key : keySet) {
-							ActionCombinerValue expireTimeValue  = combinerMap.remove(key);
+							ActionCombinerValue expireTimeValue  = deadCombinerMap.get(key);
 							try{
 								new ActionDetailUpdateAysncCallback(key,expireTimeValue).excute();
 							}catch(Exception e){
 								logger.error(e.getMessage(), e);
-								//mt.addCountEntry(systemID, interfaceID, item, count)
 							}
 						}
+						deadCombinerMap.clear();
+						deadCombinerMap = null;
 					}
 				} catch (Exception e) {
 					logger.error("Schedule thread error:" + e, e);
@@ -152,13 +161,13 @@ public class ActionDetailBolt extends AbstractConfigUpdateBolt{
 	}
 	
 	private void combinerKeys(String key,ActionCombinerValue value) {
-		synchronized(combinerMap){
-			if(combinerMap.containsKey(key)){
-				ActionCombinerValue oldValue = combinerMap.get(key);
+		synchronized(liveCombinerMap){
+			if(liveCombinerMap.containsKey(key)){
+				ActionCombinerValue oldValue = liveCombinerMap.get(key);
 				oldValue.incrument(value);
-				combinerMap.put(key, oldValue);
+				liveCombinerMap.put(key, oldValue);
 			}else{
-				combinerMap.put(key, value);
+				liveCombinerMap.put(key, value);
 			}
 		}
 	}	
@@ -263,7 +272,7 @@ public class ActionDetailBolt extends AbstractConfigUpdateBolt{
 				actMap = new HashMap<Integer,ActType>();		
 			}	
 				
-			Long count = 1L;
+			long count = 1L;
 			if(actMap.containsKey(activeRecord.getActType())){
 				count = count + actMap.get(activeRecord.getActType()).getCount() ;
 			}
@@ -313,7 +322,7 @@ public class ActionDetailBolt extends AbstractConfigUpdateBolt{
 			Collections.sort(sortList, new Comparator<Long>() {   
 				@Override
 				public int compare(Long arg0,Long arg1) {
-					return (int)(arg1 - arg0);
+					return (int)(arg1.longValue() - arg0.longValue());
 				}
 			}); 
 			
@@ -374,14 +383,6 @@ public class ActionDetailBolt extends AbstractConfigUpdateBolt{
 					future = clientEntry.getClient().putAsync((short)nsTableId, key.getBytes(),pbValue.toByteArray(), putopt);
 					clientEntry.getClient().notifyFuture(future, putCallBack, 
 							new UpdateCallBackContext(clientEntry,key,pbValue.toByteArray(),putopt));
-					
-					/*
-					if(mt!=null){
-						MonitorEntry mEntryPut = new MonitorEntry(Constants.SUCCESSCODE,Constants.SUCCESSCODE);
-						mEntryPut.addExtField("TDW_IDC", clientEntry.getGroupname());
-						mEntryPut.addExtField("tbl_name", "FIFO1");
-						mt.addCountEntry(Constants.systemID, Constants.tde_put_interfaceID, mEntryPut, 1);
-					}*/
 				} catch (Exception e){
 					logger.error(e.getMessage(), e);
 				}

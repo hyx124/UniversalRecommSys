@@ -1,5 +1,6 @@
 package com.tencent.urs.bolts;
 
+import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
 import java.util.Set;
@@ -23,6 +24,7 @@ import com.tencent.streaming.commons.spouts.tdbank.Output;
 import com.tencent.tde.client.Result;
 import com.tencent.tde.client.TairClient.TairOption;
 import com.tencent.tde.client.impl.MutiThreadCallbackClient.MutiClientCallBack;
+import com.tencent.urs.combine.ActionCombinerValue;
 import com.tencent.urs.combine.GroupActionCombinerValue;
 import com.tencent.urs.combine.UpdateKey;
 import com.tencent.urs.protobuf.Recommend.GroupCountInfo;
@@ -36,7 +38,7 @@ public class HotTopBolt extends AbstractConfigUpdateBolt{
 	private static final long serialVersionUID = 4730598061697463554L;
 	private List<ClientAttr> mtClientList;	
 	private MonitorTools mt;
-	private ConcurrentHashMap<UpdateKey, GroupActionCombinerValue> combinerMap;
+	private HashMap<UpdateKey, GroupActionCombinerValue> liveCombinerMap;
 	private int combinerExpireTime;
 	private int dataExpireTime;
 	private OutputCollector collector;
@@ -67,7 +69,7 @@ public class HotTopBolt extends AbstractConfigUpdateBolt{
 		this.collector = collector;
 		this.mtClientList = TDEngineClientFactory.createMTClientList(conf);
 		this.mt = MonitorTools.getMonitorInstance(conf);
-		this.combinerMap = new ConcurrentHashMap<UpdateKey,GroupActionCombinerValue>(1024);
+		this.liveCombinerMap = new HashMap<UpdateKey,GroupActionCombinerValue>(1024);
 			
 		this.combinerExpireTime = Utils.getInt(conf, "combiner.expireTime",5)+3;
 		setCombinerTime(combinerExpireTime);
@@ -105,15 +107,23 @@ public class HotTopBolt extends AbstractConfigUpdateBolt{
 				try {
 					while (true) {
 						Thread.sleep(second * 1000);
-						Set<UpdateKey> keySet = combinerMap.keySet();
+						
+						HashMap<UpdateKey,GroupActionCombinerValue> deadCombinerMap = null;
+						synchronized (liveCombinerMap) {
+							deadCombinerMap = liveCombinerMap;
+							liveCombinerMap = new HashMap<UpdateKey,GroupActionCombinerValue>(1024);
+						}
+						
+						Set<UpdateKey> keySet = deadCombinerMap.keySet();
 						for (UpdateKey key : keySet) {
-							combinerMap.remove(key);
 							try{
 								new GetGroupCountCallBack(key).excute();
 							}catch(Exception e){
-								//mt.addCountEntry(systemID, interfaceID, item, count)
+								logger.error(e.getMessage(), e);
 							}
 						}
+						deadCombinerMap.clear();
+						deadCombinerMap = null;
 					}
 				} catch (Exception e) {
 					logger.error(e.getMessage(), e);
@@ -123,13 +133,13 @@ public class HotTopBolt extends AbstractConfigUpdateBolt{
 	}
 	
 	private void combinerKeys(UpdateKey key,GroupActionCombinerValue value) {
-		synchronized(combinerMap){
-			if(combinerMap.containsKey(key)){
-				GroupActionCombinerValue oldValue = combinerMap.get(key);
+		synchronized(liveCombinerMap){
+			if(liveCombinerMap.containsKey(key)){
+				GroupActionCombinerValue oldValue = liveCombinerMap.get(key);
 				oldValue.incrument(value);
-				combinerMap.put(key, oldValue);
+				liveCombinerMap.put(key, oldValue);
 			}else{
-				combinerMap.put(key, value);
+				liveCombinerMap.put(key, value);
 			}
 			
 		}

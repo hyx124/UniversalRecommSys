@@ -24,6 +24,8 @@ import com.tencent.tde.client.TairClient.TairOption;
 import com.tencent.tde.client.impl.MutiThreadCallbackClient.MutiClientCallBack;
 import com.tencent.urs.asyncupdate.UpdateCallBack;
 import com.tencent.urs.asyncupdate.UpdateCallBackContext;
+import com.tencent.urs.combine.GroupActionCombinerValue;
+import com.tencent.urs.combine.UpdateKey;
 
 import com.tencent.urs.protobuf.Recommend;
 import com.tencent.urs.protobuf.Recommend.RecommendResult;
@@ -48,7 +50,7 @@ public class ResultStorageBolt extends AbstractConfigUpdateBolt {
 	private int nsTableId;
 	private int cacheExpireTime;
 	private int topNum;
-	private ConcurrentHashMap<String,HashMap<String,RecommendResult.Result>> combinerMap;
+	private HashMap<String,HashMap<String,RecommendResult.Result>> liveCombinerMap;
 	
 	private static Logger logger = LoggerFactory
 			.getLogger(ResultStorageBolt.class);
@@ -67,7 +69,7 @@ public class ResultStorageBolt extends AbstractConfigUpdateBolt {
 		this.mtClientList = TDEngineClientFactory.createMTClientList(conf);
 		this.mt = MonitorTools.getMonitorInstance(conf);
 		
-		this.combinerMap = new ConcurrentHashMap<String,HashMap<String,RecommendResult.Result>>(1024);
+		this.liveCombinerMap = new HashMap<String,HashMap<String,RecommendResult.Result>>(1024);
 		int combinerExpireTime = Utils.getInt(conf, "combiner.expireTime",5);
 		setCombinerTime(combinerExpireTime);
 
@@ -86,7 +88,7 @@ public class ResultStorageBolt extends AbstractConfigUpdateBolt {
 	public void processEvent(String sid, Tuple tuple) {		
 		//bid,key,item_id,weight,alg_name,big_type,mid_type,small_type,free,price
 		try{
-			String algName = tuple.getStringByField("alg_name");
+			//String algName = tuple.getStringByField("alg_name");
 			String key = tuple.getStringByField("key");			
 			String itemId = tuple.getStringByField("item_id");
 			Double weight = tuple.getDoubleByField("weight");
@@ -127,17 +129,23 @@ public class ResultStorageBolt extends AbstractConfigUpdateBolt {
 				try {
 					while (true) {
 						Thread.sleep(second * 1000);
-						Set<String> keySet = combinerMap.keySet();
-						//logger.info("deal with="+ keySet.size()+",left size="+combinerMap.size());
+						HashMap<String,HashMap<String,RecommendResult.Result>> deadCombinerMap = null;
+						synchronized (liveCombinerMap) {
+							deadCombinerMap = liveCombinerMap;
+							liveCombinerMap = new HashMap<String,HashMap<String,RecommendResult.Result>>(1024);
+						}
+						
+						Set<String> keySet = deadCombinerMap.keySet();
 						for (String key : keySet) {
-							HashMap<String, RecommendResult.Result> expireValue  = combinerMap.remove(key);
+							HashMap<String, RecommendResult.Result> expireValue  = deadCombinerMap.get(key);
 							try{
 								new putToTDEUpdateCallBack(key,expireValue).excute();
 							}catch(Exception e){
 								logger.error(e.getMessage(), e);
-								//mt.addCountEntry(systemID, interfaceID, item, count)
 							}
 						}
+						deadCombinerMap.clear();
+						deadCombinerMap = null;
 						
 					}
 				} catch (Exception e) {
@@ -148,16 +156,16 @@ public class ResultStorageBolt extends AbstractConfigUpdateBolt {
 	}
 	
 	private void combinerKeys(String key,RecommendResult.Result value) {
-		synchronized (combinerMap) {
-			if(combinerMap.containsKey(key)){
-				HashMap<String,RecommendResult.Result> oldValue = combinerMap.get(key);
+		synchronized (liveCombinerMap) {
+			if(liveCombinerMap.containsKey(key)){
+				HashMap<String,RecommendResult.Result> oldValue = liveCombinerMap.get(key);
 				oldValue.put(value.getItem(),value);
-				combinerMap.put(key, oldValue);
+				liveCombinerMap.put(key, oldValue);
 			}else{
 				HashMap<String,RecommendResult.Result> newValue =
 						new HashMap<String,RecommendResult.Result>();
 				newValue.put(value.getItem(), value);
-				combinerMap.put(key, newValue);
+				liveCombinerMap.put(key, newValue);
 			}
 		}
 	}	
@@ -246,9 +254,7 @@ public class ResultStorageBolt extends AbstractConfigUpdateBolt {
 			}
 			
 			
-			saveValues(key,mergeValueBuilder);
-			//logger.info("merge success ,count="+mergeValueBuilder.getResultsCount());		
-			
+			saveValues(key,mergeValueBuilder);			
 		}
 
 		private void saveValues(String key, RecommendResult.Builder mergeValueBuilder) {
@@ -256,29 +262,25 @@ public class ResultStorageBolt extends AbstractConfigUpdateBolt {
 			synchronized(resCache){
 				resCache.set(key, new SoftReference<RecommendResult>(putValue),cacheExpireTime);
 			}
-			/*
-			for(Recommend.RecommendResult.Result res:mergeValueBuilder.getResultsList()){
-				logger.info(res.getItem()+",weight="+res.getWeight());
-			}*/
-			
-			//logger.info("key ="+key+",count="+mergeValueBuilder.getResultsCount());
+
 			Future<Result<Void>> future = null;
 			for(ClientAttr clientEntry:mtClientList ){
 				TairOption putopt = new TairOption(clientEntry.getTimeout(),(short)0, dataExpireTime);
 				try {
-					UpdateCallBack putCallBack = new UpdateCallBack(mt, key, false);
+					UpdateCallBack putCallBack = null;
+					String[] keyItems = key.split("#");
+					if(keyItems.length >= 5){
+						putCallBack = new UpdateCallBack(mt, keyItems[3], false);
+					}else{
+						putCallBack = new UpdateCallBack(mt, key, false);
+					}
+					
+					
 					future = clientEntry.getClient().putAsync((short)nsTableId, 
 										key.getBytes(), putValue.toByteArray(), putopt);
 					clientEntry.getClient().notifyFuture(future, putCallBack, 
 							new UpdateCallBackContext(clientEntry,key,putValue.toByteArray(),putopt));
-					
-					
-					/*if(mt!=null){
-						MonitorEntry mEntryPut = new MonitorEntry(Constants.SUCCESSCODE,Constants.SUCCESSCODE);
-						mEntryPut.addExtField("TDW_IDC", clientEntry.getGroupname());
-						mEntryPut.addExtField("tbl_name", algName);
-						mt.addCountEntry(Constants.systemID, Constants.tde_put_interfaceID, mEntryPut, 1);
-					}*/
+
 				} catch (Exception e){
 					logger.error(e.getMessage(), e);
 				}

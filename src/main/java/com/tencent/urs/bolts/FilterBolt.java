@@ -26,6 +26,8 @@ import com.tencent.urs.asyncupdate.UpdateCallBack;
 import com.tencent.urs.asyncupdate.UpdateCallBackContext;
 
 import com.tencent.urs.combine.ActionCombinerValue;
+import com.tencent.urs.combine.GroupActionCombinerValue;
+import com.tencent.urs.combine.UpdateKey;
 import com.tencent.urs.protobuf.Recommend;
 import com.tencent.urs.protobuf.Recommend.UserActiveDetail;
 import com.tencent.urs.protobuf.Recommend.UserActiveDetail.TimeSegment.ItemInfo.ActType;
@@ -44,7 +46,7 @@ public class FilterBolt extends AbstractConfigUpdateBolt {
 	private static final long serialVersionUID = -1351459986701457961L;
 	private List<ClientAttr> mtClientList;	
 	private MonitorTools mt;
-	private ConcurrentHashMap<String, ActionCombinerValue> combinerMap;
+	private HashMap<String, ActionCombinerValue> liveCombinerMap;
 	private UpdateCallBack putCallBack;
 	
 	private int nsFilterTableId;
@@ -69,7 +71,7 @@ public class FilterBolt extends AbstractConfigUpdateBolt {
 		
 		this.mtClientList = TDEngineClientFactory.createMTClientList(conf);
 		this.mt = MonitorTools.getMonitorInstance(conf);
-		this.combinerMap = new ConcurrentHashMap<String,ActionCombinerValue>(1024);
+		this.liveCombinerMap = new HashMap<String,ActionCombinerValue>(1024);
 		this.putCallBack = new UpdateCallBack(mt, this.nsFilterTableId ,debug);	
 		
 		int combinerExpireTime = Utils.getInt(conf, "combiner.expireTime",5);
@@ -88,7 +90,6 @@ public class FilterBolt extends AbstractConfigUpdateBolt {
 	@Override
 	public void processEvent(String sid, Tuple tuple) {
 		try{
-			// [1, UserAction, 389687043, 17139104, 0, 5, 1389657189, 0, , , , , 389687043, 51]
 			String bid = tuple.getStringByField("bid");
 			String qq = tuple.getStringByField("qq");
 			String itemId = tuple.getStringByField("item_id");
@@ -140,9 +141,15 @@ public class FilterBolt extends AbstractConfigUpdateBolt {
 				try {
 					while (true) {
 						Thread.sleep(second * 1000);
-						Set<String> keySet = combinerMap.keySet();
+						HashMap<String, ActionCombinerValue> deadCombinerMap = null;
+						synchronized (liveCombinerMap) {
+							deadCombinerMap = liveCombinerMap;
+							liveCombinerMap = new HashMap<String, ActionCombinerValue>(1024);
+						}
+						
+						Set<String> keySet = deadCombinerMap.keySet();
 						for (String key : keySet) {
-							ActionCombinerValue expireValue  = combinerMap.remove(key);
+							ActionCombinerValue expireValue  = deadCombinerMap.get(key);
 							try{
 								new CheckActionDetailCallBack(key,expireValue).excute();
 							}catch(Exception e){
@@ -159,13 +166,13 @@ public class FilterBolt extends AbstractConfigUpdateBolt {
 	}
 	
 	private void combinerKeys(String key,ActionCombinerValue value) {
-		synchronized (combinerMap) {
-			if(combinerMap.containsKey(key)){
-				ActionCombinerValue oldvalue = combinerMap.get(key);
+		synchronized (liveCombinerMap) {
+			if(liveCombinerMap.containsKey(key)){
+				ActionCombinerValue oldvalue = liveCombinerMap.get(key);
 				oldvalue.incrument(value);
-				combinerMap.put(key, oldvalue);
+				liveCombinerMap.put(key, oldvalue);
 			}else{
-				combinerMap.put(key, value);
+				liveCombinerMap.put(key, value);
 			}
 		}
 	}	

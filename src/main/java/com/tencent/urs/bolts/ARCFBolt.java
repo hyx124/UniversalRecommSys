@@ -77,11 +77,8 @@ public class ARCFBolt extends AbstractConfigUpdateBolt{
 		nsGroupPairTableId = config.getInt("group_pair_table",516);
 		nsDetailTableId = config.getInt("dependent_table",512);
 		dataExpireTime = config.getInt("data_expiretime",7*24*3600);
-		linkedTime = config.getInt("linked_time",1*24*3600);
-		//cacheExpireTime = config.getInt("cache_expiretime",3600);
-		
+		linkedTime = config.getInt("linked_time",1*24*3600);		
 		debug = config.getBoolean("debug",false);
-		logger.info("init ,debug="+debug);
 	}
 
 	@Override

@@ -4,6 +4,7 @@ import java.lang.ref.SoftReference;
 import java.util.ArrayList;
 import java.util.Collections;
 import java.util.Comparator;
+import java.util.HashMap;
 import java.util.HashSet;
 import java.util.List;
 import java.util.Map;
@@ -22,14 +23,12 @@ import com.tencent.streaming.commons.bolts.config.AbstractConfigUpdateBolt;
 import com.tencent.streaming.commons.spouts.tdbank.Output;
 import com.tencent.tde.client.Result;
 import com.tencent.tde.client.TairClient.TairOption;
-import com.tencent.tde.client.error.TairFlowLimit;
-import com.tencent.tde.client.error.TairQueueOverflow;
-import com.tencent.tde.client.error.TairRpcError;
 import com.tencent.tde.client.impl.MutiThreadCallbackClient.MutiClientCallBack;
 import com.tencent.urs.asyncupdate.UpdateCallBack;
 import com.tencent.urs.asyncupdate.UpdateCallBackContext;
 import com.tencent.urs.combine.ActionCombinerValue;
 import com.tencent.urs.protobuf.Recommend;
+import com.tencent.urs.protobuf.Recommend.RecommendResult;
 import com.tencent.urs.protobuf.Recommend.UserActiveHistory;
 import com.tencent.urs.protobuf.Recommend.UserActiveHistory.ActiveRecord;
 import com.tencent.urs.tdengine.TDEngineClientFactory;
@@ -46,7 +45,7 @@ public class TopActionBolt extends AbstractConfigUpdateBolt {
 	private static final long serialVersionUID = -1351459986701457961L;
 	private List<ClientAttr> mtClientList;	
 	private MonitorTools mt;
-	private ConcurrentHashMap<String, ActionCombinerValue> combinerMap;
+	private HashMap<String, ActionCombinerValue> liveCombinerMap;
 	private DataCache<Recommend.UserActiveHistory> cacheMap;
 	private UpdateCallBack putCallBack;
 	
@@ -71,7 +70,7 @@ public class TopActionBolt extends AbstractConfigUpdateBolt {
 		
 		this.mtClientList = TDEngineClientFactory.createMTClientList(conf);
 		this.mt = MonitorTools.getMonitorInstance(conf);
-		this.combinerMap = new ConcurrentHashMap<String,ActionCombinerValue>(1024);
+		this.liveCombinerMap = new HashMap<String,ActionCombinerValue>(1024);
 		this.putCallBack = new UpdateCallBack(mt, this.nsTableId, debug);	
 		this.cacheMap = new DataCache<UserActiveHistory>(conf);
 		
@@ -142,16 +141,23 @@ public class TopActionBolt extends AbstractConfigUpdateBolt {
 				try {
 					while (true) {
 						Thread.sleep(second * 1000);
-						Set<String> keySet = combinerMap.keySet();
+						HashMap<String,ActionCombinerValue> deadCombinerMap = null;
+						synchronized (liveCombinerMap) {
+							deadCombinerMap = liveCombinerMap;
+							liveCombinerMap = new HashMap<String,ActionCombinerValue>(1024);
+						}
+						
+						Set<String> keySet = deadCombinerMap.keySet();
 						for (String key : keySet) {
-							ActionCombinerValue expireValue  = combinerMap.remove(key);
+							ActionCombinerValue expireValue  = deadCombinerMap.get(key);
 							try{
 								new TopActionsUpdateCallBack(key,expireValue).excute();
 							}catch(Exception e){
 								logger.error(e.getMessage(), e);
-								//mt.addCountEntry(systemID, interfaceID, item, count)
 							}
 						}
+						deadCombinerMap.clear();
+						deadCombinerMap = null;
 						
 					}
 				} catch (Exception e) {
@@ -162,13 +168,13 @@ public class TopActionBolt extends AbstractConfigUpdateBolt {
 	}
 	
 	private void combinerKeys(String key,ActionCombinerValue value) {
-		synchronized (combinerMap) {
-			if(combinerMap.containsKey(key)){
-				ActionCombinerValue oldvalue = combinerMap.get(key);
+		synchronized (liveCombinerMap) {
+			if(liveCombinerMap.containsKey(key)){
+				ActionCombinerValue oldvalue = liveCombinerMap.get(key);
 				oldvalue.incrument(value);
-				combinerMap.put(key, oldvalue);
+				liveCombinerMap.put(key, oldvalue);
 			}else{
-				combinerMap.put(key, value);
+				liveCombinerMap.put(key, value);
 			}
 		}
 	}	

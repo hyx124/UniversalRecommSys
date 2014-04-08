@@ -1,15 +1,15 @@
 package com.tencent.urs.bolts;
 
-import java.io.UnsupportedEncodingException;
 import java.lang.ref.SoftReference;
+import java.text.SimpleDateFormat;
 import java.util.Collections;
 import java.util.Comparator;
+import java.util.HashMap;
 import java.util.HashSet;
 import java.util.LinkedList;
 import java.util.List;
 import java.util.Map;
 import java.util.Set;
-import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.Future;
 
 import org.apache.commons.configuration.XMLConfiguration;
@@ -20,7 +20,6 @@ import NewsApp.Newsapp.NewsAttr;
 import NewsApp.Newsapp.NewsCategory;
 import NewsApp.Newsapp.NewsIndex;
 import NewsApp.Newsapp.UserFace;
-import NewsApp.Newsapp.UserFace.UserPreference;
 import NewsProcessor.NewsClassifier;
 import backtype.storm.task.OutputCollector;
 import backtype.storm.task.TopologyContext;
@@ -51,7 +50,7 @@ public class CBBolt extends AbstractConfigUpdateBolt{
 	private DataCache<NewsApp.Newsapp.NewsAttr> itemAttrCache;
 	private DataCache<UserFace> qqProfileCache;
 
-	private ConcurrentHashMap<String, HashSet<String>> combinerMap;
+	private HashMap<String, HashSet<String>> liveCombinerMap;
 	private NewsClassifier classifier;
 	private int nsCbIndexTableId;
 	private int nsUserFaceTableId;
@@ -86,7 +85,7 @@ public class CBBolt extends AbstractConfigUpdateBolt{
 		this.itemAttrCache = new DataCache<NewsApp.Newsapp.NewsAttr>(conf);
 		this.qqProfileCache = new DataCache<UserFace>(conf);
 		
-		this.combinerMap = new ConcurrentHashMap<String,HashSet<String>>(1024);			
+		this.liveCombinerMap = new HashMap<String,HashSet<String>>(1024);			
 		this.userFaceCallBack = new UpdateCallBack(mt, this.nsCbIndexTableId,debug);
 		this.itemIndexCallBack = new UpdateCallBack(mt, this.nsCbIndexTableId,debug);
 		
@@ -104,15 +103,23 @@ public class CBBolt extends AbstractConfigUpdateBolt{
 				try {
 					while (true) {
 						Thread.sleep(second * 1000);
-						Set<String> keySet = combinerMap.keySet();
+						HashMap<String,HashSet<String>> deadCombinerMap = null;
+						synchronized (liveCombinerMap) {
+							deadCombinerMap = liveCombinerMap;
+							liveCombinerMap = new HashMap<String,HashSet<String>>(1024);
+						}
+						
+						Set<String> keySet = deadCombinerMap.keySet();
 						for (String key : keySet) {
-							HashSet<String> valueSet = combinerMap.remove(key);
+							HashSet<String> valueSet = deadCombinerMap.get(key);
 							try{								
 								new GetItemAttrByItemId(key,valueSet).excute();
 							}catch(Exception e){
-								//mt.addCountEntry(systemID, interfaceID, item, count)
+								logger.error(e.getMessage(), e);
 							}
 						}
+						deadCombinerMap.clear();
+						deadCombinerMap = null;
 					}
 				} catch (Exception e) {
 					logger.error("Schedule thread error:" + e, e);
@@ -122,15 +129,15 @@ public class CBBolt extends AbstractConfigUpdateBolt{
 	}
 	
 	private void combinerKeys(String key,String  value) {	
-		synchronized(combinerMap){
+		synchronized(liveCombinerMap){
 			HashSet<String> valueSet = null;
-			if(combinerMap.containsKey(key)){
-				valueSet = combinerMap.get(key);	
+			if(liveCombinerMap.containsKey(key)){
+				valueSet = liveCombinerMap.get(key);	
 			}else{
 				valueSet = new HashSet<String>();
 			}
 			valueSet.add(value);
-			combinerMap.put(key, valueSet);
+			liveCombinerMap.put(key, valueSet);
 		}
 	}	
 
@@ -563,82 +570,23 @@ public class CBBolt extends AbstractConfigUpdateBolt{
 			}
 		}
 	}
-
-	public static void main(String[] args) throws UnsupportedEncodingException{
-		
-		
-		
-		NewsAttr.Builder oldItemAttr = NewsAttr.newBuilder();
-		
-		
-		NewsCategory.Builder value = NewsCategory.newBuilder();
-		String name = "1";
-		ByteString s = ByteString.copyFrom(name.getBytes());
-		value.setId(1).setLevel(1).setName(s ).setWeight(1.0F);
-		
-		oldItemAttr.setFreshnessScore(System.currentTimeMillis()/1000).addCategory( value.build()).setNewsId("1")
-					.setIndexScore(System.currentTimeMillis()/1000);
-		
-		NewsIndex.Builder oldNewsListBuilder = NewsIndex.newBuilder() ;
-		
-		NewsIndex oldNewsList = oldNewsListBuilder.addNewsList(oldItemAttr.build())
-							.setCreateTime(System.currentTimeMillis()/1000)
-							.setUpdateTime(System.currentTimeMillis()/1000).build();
-		
-		NewsCategory.Builder value2 = NewsCategory.newBuilder();
-		String name2 = "2";
-		ByteString s2 = ByteString.copyFrom(name2.getBytes());
-		value2.setId(1).setLevel(1).setName(s2 ).setWeight(2.0F);
-		
-		NewsAttr newItemAttr = NewsAttr.newBuilder()
-							.addCategory(value2.build()).setNewsId("2").build();
-		
-		NewsIndex.Builder newListBuilder =  NewsIndex.newBuilder();
-		
-		
-		
-		
-		
-		HashSet<String> alreadyIn = new HashSet<String>();
-		
-		Long now = System.currentTimeMillis()/1000;
-		newListBuilder.setCreateTime(now);
-		newListBuilder.setUpdateTime(now);
-		
-		if(oldNewsList != null){
-			newListBuilder.setCreateTime(oldNewsList.getCreateTime());
-			for(NewsAttr eachNews :oldNewsList.getNewsListList()){
-				if(newListBuilder.getNewsListCount() > 100){
-					break;
-				}
+	
+	public static void main(String[] args){
+		Object _lock = new Object();
+		long start1 = System.currentTimeMillis();
+		for(int i=0; i<100000000; i++){		
+			synchronized(_lock){
 				
-				if(Utils.getDateByTime((long) eachNews.getIndexScore()) <= 20140401){
-					System.out.println(Utils.getDateByTime((long) eachNews.getIndexScore()));
-					continue;
-				}
-														
-				if(!alreadyIn.contains(newItemAttr.getNewsId()) 
-						&& newItemAttr.getIndexScore() >= eachNews.getIndexScore()){
-					newListBuilder.addNewsList(newItemAttr);
-					alreadyIn.add(newItemAttr.getNewsId());
-				}
-					
-				if(!alreadyIn.contains(eachNews.getNewsId()) 
-						&& !eachNews.getNewsId().equals(newItemAttr.getNewsId())){
-
-					newListBuilder.addNewsList(eachNews);
-					alreadyIn.add(eachNews.getNewsId());
-				}
 			}
 		}
-			
-		if(!alreadyIn.contains(newItemAttr.getNewsId())  
-				&& newListBuilder.getNewsListCount() < 100){
-			newListBuilder.addNewsList(newItemAttr);
-			alreadyIn.add(newItemAttr.getNewsId());
-		}
+		long end1 = System.currentTimeMillis();
+		System.out.println(end1-start1);
 		
-		System.out.println(newListBuilder.getNewsListCount());
+		long start2 = System.currentTimeMillis();
+		for(int i=0; i<100000000; i++){
+		}
+		long end2 = System.currentTimeMillis();
+		System.out.println(end2-start2);
 	}
 	
 }

@@ -2,6 +2,7 @@ package com.tencent.urs.bolts;
 
 import java.lang.ref.SoftReference;
 import java.text.SimpleDateFormat;
+import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
 import java.util.Set;
@@ -21,6 +22,8 @@ import com.tencent.tde.client.TairClient.TairOption;
 import com.tencent.tde.client.impl.MutiThreadCallbackClient.MutiClientCallBack;
 import com.tencent.urs.asyncupdate.UpdateCallBack;
 import com.tencent.urs.asyncupdate.UpdateCallBackContext;
+import com.tencent.urs.combine.GroupActionCombinerValue;
+import com.tencent.urs.combine.UpdateKey;
 
 import com.tencent.urs.protobuf.Recommend.CtrInfo;
 import com.tencent.urs.tdengine.TDEngineClientFactory;
@@ -40,7 +43,7 @@ public class CtrStorBolt extends AbstractConfigUpdateBolt{
 	private List<ClientAttr> mtClientList;	
 	private MonitorTools mt;
 	private UpdateCallBack putCallBack;
-	private ConcurrentHashMap<String, CtrCombinerValue> combinerMap;
+	private HashMap<String, CtrCombinerValue> liveCombinerMap;
 
 	private DataCache<CtrInfo> ctrCache;
 	private int nsTableId;
@@ -103,7 +106,7 @@ public class CtrStorBolt extends AbstractConfigUpdateBolt{
 
 		this.mtClientList = TDEngineClientFactory.createMTClientList(conf);
 		this.mt = MonitorTools.getMonitorInstance(conf);
-		this.combinerMap = new ConcurrentHashMap<String,CtrCombinerValue>(1024);
+		this.liveCombinerMap = new HashMap<String,CtrCombinerValue>(1024);
 		this.putCallBack = new UpdateCallBack(mt, this.nsTableId, false);
 		this.ctrCache = new DataCache<CtrInfo>(conf);
 		
@@ -150,15 +153,24 @@ public class CtrStorBolt extends AbstractConfigUpdateBolt{
 				try {
 					while (true) {
 						Thread.sleep(second * 1000);
-						Set<String> keySet = combinerMap.keySet();
+						
+						HashMap<String,CtrCombinerValue> deadCombinerMap = null;
+						synchronized (liveCombinerMap) {
+							deadCombinerMap = liveCombinerMap;
+							liveCombinerMap = new HashMap<String,CtrCombinerValue>(1024);
+						}
+						
+						Set<String> keySet = deadCombinerMap.keySet();
 						for (String key : keySet) {
-							 CtrCombinerValue expireTimeValue = combinerMap.remove(key);
+							 CtrCombinerValue expireTimeValue = deadCombinerMap.get(key);
 							try{
 								new CtrUpdateCallBack(key,expireTimeValue).excute();
 							}catch(Exception e){
 								//mt.addCountEntry(systemID, interfaceID, item, count)
 							}
 						}
+						deadCombinerMap.clear();
+						deadCombinerMap = null;
 					}
 				} catch (Exception e) {
 					logger.error(e.getMessage(), e);
@@ -168,13 +180,13 @@ public class CtrStorBolt extends AbstractConfigUpdateBolt{
 	}
 	
 	private void combinerKeys(String key,CtrCombinerValue value) {
-		synchronized(combinerMap){
-			if(combinerMap.containsKey(key)){
-				CtrCombinerValue oldValue = combinerMap.get(key);
+		synchronized(liveCombinerMap){
+			if(liveCombinerMap.containsKey(key)){
+				CtrCombinerValue oldValue = liveCombinerMap.get(key);
 				oldValue.incrument(value);
-				combinerMap.put(key, oldValue);
+				liveCombinerMap.put(key, oldValue);
 			}else{
-				combinerMap.put(key, value);
+				liveCombinerMap.put(key, value);
 			}	
 		}
 	}	

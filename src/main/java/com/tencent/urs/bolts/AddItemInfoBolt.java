@@ -158,6 +158,7 @@ public class AddItemInfoBolt extends AbstractConfigUpdateBolt {
 				
 				value.add(price.longValue());	
 				value.add(itemInfo.getShopId());
+				value.add(itemInfo.getItemTime());
 			}else{
 				value.add(0L);
 				value.add(0L);
@@ -165,6 +166,7 @@ public class AddItemInfoBolt extends AbstractConfigUpdateBolt {
 				value.add(0L);
 				value.add(0L);	
 				value.add("");
+				value.add(0L);
 			}
 			
 			if(value!=null && streamId != null){
