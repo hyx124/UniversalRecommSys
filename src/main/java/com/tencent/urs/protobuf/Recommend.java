@@ -3077,6 +3077,10 @@ public final class Recommend {
       // optional string shopId = 11;
       boolean hasShopId();
       String getShopId();
+      
+      // optional uint64 ItemTime = 12;
+      boolean hasItemTime();
+      long getItemTime();
     }
     public static final class Result extends
         com.google.protobuf.GeneratedMessageLite
@@ -3273,6 +3277,16 @@ public final class Recommend {
         }
       }
       
+      // optional uint64 ItemTime = 12;
+      public static final int ITEMTIME_FIELD_NUMBER = 12;
+      private long itemTime_;
+      public boolean hasItemTime() {
+        return ((bitField0_ & 0x00000800) == 0x00000800);
+      }
+      public long getItemTime() {
+        return itemTime_;
+      }
+      
       private void initFields() {
         item_ = "";
         bigType_ = 0L;
@@ -3285,6 +3299,7 @@ public final class Recommend {
         expireTime_ = 0L;
         comment_ = "";
         shopId_ = "";
+        itemTime_ = 0L;
       }
       private byte memoizedIsInitialized = -1;
       public final boolean isInitialized() {
@@ -3334,6 +3349,9 @@ public final class Recommend {
         }
         if (((bitField0_ & 0x00000400) == 0x00000400)) {
           output.writeBytes(11, getShopIdBytes());
+        }
+        if (((bitField0_ & 0x00000800) == 0x00000800)) {
+          output.writeUInt64(12, itemTime_);
         }
       }
       
@@ -3386,6 +3404,10 @@ public final class Recommend {
         if (((bitField0_ & 0x00000400) == 0x00000400)) {
           size += com.google.protobuf.CodedOutputStream
             .computeBytesSize(11, getShopIdBytes());
+        }
+        if (((bitField0_ & 0x00000800) == 0x00000800)) {
+          size += com.google.protobuf.CodedOutputStream
+            .computeUInt64Size(12, itemTime_);
         }
         memoizedSerializedSize = size;
         return size;
@@ -3511,6 +3533,8 @@ public final class Recommend {
           bitField0_ = (bitField0_ & ~0x00000200);
           shopId_ = "";
           bitField0_ = (bitField0_ & ~0x00000400);
+          itemTime_ = 0L;
+          bitField0_ = (bitField0_ & ~0x00000800);
           return this;
         }
         
@@ -3588,6 +3612,10 @@ public final class Recommend {
             to_bitField0_ |= 0x00000400;
           }
           result.shopId_ = shopId_;
+          if (((from_bitField0_ & 0x00000800) == 0x00000800)) {
+            to_bitField0_ |= 0x00000800;
+          }
+          result.itemTime_ = itemTime_;
           result.bitField0_ = to_bitField0_;
           return result;
         }
@@ -3626,6 +3654,9 @@ public final class Recommend {
           }
           if (other.hasShopId()) {
             setShopId(other.getShopId());
+          }
+          if (other.hasItemTime()) {
+            setItemTime(other.getItemTime());
           }
           return this;
         }
@@ -3708,6 +3739,11 @@ public final class Recommend {
               case 90: {
                 bitField0_ |= 0x00000400;
                 shopId_ = input.readBytes();
+                break;
+              }
+              case 96: {
+                bitField0_ |= 0x00000800;
+                itemTime_ = input.readUInt64();
                 break;
               }
             }
@@ -3990,6 +4026,27 @@ public final class Recommend {
           bitField0_ |= 0x00000400;
           shopId_ = value;
           
+        }
+        
+        // optional uint64 ItemTime = 12;
+        private long itemTime_ ;
+        public boolean hasItemTime() {
+          return ((bitField0_ & 0x00000800) == 0x00000800);
+        }
+        public long getItemTime() {
+          return itemTime_;
+        }
+        public Builder setItemTime(long value) {
+          bitField0_ |= 0x00000800;
+          itemTime_ = value;
+          
+          return this;
+        }
+        public Builder clearItemTime() {
+          bitField0_ = (bitField0_ & ~0x00000800);
+          itemTime_ = 0L;
+          
+          return this;
         }
         
         // @@protoc_insertion_point(builder_scope:com.tencent.urs.protobuf.RecommendResult.Result)
@@ -4443,6 +4500,10 @@ public final class Recommend {
       // optional string shopId = 14;
       boolean hasShopId();
       String getShopId();
+      
+      // optional uint64 ItemTime = 15;
+      boolean hasItemTime();
+      long getItemTime();
     }
     public static final class ActiveRecord extends
         com.google.protobuf.GeneratedMessageLite
@@ -4757,6 +4818,16 @@ public final class Recommend {
         }
       }
       
+      // optional uint64 ItemTime = 15;
+      public static final int ITEMTIME_FIELD_NUMBER = 15;
+      private long itemTime_;
+      public boolean hasItemTime() {
+        return ((bitField0_ & 0x00004000) == 0x00004000);
+      }
+      public long getItemTime() {
+        return itemTime_;
+      }
+      
       private void initFields() {
         item_ = "";
         bigType_ = 0L;
@@ -4772,6 +4843,7 @@ public final class Recommend {
         lBSInfo_ = "";
         weight_ = 0D;
         shopId_ = "";
+        itemTime_ = 0L;
       }
       private byte memoizedIsInitialized = -1;
       public final boolean isInitialized() {
@@ -4830,6 +4902,9 @@ public final class Recommend {
         }
         if (((bitField0_ & 0x00002000) == 0x00002000)) {
           output.writeBytes(14, getShopIdBytes());
+        }
+        if (((bitField0_ & 0x00004000) == 0x00004000)) {
+          output.writeUInt64(15, itemTime_);
         }
       }
       
@@ -4894,6 +4969,10 @@ public final class Recommend {
         if (((bitField0_ & 0x00002000) == 0x00002000)) {
           size += com.google.protobuf.CodedOutputStream
             .computeBytesSize(14, getShopIdBytes());
+        }
+        if (((bitField0_ & 0x00004000) == 0x00004000)) {
+          size += com.google.protobuf.CodedOutputStream
+            .computeUInt64Size(15, itemTime_);
         }
         memoizedSerializedSize = size;
         return size;
@@ -5025,6 +5104,8 @@ public final class Recommend {
           bitField0_ = (bitField0_ & ~0x00001000);
           shopId_ = "";
           bitField0_ = (bitField0_ & ~0x00002000);
+          itemTime_ = 0L;
+          bitField0_ = (bitField0_ & ~0x00004000);
           return this;
         }
         
@@ -5114,6 +5195,10 @@ public final class Recommend {
             to_bitField0_ |= 0x00002000;
           }
           result.shopId_ = shopId_;
+          if (((from_bitField0_ & 0x00004000) == 0x00004000)) {
+            to_bitField0_ |= 0x00004000;
+          }
+          result.itemTime_ = itemTime_;
           result.bitField0_ = to_bitField0_;
           return result;
         }
@@ -5161,6 +5246,9 @@ public final class Recommend {
           }
           if (other.hasShopId()) {
             setShopId(other.getShopId());
+          }
+          if (other.hasItemTime()) {
+            setItemTime(other.getItemTime());
           }
           return this;
         }
@@ -5258,6 +5346,11 @@ public final class Recommend {
               case 114: {
                 bitField0_ |= 0x00002000;
                 shopId_ = input.readBytes();
+                break;
+              }
+              case 120: {
+                bitField0_ |= 0x00004000;
+                itemTime_ = input.readUInt64();
                 break;
               }
             }
@@ -5663,6 +5756,27 @@ public final class Recommend {
           bitField0_ |= 0x00002000;
           shopId_ = value;
           
+        }
+        
+        // optional uint64 ItemTime = 15;
+        private long itemTime_ ;
+        public boolean hasItemTime() {
+          return ((bitField0_ & 0x00004000) == 0x00004000);
+        }
+        public long getItemTime() {
+          return itemTime_;
+        }
+        public Builder setItemTime(long value) {
+          bitField0_ |= 0x00004000;
+          itemTime_ = value;
+          
+          return this;
+        }
+        public Builder clearItemTime() {
+          bitField0_ = (bitField0_ & ~0x00004000);
+          itemTime_ = 0L;
+          
+          return this;
         }
         
         // @@protoc_insertion_point(builder_scope:com.tencent.urs.protobuf.UserActiveHistory.ActiveRecord)

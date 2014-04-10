@@ -103,6 +103,7 @@ public class ResultStorageBolt extends AbstractConfigUpdateBolt {
 				
 			Long charType = tuple.getLongByField("small_type");
 			Long price = tuple.getLongByField("price");
+			Long itemTime = tuple.getLongByField("item_time");
 			String shopId = tuple.getStringByField("shop_id");
 				
 			RecommendResult.Result.Builder value =
@@ -113,8 +114,10 @@ public class ResultStorageBolt extends AbstractConfigUpdateBolt {
 					.setPrice(price)
 					.setItem(itemId).setWeight(weight).setFreeFlag(charType.intValue())
 					.setUpdateTime(System.currentTimeMillis()/1000L)
-					.setShopId(shopId);
-			
+					.setShopId(shopId)
+					.setItemTime(itemTime);
+
+					
 			combinerKeys(key, value.build());	
 		}catch(Exception e){
 			logger.error(e.getMessage(), e);

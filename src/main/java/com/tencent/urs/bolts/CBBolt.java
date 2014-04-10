@@ -60,6 +60,27 @@ public class CBBolt extends AbstractConfigUpdateBolt{
 	private boolean debug;
 	private UpdateCallBack userFaceCallBack;
 	private UpdateCallBack itemIndexCallBack;
+	
+	public class ConfigValue{
+		String value;
+		long lastUpdateTime;
+		
+		ConfigValue(String value,long lastUpdateTime){
+			this.value = value;
+			this.lastUpdateTime = lastUpdateTime;
+		}
+		
+		public String getValue(){
+			return this.value;
+		}
+		
+		public long getTime(){
+			return this.lastUpdateTime;
+		}
+	}
+	
+	private HashMap<String,ConfigValue> blackPreferenceMap;
+	private HashMap<String,ConfigValue> actionWeightMap;	
 		
 	public CBBolt(String config, ImmutableList<Output> outputField) {
 		super(config, outputField, Constants.config_stream);
@@ -85,9 +106,12 @@ public class CBBolt extends AbstractConfigUpdateBolt{
 		this.itemAttrCache = new DataCache<NewsApp.Newsapp.NewsAttr>(conf);
 		this.qqProfileCache = new DataCache<UserFace>(conf);
 		
-		this.liveCombinerMap = new HashMap<String,HashSet<String>>(1024);			
+		this.liveCombinerMap = new HashMap<String,HashSet<String>>(1024);
 		this.userFaceCallBack = new UpdateCallBack(mt, this.nsCbIndexTableId,debug);
 		this.itemIndexCallBack = new UpdateCallBack(mt, this.nsCbIndexTableId,debug);
+		
+		this.blackPreferenceMap = new HashMap<String,ConfigValue>();
+		this.actionWeightMap = new HashMap<String,ConfigValue>();
 		
 		this.classifier = new NewsClassifier();
 		int combinerExpireTime = Utils.getInt(conf, "combiner.expireTime",5);
@@ -95,6 +119,77 @@ public class CBBolt extends AbstractConfigUpdateBolt{
 	}
 	
 	private static Logger logger = LoggerFactory.getLogger(CBBolt.class);
+	
+	private String getConfigValueFromTde(String key){
+		ClientAttr clientEntry = mtClientList.get(0);		
+		TairOption opt = new TairOption(clientEntry.getTimeout());
+		try {
+			Result<byte[]> res = clientEntry.getClient().get((short)55, key.getBytes(), opt);
+			if(res.isSuccess() && res.getResult() != null){
+				return new String(res.getResult(),"UTF-8");
+			}
+		} catch(Exception e){
+		}
+		
+		return null;
+	}
+	
+	private float computerUserFaceWeight(float level, float time_loss, String actionType){
+		String typeWeight = null;
+		
+		long now = System.currentTimeMillis()/1000;
+		if(actionWeightMap.containsKey(actionType)){
+			long lastUpdateTime = actionWeightMap.get(actionType).getTime();
+			if(lastUpdateTime > now - 3600){
+				typeWeight = actionWeightMap.get(actionType).getValue();
+			}else{
+				typeWeight = getConfigValueFromTde(actionType);
+				ConfigValue confValue = new ConfigValue(typeWeight,now);
+				actionWeightMap.put(actionType, confValue);
+			}
+		}else{
+			typeWeight = getConfigValueFromTde(actionType);
+			ConfigValue confValue = new ConfigValue(typeWeight,now);
+			actionWeightMap.put(actionType, confValue);
+		}
+		
+		if(typeWeight != null){
+			return level*time_loss*Float.valueOf(typeWeight);
+		}else{
+			return 0F;
+		}
+		
+	}
+	
+	private boolean isBlackPreference(String prefernece){	
+		String newResult = null;
+		long now = System.currentTimeMillis()/1000;
+		if(blackPreferenceMap.containsKey(prefernece)){
+			long lastUpdateTime = blackPreferenceMap.get(prefernece).getTime();
+			if(lastUpdateTime > now - 3600){
+				return true;
+			}else{
+				newResult = getConfigValueFromTde("black_preference_list");
+			}
+		}else{
+			newResult = getConfigValueFromTde("black_preference_list");
+
+		}
+		
+		if(newResult != null){
+			String[] items = newResult.split("\\|",-1);
+			for(String each:items){
+				ConfigValue confValue = new ConfigValue(each,now);
+				actionWeightMap.put(each, confValue);
+			}
+		}
+		
+		if(blackPreferenceMap.containsKey(prefernece)){
+			return true;
+		}else{
+			return false;
+		}
+	}
 	
 	private void setCombinerTime(final int second) {
 		new Thread(new Runnable() {
@@ -395,7 +490,7 @@ public class CBBolt extends AbstractConfigUpdateBolt{
 						break;
 					}
 					
-					if(tag.equals("")){
+					if(tag.equals("") || isBlackPreference(tag)){
 						continue;
 					}
 														
@@ -403,7 +498,7 @@ public class CBBolt extends AbstractConfigUpdateBolt{
 						UserFace.UserPreference.Builder newUpBuilder = 
 								UserFace.UserPreference.newBuilder();
 						
-						float newWeight = up.getWeight() + computerWeight(1F ,0.25F ,actionType);
+						float newWeight = up.getWeight() + computerUserFaceWeight(1F ,0.25F ,actionType);
 						newUpBuilder.setPreference(cate.getName());
 						newUpBuilder.setLevel(cate.getLevel());
 						newUpBuilder.setType(up.getType());
@@ -418,7 +513,7 @@ public class CBBolt extends AbstractConfigUpdateBolt{
 					UserFace.UserPreference.Builder newUpBuilder = 
 							UserFace.UserPreference.newBuilder();
 					
-					float newWeight = computerWeight(1F ,0.25F ,actionType);
+					float newWeight = computerUserFaceWeight(1F ,0.25F ,actionType);
 					
 					newUpBuilder.setPreference(cate.getName());
 					newUpBuilder.setLevel(cate.getLevel());
@@ -453,16 +548,6 @@ public class CBBolt extends AbstractConfigUpdateBolt{
 			newQQFaceBuilder.addAllPreference(newQQFaceList);
 			
 			saveInTde(key,newQQFaceBuilder.build());
-		}
-		
-		private float computerWeight(float level, float time_loss, String actionType){
-			Float typeWeight = Utils.getActionWeight(Integer.valueOf(actionType));
-			
-			if(typeWeight != null){
-				return level*time_loss*typeWeight;
-			}else{
-				return 0F;
-			}
 		}
 		
 		private void saveInTde(String key,UserFace value){
@@ -562,7 +647,7 @@ public class CBBolt extends AbstractConfigUpdateBolt{
 	
 	private void save(String key, NewsIndex value){		
 		for(ClientAttr clientEntry:mtClientList ){
-			TairOption putopt = new TairOption(clientEntry.getTimeout(),(short)0, dataExpireTime);
+			TairOption putopt = new TairOption(clientEntry.getTimeout(),(short)nsCbIndexTableId, dataExpireTime);
 			try { 
 				clientEntry.getClient().put((short)nsCbIndexTableId, key.getBytes("UTF-8"), value.toByteArray(), putopt);
 			} catch(Exception e){

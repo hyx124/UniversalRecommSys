@@ -71,6 +71,7 @@ message RecommendResult
 		optional string Comment = 10;		//备注
 		
 		optional string shopId = 11;		//商品所属商家
+		optional uint64 ItemTime = 12;		//商品所属商家
     }
     repeated Result Results  = 1;
 }
@@ -79,23 +80,24 @@ message UserActiveHistory
 {	
     message ActiveRecord
     {
-        required string Item        = 1;                            //item
-		optional uint64 BigType      = 2;   						//item所属大类目
+        	required string Item        = 1;                           				//itemID
+		optional uint64 BigType      = 2;   							//item所属大类目
 		optional uint64 MiddleType   = 3;  							//item所属中类目
 		optional uint64 SmallType   = 4;  							//item所属小类目
 		
 		optional uint32 ActType = 5 ; 								//item行为类型
-		optional string ActResult =	6;								//item行为的结果
-        optional uint64 ActTime	 = 7; 								//item行为发生时间戳(s)
+		optional string ActResult =	6;							//item行为的结果
+        	optional uint64 ActTime	 = 7; 								//item行为发生时间戳(s)
 		optional uint64 ExpireTime = 8; 							//item行为失效时间
-		optional string TablID = 9;									//item行为发生的场景
-		optional string AlgID = 10;									//itme行为被推荐的算法
+		optional string TablID = 9;								//item行为发生的场景
+		optional string AlgID = 10;								//itme行为被推荐的算法
 		optional string PlatForm = 11;								//item行为产生的平台
 		optional string LBSInfo = 12;								//item行为产生时的LBS信息
 		
-		optional double Weight = 13 [default = 0.0];              	//行为权重
+		optional double Weight = 13 [default = 0.0];              				//行为权重
 		
 		optional string shopId = 14;								//商品所属商家
+		optional uint64 ItemTime = 15;								//item的上架时间
     }
 
     repeated ActiveRecord ActRecords  = 1;

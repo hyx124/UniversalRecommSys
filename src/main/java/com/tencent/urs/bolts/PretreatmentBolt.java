@@ -66,18 +66,12 @@ public class PretreatmentBolt extends AbstractConfigUpdateBolt {
 	}
 
 	@Override
-	public void processEvent(String sid, Tuple tuple) {
-		
+	public void processEvent(String sid, Tuple tuple) {		
 		try{
-			//hashkey,bid,topic,qq,uid,adpos,action_type,action_time,item_id,
-			//action_result,imei,platform,lbs_info</fields>
-	
 			String bid = tuple.getStringByField("bid");	
 			String topic = tuple.getStringByField("topic");	
 			String qq = tuple.getStringByField("qq");
-			String uid = tuple.getStringByField("uid");	
-
-			
+			String uid = tuple.getStringByField("uid");		
 			
 			if(!topic.equals(Constants.actions_stream)){
 				return ;
@@ -100,19 +94,12 @@ public class PretreatmentBolt extends AbstractConfigUpdateBolt {
 					if(!uid.equals("0") && !uid.equals("")){
 						new GetQQUpdateCallBack(uid,outputValues).excute();				
 					}else{
-						if(qq.equals("389687043")){
-							logger.info("uid is error,uid="+uid);
-						}
 						return;
 					}
 				}else{
 					outputValues.add(qq);
 					new GetGroupIdUpdateCallBack(qq,outputValues).excute();
 				}	
-			}
-					
-			if(qq.equals("389687043")){
-				logger.info("input = "+tuple.toString());
 			}
 		}catch(Exception e){
 			logger.error(e.getMessage(), e);
@@ -143,12 +130,12 @@ public class PretreatmentBolt extends AbstractConfigUpdateBolt {
 					}else{
 						qqCache.set(uid, new SoftReference<String>("0"),cacheExpireTime);
 					}
+				}else{
+					qqCache.set(uid, new SoftReference<String>("0"),cacheExpireTime);
 				}
 			} catch (Exception e) {
 				logger.error(e.getMessage(), e);
 			}
-
-			
 		}
 
 		public void excute() {

@@ -92,7 +92,7 @@ public class TopActionBolt extends AbstractConfigUpdateBolt {
 		try{
 			String bid = tuple.getStringByField("bid");
 			String qq = tuple.getStringByField("qq");
-			String itemId = tuple.getStringByField("item_id");
+			String itemId = tuple.getStringByField("item_id");			
 			
 			if(!Utils.isItemIdValid(itemId) || !Utils.isQNumValid(qq)){
 				return;
@@ -106,7 +106,7 @@ public class TopActionBolt extends AbstractConfigUpdateBolt {
 			Long bigType = tuple.getLongByField("big_type");
 			Long midType = tuple.getLongByField("mid_type");
 			Long smallType = tuple.getLongByField("small_type");
-
+			Long itemTime = tuple.getLongByField("item_time");
 			String shopId = tuple.getStringByField("shop_id");
 			
 			if(Utils.isRecommendAction(actionType)){
@@ -122,7 +122,8 @@ public class TopActionBolt extends AbstractConfigUpdateBolt {
 			actBuilder.setItem(itemId).setActTime(Long.valueOf(actionTime))
 						.setActType(Integer.valueOf(actionType))
 						.setBigType(bigType).setMiddleType(midType).setSmallType(smallType)
-						.setLBSInfo(lbsInfo).setPlatForm(platform).setShopId(shopId);
+						.setLBSInfo(lbsInfo).setPlatForm(platform).setShopId(shopId)
+						.setItemTime(itemTime);
 
 			
 			ActionCombinerValue value = new ActionCombinerValue();
