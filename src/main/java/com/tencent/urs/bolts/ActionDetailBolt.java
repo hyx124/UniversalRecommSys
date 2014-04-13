@@ -47,13 +47,13 @@ public class ActionDetailBolt extends AbstractConfigUpdateBolt{
 	private static final long serialVersionUID = 5958754435166536530L;
 	private List<ClientAttr> mtClientList;	
 	private MonitorTools mt;
-	private DataCache<Recommend.UserActiveDetail> cacheMap;
+	//private DataCache<Recommend.UserActiveDetail> cacheMap;
 	private UpdateCallBack putCallBack;
 	private HashMap<String,ActionCombinerValue> liveCombinerMap;
 	
 	private int nsTableId;
 	private int dataExpireTime;
-	private int cacheExpireTime;
+	//private int cacheExpireTime;
 	private int topNum;
 	private boolean debug;
 	
@@ -68,7 +68,7 @@ public class ActionDetailBolt extends AbstractConfigUpdateBolt{
 	public void updateConfig(XMLConfiguration config) {
 		nsTableId = config.getInt("storage_table",512);
 		dataExpireTime = config.getInt("data_expiretime",7*24*3600);
-		cacheExpireTime = config.getInt("cache_expiretime",3600);
+		//cacheExpireTime = config.getInt("cache_expiretime",3600);
 		topNum = config.getInt("topNum",100);
 		debug = config.getBoolean("debug",false);
 	}
@@ -81,7 +81,7 @@ public class ActionDetailBolt extends AbstractConfigUpdateBolt{
 		
 		this.mtClientList = TDEngineClientFactory.createMTClientList(conf);
 		this.mt = MonitorTools.getMonitorInstance(conf);
-		this.cacheMap = new DataCache<Recommend.UserActiveDetail>(conf);
+		//this.cacheMap = new DataCache<Recommend.UserActiveDetail>(conf);
 		this.liveCombinerMap = new HashMap<String,ActionCombinerValue>(1024);
 		this.putCallBack = new UpdateCallBack(mt, this.nsTableId, debug);
 		
@@ -182,35 +182,25 @@ public class ActionDetailBolt extends AbstractConfigUpdateBolt{
 		}
 
 		public void excute() {
-			Recommend.UserActiveDetail oldValue = null;
+			/*Recommend.UserActiveDetail oldValue = null;
 			SoftReference<UserActiveDetail> sr = cacheMap.get(key);
 			if(sr != null){
 				oldValue =  sr.get();
-			}
-						
-			if(oldValue != null){	
-				if(debug){
-					logger.info("get key="+key+",in caceh");
-				}
-				UserActiveDetail.Builder mergeValueBuilder = Recommend.UserActiveDetail.newBuilder();
-				mergeToHeap(values,oldValue,mergeValueBuilder);
-				Save(mergeValueBuilder);
-			}else{
-				if(debug){
-					logger.info("get key="+key+",in tde");
-				}
-				ClientAttr clientEntry = mtClientList.get(0);		
-				TairOption opt = new TairOption(clientEntry.getTimeout());
-				Future<Result<byte[]>> future;
-				try {
-					future = clientEntry.getClient().getAsync((short)nsTableId,key.getBytes(),opt);
-					clientEntry.getClient().notifyFuture(future, this,clientEntry);	
-				} catch(Exception e){
-					logger.error(e.getMessage(), e);
-				}
+			}*/
 			
-			}			
-
+			if(debug){
+				logger.info("get key="+key+",in tde");
+			}
+				
+			ClientAttr clientEntry = mtClientList.get(0);		
+			TairOption opt = new TairOption(clientEntry.getTimeout());
+			Future<Result<byte[]>> future;
+			try {
+				future = clientEntry.getClient().getAsync((short)nsTableId,key.getBytes(),opt);
+				clientEntry.getClient().notifyFuture(future, this,clientEntry);	
+			} catch(Exception e){
+				logger.error(e.getMessage(), e);
+			}
 		}	
 		
 		private void mergeOldToMap(UserActiveDetail oldValList,
@@ -372,10 +362,7 @@ public class ActionDetailBolt extends AbstractConfigUpdateBolt{
 			}
 
 			Future<Result<Void>> future = null;
-			UserActiveDetail pbValue = mergeValueBuilder.build();
-			synchronized(cacheMap){
-				cacheMap.set(key, new SoftReference<UserActiveDetail>(pbValue), cacheExpireTime);
-			}			
+			UserActiveDetail pbValue = mergeValueBuilder.build();		
 			
 			for(ClientAttr clientEntry:mtClientList ){
 				TairOption putopt = new TairOption(clientEntry.getTimeout(),(short)0, dataExpireTime);

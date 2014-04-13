@@ -1,7 +1,6 @@
 package com.tencent.urs.bolts;
 
 import java.lang.ref.SoftReference;
-import java.text.SimpleDateFormat;
 import java.util.Collections;
 import java.util.Comparator;
 import java.util.HashMap;
@@ -43,23 +42,22 @@ import com.tencent.urs.utils.Constants;
 import com.tencent.urs.utils.DataCache;
 import com.tencent.urs.utils.Utils;
 
-public class CBBolt extends AbstractConfigUpdateBolt{
+public class UserFaceUpdateBolt extends AbstractConfigUpdateBolt{
 	private static final long serialVersionUID = 2972911860800045348L;
 	private List<ClientAttr> mtClientList;	
 	private MonitorTools mt;
 	private DataCache<NewsApp.Newsapp.NewsAttr> itemAttrCache;
-	private DataCache<UserFace> qqProfileCache;
+	//private DataCache<UserFace> qqProfileCache;
 
 	private HashMap<String, HashSet<String>> liveCombinerMap;
-	private NewsClassifier classifier;
 	private int nsCbIndexTableId;
 	private int nsUserFaceTableId;
+	private int nsConfigTableId;
 	private int dataExpireTime;
-	private int cacheExpireTime;
+	//private int cacheExpireTime;
 	private int topNum;
 	private boolean debug;
 	private UpdateCallBack userFaceCallBack;
-	private UpdateCallBack itemIndexCallBack;
 	
 	public class ConfigValue{
 		String value;
@@ -82,16 +80,17 @@ public class CBBolt extends AbstractConfigUpdateBolt{
 	private HashMap<String,ConfigValue> blackPreferenceMap;
 	private HashMap<String,ConfigValue> actionWeightMap;	
 		
-	public CBBolt(String config, ImmutableList<Output> outputField) {
+	public UserFaceUpdateBolt(String config, ImmutableList<Output> outputField) {
 		super(config, outputField, Constants.config_stream);
 	}
 
 	@Override
 	public void updateConfig(XMLConfiguration config) {
 		nsCbIndexTableId = config.getInt("item_index_table",519);
-		nsUserFaceTableId = config.getInt("user_face_table",53);
+		nsUserFaceTableId = config.getInt("user_face_table",54);
+		nsConfigTableId = config.getInt("config_table",55);
 		dataExpireTime = config.getInt("data_expiretime",30*24*3600);
-		cacheExpireTime = config.getInt("cache_expiretime",3600);
+		//cacheExpireTime = config.getInt("cache_expiretime",3600);
 		debug = config.getBoolean("debug",false);
 		topNum = config.getInt("top_num",100);
 	}
@@ -104,28 +103,28 @@ public class CBBolt extends AbstractConfigUpdateBolt{
 		this.mtClientList = TDEngineClientFactory.createMTClientList(conf);
 		this.mt = MonitorTools.getMonitorInstance(conf);
 		this.itemAttrCache = new DataCache<NewsApp.Newsapp.NewsAttr>(conf);
-		this.qqProfileCache = new DataCache<UserFace>(conf);
+		//this.qqProfileCache = new DataCache<UserFace>(conf);
 		
 		this.liveCombinerMap = new HashMap<String,HashSet<String>>(1024);
-		this.userFaceCallBack = new UpdateCallBack(mt, this.nsCbIndexTableId,debug);
-		this.itemIndexCallBack = new UpdateCallBack(mt, this.nsCbIndexTableId,debug);
-		
+		this.userFaceCallBack = new UpdateCallBack(mt, this.nsCbIndexTableId,debug);		
 		this.blackPreferenceMap = new HashMap<String,ConfigValue>();
 		this.actionWeightMap = new HashMap<String,ConfigValue>();
 		
-		this.classifier = new NewsClassifier();
+		blackPreferenceInit();
+		actionWeightMapInit();
 		int combinerExpireTime = Utils.getInt(conf, "combiner.expireTime",5);
 		setCombinerTime(combinerExpireTime);
 	}
 	
-	private static Logger logger = LoggerFactory.getLogger(CBBolt.class);
+	private static Logger logger = LoggerFactory.getLogger(UserFaceUpdateBolt.class);
 	
 	private String getConfigValueFromTde(String key){
 		ClientAttr clientEntry = mtClientList.get(0);		
 		TairOption opt = new TairOption(clientEntry.getTimeout());
 		try {
-			Result<byte[]> res = clientEntry.getClient().get((short)55, key.getBytes(), opt);
+			Result<byte[]> res = clientEntry.getClient().get((short)nsConfigTableId, key.getBytes(), opt);
 			if(res.isSuccess() && res.getResult() != null){
+				logger.info("get config from tde, value="+new String(res.getResult(),"UTF-8"));
 				return new String(res.getResult(),"UTF-8");
 			}
 		} catch(Exception e){
@@ -159,6 +158,39 @@ public class CBBolt extends AbstractConfigUpdateBolt{
 			return 0F;
 		}
 		
+	}
+	
+	private void blackPreferenceInit(){
+		String black_preference = "新闻|要闻|订阅|图片|视频|精选|北京|上海|广州|深圳|重庆|天津|香港|澳门|山东|山西|河南|河北|湖南|湖北|广东|广西|黑龙江|辽宁|浙江|安徽|江苏|福建|甘肃|江西|云南|贵州|四川|青海|陕西|吉林|宁夏|海南|西藏|内蒙古|新疆|台湾";
+		String[] bpres =  black_preference.split("\\|",-1);
+		
+		long now = System.currentTimeMillis()/1000;
+		for(String each:bpres){
+			ConfigValue confValue = new ConfigValue(each,now);
+			this.blackPreferenceMap.put(each, confValue);
+		}
+	}
+	
+	private void actionWeightMapInit(){
+		long now = System.currentTimeMillis()/1000;
+		this.actionWeightMap.put("1", new ConfigValue("0",now));
+		this.actionWeightMap.put("5", new ConfigValue("1.5",now));
+		this.actionWeightMap.put("9", new ConfigValue("0.4",now));
+		this.actionWeightMap.put("10", new ConfigValue("0.4",now));
+		this.actionWeightMap.put("11", new ConfigValue("0.4",now));
+		this.actionWeightMap.put("13", new ConfigValue("0.5",now));
+		this.actionWeightMap.put("16", new ConfigValue("0.3",now));
+		this.actionWeightMap.put("17", new ConfigValue("0.3",now));
+		this.actionWeightMap.put("18", new ConfigValue("0.3",now));
+		this.actionWeightMap.put("19", new ConfigValue("2",now));
+		this.actionWeightMap.put("20", new ConfigValue("2",now));
+		
+		this.actionWeightMap.put("21", new ConfigValue("0.3",now));
+		this.actionWeightMap.put("22", new ConfigValue("0",now));
+		this.actionWeightMap.put("23", new ConfigValue("0",now));
+		this.actionWeightMap.put("24", new ConfigValue("0",now));
+		this.actionWeightMap.put("25", new ConfigValue("0.3",now));
+		this.actionWeightMap.put("26", new ConfigValue("0",now));
 	}
 	
 	private boolean isBlackPreference(String prefernece){	
@@ -235,41 +267,6 @@ public class CBBolt extends AbstractConfigUpdateBolt{
 			liveCombinerMap.put(key, valueSet);
 		}
 	}	
-
-	private static void genInputPbBuilder(NewsAttr.Builder cbAppBuilder,
-					String itemId,Long bigType,Long midType,Long smallType,
-					com.google.protobuf.ByteString bigTypeName,
-					com.google.protobuf.ByteString midTypeName, 
-					com.google.protobuf.ByteString smallTypeName,
-					com.google.protobuf.ByteString text){
-		cbAppBuilder.setNewsId(itemId);
-		
-		NewsCategory.Builder bigTypeBuilder = NewsCategory.newBuilder();
-		NewsCategory.Builder midTypeBuilder = NewsCategory.newBuilder();
-		NewsCategory.Builder smallTypeBuilder = NewsCategory.newBuilder();
-		
-		bigTypeBuilder.setId(bigType);
-		midTypeBuilder.setId(midType);
-		smallTypeBuilder.setId(smallType);
-		
-		bigTypeBuilder.setLevel(0);
-		midTypeBuilder.setLevel(1);
-		smallTypeBuilder.setLevel(2);
-
-		
-		bigTypeBuilder.setName(bigTypeName);
-		midTypeBuilder.setName(midTypeName);
-		smallTypeBuilder.setName(smallTypeName);
-		
-		cbAppBuilder.addCategory(0,bigTypeBuilder.build());
-		cbAppBuilder.addCategory(1,midTypeBuilder.build());
-		cbAppBuilder.addCategory(2,smallTypeBuilder.build());
-		
-	
-		cbAppBuilder.setTitle(text);
-		cbAppBuilder.setSourceId(Long.valueOf(bigType));
-
-	}
 	
 	@Override
 	public void processEvent(String sid, Tuple tuple) {	
@@ -279,55 +276,7 @@ public class CBBolt extends AbstractConfigUpdateBolt{
 			String topic = tuple.getStringByField("topic");
 			String itemId = tuple.getStringByField("item_id");
 			
-			if(topic.equals(Constants.item_info_stream) ){
-				String bigType = tuple.getStringByField("cate_id1");
-				String midType = tuple.getStringByField("cate_id2");
-				String smallType = tuple.getStringByField("cate_id3");
-				String bigTypeName = tuple.getStringByField("cate_name1");
-				String midTypeName = tuple.getStringByField("cate_name2");
-				String smallTypeName = tuple.getStringByField("cate_name3");
-				String itemTime = tuple.getStringByField("item_time");
-				String text = tuple.getStringByField("text");
-				
-				if(!Utils.isBidValid(bid) || !Utils.isItemIdValid(itemId)){
-					return;
-				}
-				
-				ByteString bigTypeNameStr = ByteString.copyFrom(bigTypeName,"UTF-8");
-				ByteString midTypeNameStr = ByteString.copyFrom(midTypeName,"UTF-8");
-				ByteString smallTypeNameStr = ByteString.copyFrom(smallTypeName,"UTF-8");
-				ByteString textStr = ByteString.copyFrom(text,"UTF-8");
-				
-	
-				NewsAttr.Builder cbAppBuilder = NewsAttr.newBuilder();
-				genInputPbBuilder(cbAppBuilder,itemId,Long.valueOf(bigType),Long.valueOf(midType),Long.valueOf(smallType)
-						,bigTypeNameStr,midTypeNameStr,smallTypeNameStr,textStr);
-				cbAppBuilder.setIndexScore(Long.valueOf(itemTime));
-				cbAppBuilder.setFreshnessScore(Long.valueOf(itemTime));
-				
-				classifier.HierarchicalClassify(cbAppBuilder);
-				
-				boolean isSend = false;
-				for(NewsApp.Newsapp.NewsCategory cs:cbAppBuilder.getCategoryList()){
-					String tag = cs.getName().toStringUtf8();
-					if(cs.getName().isEmpty() || tag.equals("")){
-						continue;
-					}
-						
-					String tagKey = Utils.spliceStringBySymbol("#", bid,tag); 		
-					cbAppBuilder.setTagScore(cs.getWeight());
-						
-					doReIndexsCallBack(tagKey,cbAppBuilder.build());
-					isSend =true;
-				}
-				
-				Long date = Utils.getDateByTime(Long.valueOf(itemTime));
-				String inTdeKey = Utils.spliceStringBySymbol("#", bid,itemId);
-				if(isSend){
-					logger.info("do indexs ,for item="+inTdeKey+",date="+date+",tag_count="+cbAppBuilder.getCategoryCount());
-				}
-				saveNewsAttrInTde(inTdeKey, cbAppBuilder.build());
-			}else if(topic.equals(Constants.actions_stream)){
+			if(topic.equals(Constants.actions_stream)){
 				String qq = tuple.getStringByField("qq");
 				String actionType = tuple.getStringByField("action_type");
 				String comValue = Utils.spliceStringBySymbol("#", bid, qq, actionType);
@@ -341,26 +290,6 @@ public class CBBolt extends AbstractConfigUpdateBolt{
 
 	}
 
-	private void saveNewsAttrInTde(String key, NewsAttr value){
-		synchronized(itemAttrCache){
-			itemAttrCache.set(key, new SoftReference<NewsApp.Newsapp.NewsAttr>(value), cacheExpireTime);
-		}
-		
-		for(ClientAttr clientEntry:mtClientList ){
-			TairOption putopt = new TairOption(clientEntry.getTimeout(),(short)0, dataExpireTime);
-			try {
-				Future<Result<Void>> future = 
-				clientEntry.getClient().putAsync((short)nsCbIndexTableId, 
-									key.getBytes(), value.toByteArray(), putopt);
-				clientEntry.getClient().notifyFuture(future, this.itemIndexCallBack, 
-						new UpdateCallBackContext(clientEntry,key,value.toByteArray(),putopt));
-			}catch(Exception e){
-				logger.error(e.getMessage(), e);
-			}
-			break;
-		}
-	}
-	
 	public class GetItemAttrByItemId implements MutiClientCallBack{
 		private String bidItemId;
 		private HashSet<String> valueSet;
@@ -403,11 +332,13 @@ public class CBBolt extends AbstractConfigUpdateBolt{
 					logger.error(e.getMessage(), e);
 				}
 			}
-
 		}
 		
 		public void next(HashSet<String> valueSet,NewsApp.Newsapp.NewsAttr itemAttr){	
 			for(String bidQQType: valueSet){
+				if(bidQQType.indexOf("389687043") > 0){
+					logger.info("user face,qq=389687043,itemAttr.count ="+itemAttr.getCategoryCount());
+				}
 				new RefreshQQProfileCallBack(bidQQType,itemAttr).excute();
 			}
 		}
@@ -438,11 +369,15 @@ public class CBBolt extends AbstractConfigUpdateBolt{
 		@Override
 		public void handle(Future<?> future, Object context) {
 			Future<Result<byte[]>> afuture = (Future<Result<byte[]>>) future;
+			if(key.indexOf("389687043")>=0){
+				logger.info("user face,from tde=");
+			}
+			
 			try {
 				Result<byte[]> res = afuture.get();
 				if(res.isSuccess() && res.getResult() != null){
 					UserFace qqFace = UserFace.parseFrom(res.getResult());					
-					doRefreshUserFace(bidQQType,qqFace);
+					doRefreshUserFace(qqFace);
 				}
 			} catch (Exception e) {
 				logger.error(e.getMessage(), e);
@@ -453,28 +388,25 @@ public class CBBolt extends AbstractConfigUpdateBolt{
 			if(key == null || actionType == null){
 				return;
 			}
-			
-			UserFace qqFace = null;
-			SoftReference<UserFace> sr = qqProfileCache.get(key);
-			if(sr != null){
-				qqFace = sr.get();
-			}
 				
-			if(qqFace != null){
-				doRefreshUserFace(bidQQType,qqFace);
-			}else{
-				try{
-					ClientAttr clientEntry = mtClientList.get(0);		
-					TairOption opt = new TairOption(clientEntry.getTimeout());
-					Future<Result<byte[]>> future = clientEntry.getClient().getAsync((short)nsUserFaceTableId,key.getBytes(),opt);
-					clientEntry.getClient().notifyFuture(future, this,clientEntry);	
-				}catch(Exception e){
-					logger.error(e.getMessage(), e);
-				}
+			try{
+				ClientAttr clientEntry = mtClientList.get(0);		
+				TairOption opt = new TairOption(clientEntry.getTimeout());
+				Future<Result<byte[]>> future = clientEntry.getClient().getAsync((short)nsUserFaceTableId,key.getBytes(),opt);
+				clientEntry.getClient().notifyFuture(future, this,clientEntry);	
+			}catch(Exception e){
+				logger.error(e.getMessage(), e);
+			}
+			
+			if(key.indexOf("389687043")>=0){
+				logger.info("user face,send to tde,tableId="+nsUserFaceTableId+",key="+key);
 			}
 		}
 		
-		private void doRefreshUserFace(String bidQQType, UserFace qqFace){
+		private void doRefreshUserFace(UserFace qqFace){
+			if(key.indexOf("389687043")>=0){
+				logger.info("user face,qqFace="+qqFace.getPreferenceCount());
+			}
 			LinkedList<UserFace.UserPreference> newQQFaceList = new LinkedList<UserFace.UserPreference>();
 	
 			HashSet<String> alreadyIn = new HashSet<String>();
@@ -551,15 +483,11 @@ public class CBBolt extends AbstractConfigUpdateBolt{
 		}
 		
 		private void saveInTde(String key,UserFace value){
-			synchronized(qqProfileCache){
-				qqProfileCache.set(key, new SoftReference<UserFace>(value), cacheExpireTime);
-			}
-			
-			if(debug && key.indexOf("389687043")>0){
+			if(key.indexOf("389687043")>=0){
 				logger.info("user face,count="+value.getPreferenceCount());
 			}
 			
-			if(debug && key.indexOf("475182144")>0){
+			if(key.indexOf("475182144")>=0){
 				logger.info("user face,count="+value.getPreferenceCount());
 			}
 			
@@ -572,106 +500,10 @@ public class CBBolt extends AbstractConfigUpdateBolt{
 					clientEntry.getClient().notifyFuture(future, userFaceCallBack, 
 							new UpdateCallBackContext(clientEntry,key,value.toByteArray(),putopt));
 
-					/*
-					if(mt!=null){
-						MonitorEntry mEntryPut = new MonitorEntry(Constants.SUCCESSCODE,Constants.SUCCESSCODE);
-						mEntryPut.addExtField("TDW_IDC", clientEntry.getGroupname());
-						mEntryPut.addExtField("tbl_name", "TopActions");
-						mt.addCountEntry(Constants.systemID, Constants.tde_put_interfaceID, mEntryPut, 1);
-					}*/
 				} catch (Exception e){
 					logger.error(e.getMessage(), e);
 				}
 			}
 		}
 	}
-	
-	private void doReIndexsCallBack(String tagKey,NewsAttr newItemAttr){
-		ClientAttr clientEntry = mtClientList.get(0);		
-		TairOption opt = new TairOption(clientEntry.getTimeout());
-		
-		NewsIndex oldNewsList = null;
-		try {
-			Result<byte[]> res = clientEntry.getClient().get((short)nsCbIndexTableId, tagKey.getBytes("UTF-8"), opt);
-			if(res.isSuccess() && res.getResult() != null){
-				oldNewsList = NewsIndex.parseFrom(res.getResult());
-			}
-		} catch(Exception e){
-		}
-		
-		NewsIndex.Builder newListBuilder = NewsIndex.newBuilder();
-		insertNewValueToList(oldNewsList,newListBuilder,newItemAttr);
-		save(tagKey, newListBuilder.build());
-
-	}
-	
-	private void insertNewValueToList(NewsIndex oldNewsList, NewsIndex.Builder newListBuilder, NewsAttr newItemAttr){
-		HashSet<String> alreadyIn = new HashSet<String>();
-		
-		Long now = System.currentTimeMillis()/1000;
-		newListBuilder.setCreateTime(now);
-		newListBuilder.setUpdateTime(now);
-		
-		if(oldNewsList != null){
-			newListBuilder.setCreateTime(oldNewsList.getCreateTime());
-			for(NewsAttr eachNews :oldNewsList.getNewsListList()){
-				if(newListBuilder.getNewsListCount() > topNum){
-					break;
-				}
-				
-				if(Utils.getDateByTime((long) eachNews.getFreshnessScore() )<= 20140401){
-					continue;
-				}
-				
-				if(!alreadyIn.contains(newItemAttr.getNewsId()) 
-						&& newItemAttr.getFreshnessScore() >= eachNews.getFreshnessScore()){
-					newListBuilder.addNewsList(newItemAttr);
-					alreadyIn.add(newItemAttr.getNewsId());
-				}
-					
-				if(!alreadyIn.contains(eachNews.getNewsId()) 
-						&& !eachNews.getNewsId().equals(newItemAttr.getNewsId())){
-
-					newListBuilder.addNewsList(eachNews);
-					alreadyIn.add(eachNews.getNewsId());
-				}
-			}
-		}
-			
-		if(!alreadyIn.contains(newItemAttr.getNewsId())  
-				&& newListBuilder.getNewsListCount() < topNum){
-			newListBuilder.addNewsList(newItemAttr);
-			alreadyIn.add(newItemAttr.getNewsId());
-		}
-	}
-	
-	private void save(String key, NewsIndex value){		
-		for(ClientAttr clientEntry:mtClientList ){
-			TairOption putopt = new TairOption(clientEntry.getTimeout(),(short)nsCbIndexTableId, dataExpireTime);
-			try { 
-				clientEntry.getClient().put((short)nsCbIndexTableId, key.getBytes("UTF-8"), value.toByteArray(), putopt);
-			} catch(Exception e){
-				logger.error(e.getMessage(), e);
-			}
-		}
-	}
-	
-	public static void main(String[] args){
-		Object _lock = new Object();
-		long start1 = System.currentTimeMillis();
-		for(int i=0; i<100000000; i++){		
-			synchronized(_lock){
-				
-			}
-		}
-		long end1 = System.currentTimeMillis();
-		System.out.println(end1-start1);
-		
-		long start2 = System.currentTimeMillis();
-		for(int i=0; i<100000000; i++){
-		}
-		long end2 = System.currentTimeMillis();
-		System.out.println(end2-start2);
-	}
-	
 }

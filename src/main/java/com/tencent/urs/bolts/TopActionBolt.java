@@ -46,12 +46,10 @@ public class TopActionBolt extends AbstractConfigUpdateBolt {
 	private List<ClientAttr> mtClientList;	
 	private MonitorTools mt;
 	private HashMap<String, ActionCombinerValue> liveCombinerMap;
-	private DataCache<Recommend.UserActiveHistory> cacheMap;
 	private UpdateCallBack putCallBack;
 	
 	private int nsTableId;
 	private int dataExpireTime;
-	private int cacheExpireTime;
 	private int topNum;
 	private boolean debug;
 
@@ -72,7 +70,6 @@ public class TopActionBolt extends AbstractConfigUpdateBolt {
 		this.mt = MonitorTools.getMonitorInstance(conf);
 		this.liveCombinerMap = new HashMap<String,ActionCombinerValue>(1024);
 		this.putCallBack = new UpdateCallBack(mt, this.nsTableId, debug);	
-		this.cacheMap = new DataCache<UserActiveHistory>(conf);
 		
 		int combinerExpireTime = Utils.getInt(conf, "combiner.expireTime",5);
 		setCombinerTime(combinerExpireTime);
@@ -81,8 +78,7 @@ public class TopActionBolt extends AbstractConfigUpdateBolt {
 	@Override
 	public void updateConfig(XMLConfiguration config) {	
 		nsTableId = config.getInt("storage_table",511);
-		dataExpireTime = config.getInt("data_expiretime",15*24*3600);
-		cacheExpireTime = config.getInt("cache_expiretime",3600);
+		dataExpireTime = config.getInt("data_expiretime",7*24*3600);
 		topNum = config.getInt("top_num",30);
 		debug = config.getBoolean("debug",false);
 	}
@@ -191,23 +187,10 @@ public class TopActionBolt extends AbstractConfigUpdateBolt {
 
 		public void excute() {
 			try{
-				UserActiveHistory oldValueHeap = null;
-			    SoftReference<UserActiveHistory> sr = cacheMap.get(key);
-			    if(sr != null){
-			    	oldValueHeap = sr.get();
-			    }
-			    
-				if( oldValueHeap != null){
-					UserActiveHistory.Builder mergeValueBuilder = Recommend.UserActiveHistory.newBuilder();
-					mergeToHeap(values,oldValueHeap,mergeValueBuilder);
-					Save(mergeValueBuilder);
-				}else{
-					ClientAttr clientEntry = mtClientList.get(0);		
-					TairOption opt = new TairOption(clientEntry.getTimeout());
-					Future<Result<byte[]>> future = clientEntry.getClient().getAsync((short)nsTableId,key.getBytes(),opt);
-					clientEntry.getClient().notifyFuture(future, this, clientEntry);	
-				}			
-				
+				ClientAttr clientEntry = mtClientList.get(0);		
+				TairOption opt = new TairOption(clientEntry.getTimeout());
+				Future<Result<byte[]>> future = clientEntry.getClient().getAsync((short)nsTableId,key.getBytes(),opt);
+				clientEntry.getClient().notifyFuture(future, this, clientEntry);	
 			} catch (Exception e){
 				logger.error(e.toString());
 			}
@@ -265,10 +248,6 @@ public class TopActionBolt extends AbstractConfigUpdateBolt {
 			
 			
 			UserActiveHistory putValue = mergeValueBuilder.build();
-			synchronized(cacheMap){
-				cacheMap.set(key, new SoftReference<UserActiveHistory>(putValue), cacheExpireTime);
-			}
-			
 			for(ClientAttr clientEntry:mtClientList ){
 				TairOption putopt = new TairOption(clientEntry.getTimeout(),(short)0, dataExpireTime);
 				try {

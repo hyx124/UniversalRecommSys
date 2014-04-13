@@ -3,11 +3,9 @@ package com.tencent.urs.bolts;
 import java.lang.ref.SoftReference;
 import java.util.HashMap;
 import java.util.HashSet;
-import java.util.LinkedList;
 import java.util.List;
 import java.util.Map;
 import java.util.Set;
-import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.Future;
 
 import org.apache.commons.configuration.XMLConfiguration;
@@ -15,7 +13,6 @@ import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
 import com.google.common.collect.ImmutableList;
-import com.tencent.monitor.MonitorEntry;
 import com.tencent.monitor.MonitorTools;
 import com.tencent.streaming.commons.bolts.config.AbstractConfigUpdateBolt;
 import com.tencent.streaming.commons.spouts.tdbank.Output;
@@ -24,10 +21,7 @@ import com.tencent.tde.client.TairClient.TairOption;
 import com.tencent.tde.client.impl.MutiThreadCallbackClient.MutiClientCallBack;
 import com.tencent.urs.asyncupdate.UpdateCallBack;
 import com.tencent.urs.asyncupdate.UpdateCallBackContext;
-import com.tencent.urs.combine.GroupActionCombinerValue;
-import com.tencent.urs.combine.UpdateKey;
 
-import com.tencent.urs.protobuf.Recommend;
 import com.tencent.urs.protobuf.Recommend.RecommendResult;
 import com.tencent.urs.tdengine.TDEngineClientFactory;
 import com.tencent.urs.tdengine.TDEngineClientFactory.ClientAttr;
@@ -38,7 +32,6 @@ import com.tencent.urs.utils.Utils;
 import backtype.storm.task.OutputCollector;
 import backtype.storm.task.TopologyContext;
 import backtype.storm.tuple.Tuple;
-import backtype.storm.tuple.Values;
 
 public class ResultStorageBolt extends AbstractConfigUpdateBolt {
 	private static final long serialVersionUID = 1L;
@@ -97,6 +90,8 @@ public class ResultStorageBolt extends AbstractConfigUpdateBolt {
 				return;
 			}
 			
+			
+			
 			Long bigType = tuple.getLongByField("big_type");
 			Long midType = tuple.getLongByField("mid_type");
 			Long smallType = tuple.getLongByField("small_type");
@@ -105,7 +100,13 @@ public class ResultStorageBolt extends AbstractConfigUpdateBolt {
 			Long price = tuple.getLongByField("price");
 			Long itemTime = tuple.getLongByField("item_time");
 			String shopId = tuple.getStringByField("shop_id");
-				
+			
+			Long now = System.currentTimeMillis()/1000L;
+			
+			if(itemTime >0 && (now - itemTime) < 3*3600){
+				return;	
+			}
+			
 			RecommendResult.Result.Builder value =
 					RecommendResult.Result.newBuilder();
 			value.setBigType(bigType)
@@ -113,7 +114,7 @@ public class ResultStorageBolt extends AbstractConfigUpdateBolt {
 					.setSmallType(smallType)
 					.setPrice(price)
 					.setItem(itemId).setWeight(weight).setFreeFlag(charType.intValue())
-					.setUpdateTime(System.currentTimeMillis()/1000L)
+					.setUpdateTime(now)
 					.setShopId(shopId)
 					.setItemTime(itemTime);
 
@@ -240,7 +241,7 @@ public class ResultStorageBolt extends AbstractConfigUpdateBolt {
 						
 						if(!alreadyIn.contains(eachItem.getItem()) 
 								&& !eachItem.getItem().equals(eachNewValue.getItem())
-								&& (eachItem.getUpdateTime() - eachNewValue.getUpdateTime()) < itemExpireTime
+								&& ( - eachItem.getUpdateTime()) < itemExpireTime	
 								&& eachItem.getWeight() > 0){
 
 								mergeValueBuilder.addResults(eachItem);
@@ -291,6 +292,5 @@ public class ResultStorageBolt extends AbstractConfigUpdateBolt {
 			
 		}
 	}
-
 	
 }

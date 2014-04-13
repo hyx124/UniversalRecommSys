@@ -49,13 +49,13 @@ public class ItemPairStep1Bolt  extends AbstractConfigUpdateBolt{
 	private static final long serialVersionUID = -3578535683081183276L;
 	private List<ClientAttr> mtClientList;	
 	private MonitorTools mt;
-	private DataCache<Recommend.UserPairInfo> userPairCache;
+	//private DataCache<Recommend.UserPairInfo> userPairCache;
 	private UpdateCallBack putCallBack;
 	private HashMap<UpdateKey, GroupActionCombinerValue> liveCombinerMap;
 
 	private int nsDetailTableId;
 	private int dataExpireTime;
-	private int cacheExpireTime;
+	//private int cacheExpireTime;
 	private int nsUserPairTableId;
 	private int linkedTime;
 	private OutputCollector collector;
@@ -92,7 +92,7 @@ public class ItemPairStep1Bolt  extends AbstractConfigUpdateBolt{
 		super.prepare(conf, context, collector);
 		this.updateConfig(super.config);
 
-		this.userPairCache = new DataCache<Recommend.UserPairInfo>(conf);
+		//this.userPairCache = new DataCache<Recommend.UserPairInfo>(conf);
 		this.mtClientList = TDEngineClientFactory.createMTClientList(conf);
 		this.mt = MonitorTools.getMonitorInstance(conf);
 		this.liveCombinerMap = new HashMap<UpdateKey,GroupActionCombinerValue>(1024);
@@ -109,7 +109,7 @@ public class ItemPairStep1Bolt  extends AbstractConfigUpdateBolt{
 		nsUserPairTableId = config.getInt("user_pair_table",515);
 		nsDetailTableId = config.getInt("dependent_table",512);
 		dataExpireTime = config.getInt("data_expiretime",7*24*3600);
-		cacheExpireTime = config.getInt("cache_expiretime",3600);
+		//cacheExpireTime = config.getInt("cache_expiretime",3600);
 		linkedTime = config.getInt("linked_time",24*3600);
 		debug = config.getBoolean("debug",false);
 	}
@@ -205,21 +205,10 @@ public class ItemPairStep1Bolt  extends AbstractConfigUpdateBolt{
 		
 		public void excute() {
 			try {
-				UserPairInfo oldInfo = null;
-				SoftReference<UserPairInfo> sr = userPairCache.get(userPairKey);	
-				if(sr != null){
-					oldInfo = sr.get();
-				}
-				
-				if(oldInfo != null){	
-					next(oldInfo);
-				}else{
-					ClientAttr clientEntry = mtClientList.get(0);		
-					TairOption opt = new TairOption(clientEntry.getTimeout());
-					Future<Result<byte[]>> future = clientEntry.getClient().getAsync((short)nsUserPairTableId,userPairKey.getBytes(),opt);
-					clientEntry.getClient().notifyFuture(future, this,clientEntry);	
-				}			
-				
+				ClientAttr clientEntry = mtClientList.get(0);		
+				TairOption opt = new TairOption(clientEntry.getTimeout());
+				Future<Result<byte[]>> future = clientEntry.getClient().getAsync((short)nsUserPairTableId,userPairKey.getBytes(),opt);
+				clientEntry.getClient().notifyFuture(future, this,clientEntry);	
 			} catch (Exception e) {
 				logger.error(e.getMessage(), e);
 			}
@@ -341,9 +330,6 @@ public class ItemPairStep1Bolt  extends AbstractConfigUpdateBolt{
 			}
 			
 			Future<Result<Void>> future = null;
-			synchronized(userPairCache){
-				userPairCache.set(userPairKey, new SoftReference<UserPairInfo>(newInfo), cacheExpireTime);
-			}
 			
 			for(ClientAttr clientEntry:mtClientList ){
 				TairOption putopt = new TairOption(clientEntry.getTimeout(),(short)0, dataExpireTime);

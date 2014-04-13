@@ -87,7 +87,7 @@ public class ItemPairStep2Bolt  extends AbstractConfigUpdateBolt{
 			String key = tuple.getStringByField("group_pair_key");
 			Long timeId = tuple.getLongByField("time_id");
 			Float weight = tuple.getFloatByField("weight");	
-			if(weight > 0){
+			if(weight != 0){
 				combinerKeys(key,timeId,weight);
 			}
 		}catch(Exception e){
@@ -159,10 +159,10 @@ public class ItemPairStep2Bolt  extends AbstractConfigUpdateBolt{
 		public void excute() {
 			try {
 				GroupPairInfo oldInfo = null;
-				SoftReference<GroupPairInfo> sr = groupPairCache.get(putKey);
+				/*SoftReference<GroupPairInfo> sr = groupPairCache.get(putKey);
 				if(sr != null){
 					oldInfo = sr.get();
-				}
+				}*/
 				
 				if(oldInfo != null){		
 					next(oldInfo);
@@ -179,10 +179,10 @@ public class ItemPairStep2Bolt  extends AbstractConfigUpdateBolt{
 		}
 
 		private void save(String key,GroupPairInfo newInfo){	
-		
+			/*
 			synchronized(groupPairCache){
 				groupPairCache.set(key, new SoftReference<Recommend.GroupPairInfo>(newInfo), cacheExpireTime);
-			}
+			}*/
 			
 			Future<Result<Void>> future = null;
 			for(ClientAttr clientEntry:mtClientList ){
