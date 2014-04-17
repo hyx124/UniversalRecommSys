@@ -1,8 +1,5 @@
 package com.tencent.urs.bolts;
 
-import java.lang.ref.SoftReference;
-import java.util.Collections;
-import java.util.Comparator;
 import java.util.HashMap;
 import java.util.HashSet;
 import java.util.LinkedList;
@@ -15,17 +12,13 @@ import org.apache.commons.configuration.XMLConfiguration;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
-import NewsApp.Newsapp.NewsAttr;
 import NewsApp.Newsapp.NewsCategory;
-import NewsApp.Newsapp.NewsIndex;
 import NewsApp.Newsapp.UserFace;
-import NewsProcessor.NewsClassifier;
 import backtype.storm.task.OutputCollector;
 import backtype.storm.task.TopologyContext;
 import backtype.storm.tuple.Tuple;
 
 import com.google.common.collect.ImmutableList;
-import com.google.protobuf.ByteString;
 import com.tencent.monitor.MonitorTools;
 import com.tencent.streaming.commons.bolts.config.AbstractConfigUpdateBolt;
 import com.tencent.streaming.commons.spouts.tdbank.Output;
@@ -39,25 +32,25 @@ import com.tencent.urs.asyncupdate.UpdateCallBackContext;
 import com.tencent.urs.tdengine.TDEngineClientFactory;
 import com.tencent.urs.tdengine.TDEngineClientFactory.ClientAttr;
 import com.tencent.urs.utils.Constants;
-import com.tencent.urs.utils.DataCache;
+import com.tencent.urs.utils.LRUCache;
 import com.tencent.urs.utils.Utils;
 
 public class UserFaceUpdateBolt extends AbstractConfigUpdateBolt{
 	private static final long serialVersionUID = 2972911860800045348L;
 	private List<ClientAttr> mtClientList;	
 	private MonitorTools mt;
-	private DataCache<NewsApp.Newsapp.NewsAttr> itemAttrCache;
-	//private DataCache<UserFace> qqProfileCache;
-
-	private HashMap<String, HashSet<String>> liveCombinerMap;
+	private LRUCache<String, NewsApp.Newsapp.NewsAttr> itemAttrCache;
+	
+	private HashMap<String, String> liveCombinerMap;
 	private int nsCbIndexTableId;
 	private int nsUserFaceTableId;
 	private int nsConfigTableId;
 	private int dataExpireTime;
-	//private int cacheExpireTime;
 	private int topNum;
 	private boolean debug;
 	private UpdateCallBack userFaceCallBack;
+	
+	private long pbLastUpdateTime;
 	
 	public class ConfigValue{
 		String value;
@@ -77,7 +70,7 @@ public class UserFaceUpdateBolt extends AbstractConfigUpdateBolt{
 		}
 	}
 	
-	private HashMap<String,ConfigValue> blackPreferenceMap;
+	private HashSet<String> blackPreferenceMap;
 	private HashMap<String,ConfigValue> actionWeightMap;	
 		
 	public UserFaceUpdateBolt(String config, ImmutableList<Output> outputField) {
@@ -90,9 +83,8 @@ public class UserFaceUpdateBolt extends AbstractConfigUpdateBolt{
 		nsUserFaceTableId = config.getInt("user_face_table",54);
 		nsConfigTableId = config.getInt("config_table",55);
 		dataExpireTime = config.getInt("data_expiretime",30*24*3600);
-		//cacheExpireTime = config.getInt("cache_expiretime",3600);
 		debug = config.getBoolean("debug",false);
-		topNum = config.getInt("top_num",100);
+		topNum = config.getInt("top_num",10);
 	}
 	
 	@Override
@@ -102,12 +94,11 @@ public class UserFaceUpdateBolt extends AbstractConfigUpdateBolt{
 	
 		this.mtClientList = TDEngineClientFactory.createMTClientList(conf);
 		this.mt = MonitorTools.getMonitorInstance(conf);
-		this.itemAttrCache = new DataCache<NewsApp.Newsapp.NewsAttr>(conf);
-		//this.qqProfileCache = new DataCache<UserFace>(conf);
+		this.itemAttrCache = new LRUCache<String, NewsApp.Newsapp.NewsAttr>(5000);
 		
-		this.liveCombinerMap = new HashMap<String,HashSet<String>>(1024);
+		this.liveCombinerMap = new HashMap<String,String>(1024);
 		this.userFaceCallBack = new UpdateCallBack(mt, this.nsCbIndexTableId,debug);		
-		this.blackPreferenceMap = new HashMap<String,ConfigValue>();
+		this.blackPreferenceMap = new HashSet<String>();
 		this.actionWeightMap = new HashMap<String,ConfigValue>();
 		
 		blackPreferenceInit();
@@ -126,16 +117,16 @@ public class UserFaceUpdateBolt extends AbstractConfigUpdateBolt{
 			if(res.isSuccess() && res.getResult() != null){
 				logger.info("get config from tde, value="+new String(res.getResult(),"UTF-8"));
 				return new String(res.getResult(),"UTF-8");
+			}else{
+				logger.info("get config from tde failed! not found key="+key);
 			}
 		} catch(Exception e){
-		}
-		
+		}	
 		return null;
 	}
 	
 	private float computerUserFaceWeight(float level, float time_loss, String actionType){
 		String typeWeight = null;
-		
 		long now = System.currentTimeMillis()/1000;
 		if(actionWeightMap.containsKey(actionType)){
 			long lastUpdateTime = actionWeightMap.get(actionType).getTime();
@@ -143,13 +134,27 @@ public class UserFaceUpdateBolt extends AbstractConfigUpdateBolt{
 				typeWeight = actionWeightMap.get(actionType).getValue();
 			}else{
 				typeWeight = getConfigValueFromTde(actionType);
-				ConfigValue confValue = new ConfigValue(typeWeight,now);
-				actionWeightMap.put(actionType, confValue);
+				if(typeWeight != null){
+					ConfigValue confValue = new ConfigValue(typeWeight,now);
+					actionWeightMap.put(actionType, confValue);
+				}else{
+					typeWeight = actionWeightMap.get(actionType).getValue();
+					ConfigValue confValue = new ConfigValue(typeWeight,now);
+					actionWeightMap.put(actionType, confValue);
+				}
+				logger.info("get actionType from tde , type="+actionType+",value="+typeWeight);
 			}
 		}else{
 			typeWeight = getConfigValueFromTde(actionType);
-			ConfigValue confValue = new ConfigValue(typeWeight,now);
-			actionWeightMap.put(actionType, confValue);
+			if(typeWeight != null){
+				ConfigValue confValue = new ConfigValue(typeWeight,now);
+				actionWeightMap.put(actionType, confValue);
+			}else{
+				typeWeight = actionWeightMap.get(actionType).getValue();
+				ConfigValue confValue = new ConfigValue(typeWeight,now);
+				actionWeightMap.put(actionType, confValue);
+			}
+			logger.info("get actionType from tde failed, type="+actionType);
 		}
 		
 		if(typeWeight != null){
@@ -164,11 +169,11 @@ public class UserFaceUpdateBolt extends AbstractConfigUpdateBolt{
 		String black_preference = "新闻|要闻|订阅|图片|视频|精选|北京|上海|广州|深圳|重庆|天津|香港|澳门|山东|山西|河南|河北|湖南|湖北|广东|广西|黑龙江|辽宁|浙江|安徽|江苏|福建|甘肃|江西|云南|贵州|四川|青海|陕西|吉林|宁夏|海南|西藏|内蒙古|新疆|台湾";
 		String[] bpres =  black_preference.split("\\|",-1);
 		
-		long now = System.currentTimeMillis()/1000;
+		this.pbLastUpdateTime = System.currentTimeMillis()/1000;
 		for(String each:bpres){
-			ConfigValue confValue = new ConfigValue(each,now);
-			this.blackPreferenceMap.put(each, confValue);
+			this.blackPreferenceMap.add(each);
 		}
+		logger.info("blackPreferenceInit,size= "+blackPreferenceMap.size());
 	}
 	
 	private void actionWeightMapInit(){
@@ -191,32 +196,29 @@ public class UserFaceUpdateBolt extends AbstractConfigUpdateBolt{
 		this.actionWeightMap.put("24", new ConfigValue("0",now));
 		this.actionWeightMap.put("25", new ConfigValue("0.3",now));
 		this.actionWeightMap.put("26", new ConfigValue("0",now));
+		
+		
+		logger.info("actionWeightMap,size= "+actionWeightMap.size());
 	}
 	
 	private boolean isBlackPreference(String prefernece){	
-		String newResult = null;
+		
 		long now = System.currentTimeMillis()/1000;
-		if(blackPreferenceMap.containsKey(prefernece)){
-			long lastUpdateTime = blackPreferenceMap.get(prefernece).getTime();
-			if(lastUpdateTime > now - 3600){
-				return true;
-			}else{
-				newResult = getConfigValueFromTde("black_preference_list");
+		if(pbLastUpdateTime < now - 3600){
+			String newResult = getConfigValueFromTde("black_preference_list");
+			if(newResult != null){
+				String[] items = newResult.split("\\|",-1);
+				if(items.length > 0){
+					blackPreferenceMap.clear();
+					for(String each:items){
+						blackPreferenceMap.add(each);
+					}
+				}
 			}
-		}else{
-			newResult = getConfigValueFromTde("black_preference_list");
-
+			pbLastUpdateTime = now;
 		}
 		
-		if(newResult != null){
-			String[] items = newResult.split("\\|",-1);
-			for(String each:items){
-				ConfigValue confValue = new ConfigValue(each,now);
-				actionWeightMap.put(each, confValue);
-			}
-		}
-		
-		if(blackPreferenceMap.containsKey(prefernece)){
+		if(blackPreferenceMap.contains(prefernece)){
 			return true;
 		}else{
 			return false;
@@ -230,17 +232,17 @@ public class UserFaceUpdateBolt extends AbstractConfigUpdateBolt{
 				try {
 					while (true) {
 						Thread.sleep(second * 1000);
-						HashMap<String,HashSet<String>> deadCombinerMap = null;
+						HashMap<String,String> deadCombinerMap = null;
 						synchronized (liveCombinerMap) {
 							deadCombinerMap = liveCombinerMap;
-							liveCombinerMap = new HashMap<String,HashSet<String>>(1024);
+							liveCombinerMap = new HashMap<String,String>(1024);
 						}
 						
 						Set<String> keySet = deadCombinerMap.keySet();
 						for (String key : keySet) {
-							HashSet<String> valueSet = deadCombinerMap.get(key);
+							String itemActType = deadCombinerMap.get(key);
 							try{								
-								new GetItemAttrByItemId(key,valueSet).excute();
+								new GetItemAttrByItemId(key,itemActType).excute();
 							}catch(Exception e){
 								logger.error(e.getMessage(), e);
 							}
@@ -257,14 +259,7 @@ public class UserFaceUpdateBolt extends AbstractConfigUpdateBolt{
 	
 	private void combinerKeys(String key,String  value) {	
 		synchronized(liveCombinerMap){
-			HashSet<String> valueSet = null;
-			if(liveCombinerMap.containsKey(key)){
-				valueSet = liveCombinerMap.get(key);	
-			}else{
-				valueSet = new HashSet<String>();
-			}
-			valueSet.add(value);
-			liveCombinerMap.put(key, valueSet);
+			liveCombinerMap.put(key, value);
 		}
 	}	
 	
@@ -273,17 +268,19 @@ public class UserFaceUpdateBolt extends AbstractConfigUpdateBolt{
 		try{
 			
 			String bid = tuple.getStringByField("bid");
-			String topic = tuple.getStringByField("topic");
 			String itemId = tuple.getStringByField("item_id");
+			String qq = tuple.getStringByField("qq");
+			String uid = tuple.getStringByField("uid");
+			String actionType = tuple.getStringByField("action_type");
 			
-			if(topic.equals(Constants.actions_stream)){
-				String qq = tuple.getStringByField("qq");
-				String actionType = tuple.getStringByField("action_type");
-				String comValue = Utils.spliceStringBySymbol("#", bid, qq, actionType);
-				
-				String comKey = Utils.spliceStringBySymbol("#", bid,itemId);
-				combinerKeys(comKey, comValue);
+			if(!Utils.isBidValid(bid) || !Utils.isItemIdValid(itemId)
+					|| !Utils.isQNumValid(qq)){
+				return;
 			}
+
+			String comValue = Utils.spliceStringBySymbol("#", bid, itemId, actionType);
+			String comKey = Utils.spliceStringBySymbol("#", bid,qq);
+			combinerKeys(comKey, comValue);
 		}catch(Exception e){
 			logger.error(e.getMessage(), e);
 		}
@@ -291,12 +288,18 @@ public class UserFaceUpdateBolt extends AbstractConfigUpdateBolt{
 	}
 
 	public class GetItemAttrByItemId implements MutiClientCallBack{
-		private String bidItemId;
-		private HashSet<String> valueSet;
+		private String bidQQ;
+		private String bidItem;
+		private String actType;
 		
-		public GetItemAttrByItemId(String bidItemId,HashSet<String> valueSet){
-			this.bidItemId = bidItemId;
-			this.valueSet = valueSet;
+		public GetItemAttrByItemId(String bidQQ,String bidItemActType){
+			this.bidQQ = bidQQ;
+			
+			String[] items = bidItemActType.split("#",-1);
+			if(items.length >=3){
+				this.bidItem = Utils.spliceStringBySymbol("#", items[0], items[1]);
+				this.actType = items[2];
+			}
 		}
 		
 		@Override
@@ -306,7 +309,8 @@ public class UserFaceUpdateBolt extends AbstractConfigUpdateBolt{
 				Result<byte[]> res = afuture.get();
 				if(res.isSuccess() && res.getResult() != null){
 					NewsApp.Newsapp.NewsAttr itemAttr = NewsApp.Newsapp.NewsAttr.parseFrom(res.getResult());
-					next(valueSet,itemAttr);
+					itemAttrCache.put(bidItem, itemAttr);
+					next(bidQQ,itemAttr,actType);
 				}
 			} catch (Exception e) {
 				logger.error(e.getMessage(), e);
@@ -314,19 +318,18 @@ public class UserFaceUpdateBolt extends AbstractConfigUpdateBolt{
 		}
 
 		public void excute() {
-			NewsApp.Newsapp.NewsAttr itemAttr = null;
-			SoftReference<NewsApp.Newsapp.NewsAttr> sr = itemAttrCache.get(bidItemId);
-			if(sr != null){
-				itemAttr = sr.get();
+			if(bidItem == null || actType == null){
+				return;
 			}
-				
-			if(itemAttr != null){
-				next(valueSet,itemAttr);
+			
+			if(itemAttrCache.containsKey(bidItem)){
+				NewsApp.Newsapp.NewsAttr itemAttr = itemAttrCache.get(bidItem);
+				next(bidQQ,itemAttr,actType);
 			}else{				
 				try{
 					ClientAttr clientEntry = mtClientList.get(0);		
 					TairOption opt = new TairOption(clientEntry.getTimeout());
-					Future<Result<byte[]>> future = clientEntry.getClient().getAsync((short)nsCbIndexTableId,bidItemId.getBytes(),opt);
+					Future<Result<byte[]>> future = clientEntry.getClient().getAsync((short)nsCbIndexTableId,bidItem.getBytes(),opt);
 					clientEntry.getClient().notifyFuture(future, this,clientEntry);	
 				}catch(Exception e){
 					logger.error(e.getMessage(), e);
@@ -334,110 +337,131 @@ public class UserFaceUpdateBolt extends AbstractConfigUpdateBolt{
 			}
 		}
 		
-		public void next(HashSet<String> valueSet,NewsApp.Newsapp.NewsAttr itemAttr){	
-			for(String bidQQType: valueSet){
-				if(bidQQType.indexOf("389687043") > 0){
-					logger.info("user face,qq=389687043,itemAttr.count ="+itemAttr.getCategoryCount());
-				}
-				new RefreshQQProfileCallBack(bidQQType,itemAttr).excute();
+		public void next(String bidQQ,NewsApp.Newsapp.NewsAttr itemAttr,String actType){	
+			if(bidQQ.indexOf("389687043") > 0){
+				logger.info("user face,qq=389687043,itemAttr.count ="+itemAttr.getCategoryCount());
 			}
+			
+			if(itemAttr == null || itemAttr.getCategoryCount() <= 0){
+				return;
+			}
+			new RefreshQQProfileCallBack(bidQQ,itemAttr,actType).excute();
 		}
-		
 	} 
 	
 	public class RefreshQQProfileCallBack implements MutiClientCallBack{
-		private String bidQQType;
-		private String key;
+		private String bidQQ;
 		private String actionType;
 		NewsApp.Newsapp.NewsAttr itemAttr;
 		
-		public RefreshQQProfileCallBack(String bidQQType,NewsApp.Newsapp.NewsAttr itemAttr){
-			this.bidQQType = bidQQType;
-			
-			String[] items =  bidQQType.split("#");
-			if(items.length >= 2){
-				this.key = Utils.spliceStringBySymbol("#", items[0],items[1]);
-				this.actionType = items[2];
-			}else{
-				this.key = null;
-				this.actionType = null;
-			}
-			
+		public RefreshQQProfileCallBack(String bidQQ,NewsApp.Newsapp.NewsAttr itemAttr,String actionType){			
+			this.bidQQ = bidQQ;
+			this.actionType = actionType;
 			this.itemAttr = itemAttr;
 		}
 		
 		@Override
 		public void handle(Future<?> future, Object context) {
 			Future<Result<byte[]>> afuture = (Future<Result<byte[]>>) future;
-			if(key.indexOf("389687043")>=0){
+			if(bidQQ.indexOf("389687043")>=0){
 				logger.info("user face,from tde=");
 			}
-			
+			UserFace qqFace = null;
 			try {
 				Result<byte[]> res = afuture.get();
 				if(res.isSuccess() && res.getResult() != null){
-					UserFace qqFace = UserFace.parseFrom(res.getResult());					
-					doRefreshUserFace(qqFace);
+					qqFace = UserFace.parseFrom(res.getResult());					
 				}
 			} catch (Exception e) {
 				logger.error(e.getMessage(), e);
 			}
+			
+			doRefreshUserFace(qqFace);
 		}
 
 		public void excute() {
-			if(key == null || actionType == null){
-				return;
-			}
-				
 			try{
 				ClientAttr clientEntry = mtClientList.get(0);		
 				TairOption opt = new TairOption(clientEntry.getTimeout());
-				Future<Result<byte[]>> future = clientEntry.getClient().getAsync((short)nsUserFaceTableId,key.getBytes(),opt);
+				Future<Result<byte[]>> future = clientEntry.getClient().getAsync((short)nsUserFaceTableId,bidQQ.getBytes(),opt);
 				clientEntry.getClient().notifyFuture(future, this,clientEntry);	
 			}catch(Exception e){
 				logger.error(e.getMessage(), e);
 			}
 			
-			if(key.indexOf("389687043")>=0){
-				logger.info("user face,send to tde,tableId="+nsUserFaceTableId+",key="+key);
+			if(bidQQ.indexOf("389687043")>=0){
+				logger.info("user face,send to tde,tableId="+nsUserFaceTableId+",bidQQ="+bidQQ);
 			}
 		}
 		
+		private void insertToListByWeightDesc(UserFace.UserPreference newBaseVal,
+				LinkedList<UserFace.UserPreference> qqFaceList) {
+			boolean insert = false;
+			for (int idx = 0; idx < qqFaceList.size(); idx++) {
+				UserFace.UserPreference oldVal = qqFaceList.get(idx);
+				if (!insert && newBaseVal.getWeight() >= oldVal.getWeight()) {
+					qqFaceList.add(idx, newBaseVal);
+					idx++;
+					insert = true;
+				}
+				
+				if (oldVal.getPreference().equals(newBaseVal.getPreference())) {
+					qqFaceList.remove(oldVal);
+					idx--;
+				}
+			}
+			
+			if (!insert && qqFaceList.size() < topNum) {
+				qqFaceList.add(newBaseVal);
+			}
+		}
+
+		
 		private void doRefreshUserFace(UserFace qqFace){
-			if(key.indexOf("389687043")>=0){
-				logger.info("user face,qqFace="+qqFace.getPreferenceCount());
+			if(bidQQ.indexOf("389687043")>=0){
+				logger.info("user face,oldQQFace="+qqFace.getPreferenceCount()+",newItemAttrFace="+itemAttr.getCategoryCount());
 			}
 			LinkedList<UserFace.UserPreference> newQQFaceList = new LinkedList<UserFace.UserPreference>();
 	
 			HashSet<String> alreadyIn = new HashSet<String>();
-			for(NewsCategory cate:itemAttr.getCategoryList()){
+			
+			for(NewsCategory cate:itemAttr.getCategoryList()){	
 				if(cate.getName().toStringUtf8().equals("")){
 					continue;
 				}
 				
-				for(UserFace.UserPreference up:qqFace.getPreferenceList()){
-					String tag = up.getPreference().toStringUtf8();
-					
-					if(newQQFaceList.size() > topNum){
-						break;
-					}
-					
-					if(tag.equals("") || isBlackPreference(tag)){
-						continue;
-					}
-														
-					if(tag.equals(cate.getName().toStringUtf8())){
-						UserFace.UserPreference.Builder newUpBuilder = 
-								UserFace.UserPreference.newBuilder();
+				if(qqFace != null){
+					for(UserFace.UserPreference up:qqFace.getPreferenceList()){
+						String tag = up.getPreference().toStringUtf8();
 						
-						float newWeight = up.getWeight() + computerUserFaceWeight(1F ,0.25F ,actionType);
-						newUpBuilder.setPreference(cate.getName());
-						newUpBuilder.setLevel(cate.getLevel());
-						newUpBuilder.setType(up.getType());
-						newUpBuilder.setWeight(newWeight);
+						if(newQQFaceList.size() > topNum){
+							break;
+						}
 						
-						newQQFaceList.add(newUpBuilder.build());
-						alreadyIn.add(cate.getName().toStringUtf8());
+						if(tag.equals("") || isBlackPreference(tag)){
+							continue;
+						}
+															
+						if(tag.equals(cate.getName().toStringUtf8())
+								&& !alreadyIn.contains(tag)){
+							UserFace.UserPreference.Builder newUpBuilder = 
+									UserFace.UserPreference.newBuilder();
+							
+							float newWeight = up.getWeight() + computerUserFaceWeight(1F ,0.25F ,actionType);
+							if(bidQQ.indexOf("389687043")>=0){
+								logger.info("add new pre in for,newWeight = "+newWeight+",type="+actionType+",weightInMap="+actionWeightMap.get(actionType));
+							}
+							if(newWeight > 0){
+								newUpBuilder.setPreference(cate.getName());
+								newUpBuilder.setLevel(cate.getLevel());
+								newUpBuilder.setType(up.getType());
+								newUpBuilder.setWeight(newWeight);
+								
+								//newQQFaceList.add(newUpBuilder.build());
+								insertToListByWeightDesc(newUpBuilder.build(),newQQFaceList);
+								alreadyIn.add(cate.getName().toStringUtf8());
+							}
+						}
 					}
 				}
 				
@@ -446,48 +470,59 @@ public class UserFaceUpdateBolt extends AbstractConfigUpdateBolt{
 							UserFace.UserPreference.newBuilder();
 					
 					float newWeight = computerUserFaceWeight(1F ,0.25F ,actionType);
-					
-					newUpBuilder.setPreference(cate.getName());
-					newUpBuilder.setLevel(cate.getLevel());
-					newUpBuilder.setType(1);
-					newUpBuilder.setWeight(newWeight);
-					newQQFaceList.add(newUpBuilder.build());
-					
-					alreadyIn.add(cate.getName().toStringUtf8());
+					if(bidQQ.indexOf("389687043")>=0){
+						logger.info("add new pre in outside,newWeight = "+newWeight+",type="+actionType+",weightInMap="+actionWeightMap.get(actionType));
+					}
+					if(newWeight > 0){
+						newUpBuilder.setPreference(cate.getName());
+						newUpBuilder.setLevel(cate.getLevel());
+						newUpBuilder.setType(1);
+						newUpBuilder.setWeight(newWeight);
+						//newQQFaceList.add(newUpBuilder.build());
+						insertToListByWeightDesc(newUpBuilder.build(),newQQFaceList);
+						alreadyIn.add(cate.getName().toStringUtf8());
+					}
 				}
 			}
 			
+			if(bidQQ.indexOf("389687043")>=0){
+				logger.info("1,user face,newQQFaceList.size="+newQQFaceList.size());
+			}
+			
 			for(UserFace.UserPreference up:qqFace.getPreferenceList()){
-				if(!alreadyIn.contains(up.getPreference().toStringUtf8())){
-					newQQFaceList.add(up);
+				if(newQQFaceList.size() > topNum){
+					break;
+				}
+				
+				if(!alreadyIn.contains(up.getPreference().toStringUtf8()) 
+						&& up.getWeight() > 0){
+					insertToListByWeightDesc(up,newQQFaceList);
 					alreadyIn.add(up.getPreference().toStringUtf8());
 				}
 			}
-					
-			Collections.sort(newQQFaceList, new Comparator<UserFace.UserPreference>() {   
+			if(bidQQ.indexOf("389687043")>=0){
+				logger.info("2,user face,newQQFaceList.size="+newQQFaceList.size());
+			}
+			
+			/*Collections.sort(newQQFaceList, new Comparator<UserFace.UserPreference>() {   
 				@Override
-				public int compare(UserFace.UserPreference arg0,
-						UserFace.UserPreference arg1) {
+				public int compare(UserFace.UserPreference arg0,UserFace.UserPreference arg1) {
 					if(arg0.getWeight() > arg1.getWeight()){
 						return -1;
 					}
 					return 1;
 				}
-			}); 
+			});*/ 
 			
 			UserFace.Builder newQQFaceBuilder = UserFace.newBuilder();
 			newQQFaceBuilder.setProfile(qqFace.getProfile());
 			newQQFaceBuilder.addAllPreference(newQQFaceList);
 			
-			saveInTde(key,newQQFaceBuilder.build());
+			saveInTde(bidQQ,newQQFaceBuilder.build());
 		}
 		
 		private void saveInTde(String key,UserFace value){
-			if(key.indexOf("389687043")>=0){
-				logger.info("user face,count="+value.getPreferenceCount());
-			}
-			
-			if(key.indexOf("475182144")>=0){
+			if(key.indexOf("389687043")>=0 || key.indexOf("475182144")>=0){
 				logger.info("user face,count="+value.getPreferenceCount());
 			}
 			
@@ -496,7 +531,7 @@ public class UserFaceUpdateBolt extends AbstractConfigUpdateBolt{
 				try {
 					Future<Result<Void>> future = 
 					clientEntry.getClient().putAsync((short)nsUserFaceTableId, 
-										this.key.getBytes(), value.toByteArray(), putopt);
+										key.getBytes(), value.toByteArray(), putopt);
 					clientEntry.getClient().notifyFuture(future, userFaceCallBack, 
 							new UpdateCallBackContext(clientEntry,key,value.toByteArray(),putopt));
 

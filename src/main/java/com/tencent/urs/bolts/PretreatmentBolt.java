@@ -15,7 +15,6 @@ import com.tencent.streaming.commons.spouts.tdbank.Output;
 import com.tencent.tde.client.Result;
 import com.tencent.tde.client.TairClient.TairOption;
 import com.tencent.tde.client.impl.MutiThreadCallbackClient.MutiClientCallBack;
-import com.tencent.urs.protobuf.Recommend;
 import com.tencent.urs.tdengine.TDEngineClientFactory;
 import com.tencent.urs.tdengine.TDEngineClientFactory.ClientAttr;
 import com.tencent.urs.utils.Constants;
@@ -80,6 +79,7 @@ public class PretreatmentBolt extends AbstractConfigUpdateBolt {
 			Values outputValues = new Values();		
 			outputValues.add(bid);
 			outputValues.add(topic);
+			outputValues.add(uid);
 			outputValues.add(tuple.getStringByField("adpos"));
 			outputValues.add(tuple.getStringByField("action_type"));
 			outputValues.add(tuple.getStringByField("action_time"));
@@ -119,6 +119,7 @@ public class PretreatmentBolt extends AbstractConfigUpdateBolt {
 		@Override
 		public void handle(Future<?> future, Object context) {
 			Future<Result<byte[]>> afuture = (Future<Result<byte[]>>) future;
+			boolean isGetQQByUid = false; 
 			try {
 				Result<byte[]> res = afuture.get();
 				if(res.isSuccess() && res.getResult() != null){
@@ -127,14 +128,19 @@ public class PretreatmentBolt extends AbstractConfigUpdateBolt {
 						outputValues.add(qq);
 						qqCache.set(uid, new SoftReference<String>(qq),cacheExpireTime);	
 						new GetGroupIdUpdateCallBack(qq,outputValues).excute();
-					}else{
-						qqCache.set(uid, new SoftReference<String>("0"),cacheExpireTime);
+						isGetQQByUid = true;
 					}
-				}else{
-					qqCache.set(uid, new SoftReference<String>("0"),cacheExpireTime);
 				}
 			} catch (Exception e) {
 				logger.error(e.getMessage(), e);
+			}
+			
+			if(!isGetQQByUid){
+				outputValues.add("0");
+				outputValues.add("0");
+				emitData(outputValues);
+				qqCache.set(uid, new SoftReference<String>("0"),cacheExpireTime);
+				emitNoQQData();
 			}
 		}
 
@@ -145,9 +151,16 @@ public class PretreatmentBolt extends AbstractConfigUpdateBolt {
 					qq = sr.get();
 				}
 				
-				if(qq != null && Utils.isQNumValid(qq)){
-					outputValues.add(qq);
-					new GetGroupIdUpdateCallBack(qq,outputValues).excute();
+				if(qq != null ){
+					if(Utils.isQNumValid(qq)){
+						outputValues.add(qq);
+						new GetGroupIdUpdateCallBack(qq,outputValues).excute();
+					}else{
+						outputValues.add("0");
+						outputValues.add("0");
+						emitData(outputValues);
+						emitNoQQData();
+					}					
 				}else{
 					try{
 						ClientAttr clientEntry = mtClientList.get(0);		
@@ -222,4 +235,9 @@ public class PretreatmentBolt extends AbstractConfigUpdateBolt {
 		}
 	}
 	
+	private void emitNoQQData() {
+		synchronized(collector){
+			this.collector.emit("no——qq",new Values(""));
+		}
+	}
 }

@@ -87,7 +87,8 @@ public class HotTopBolt extends AbstractConfigUpdateBolt{
 			String actionType = tuple.getStringByField("action_type");
 			String actionTime = tuple.getStringByField("action_time");
 					
-			if(!Utils.isBidValid(bid) || !Utils.isQNumValid(qq) || !Utils.isGroupIdVaild(groupId) || !Utils.isItemIdValid(itemId)){
+			if(!Utils.isBidValid(bid) || !Utils.isQNumValid(qq) 
+					|| !Utils.isGroupIdVaild(groupId) || !Utils.isItemIdValid(itemId)){
 				return;
 			}
 			
@@ -158,7 +159,8 @@ public class HotTopBolt extends AbstractConfigUpdateBolt{
 			try {				
 				ClientAttr clientEntry = mtClientList.get(0);		
 				TairOption opt = new TairOption(clientEntry.getTimeout());
-				Future<Result<byte[]>> future = clientEntry.getClient().getAsync((short)nsGroupCountTableId,getKey.getBytes(),opt);
+				Future<Result<byte[]>> future = clientEntry.getClient().getAsync(
+						(short)nsGroupCountTableId,getKey.getBytes(),opt);
 				clientEntry.getClient().notifyFuture(future, this,clientEntry);		
 			} catch (Exception e) {
 				logger.error(e.getMessage(), e);
@@ -204,7 +206,7 @@ public class HotTopBolt extends AbstractConfigUpdateBolt{
 				return sumCount;
 			}
 			for(GroupCountInfo.TimeSegment ts: weightInfo.getTsegsList()){
-				if(ts.getTimeId() > Utils.getDateByTime(now - dataExpireTime)){
+				if(ts.getTimeId() >= Utils.getDateByTime(now - dataExpireTime)){
 					sumCount += ts.getCount();
 				}
 			}

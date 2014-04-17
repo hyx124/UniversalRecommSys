@@ -23,6 +23,7 @@ public class Constants {
 	public static String config_stream = "config";
 
 	public static String topN_alg_name = "D1";
+	public static String topN_Noqq_alg_name = "D2";
 	public static String ctr_alg_name = "A1001";
 	
 	public static String cf_alg_name = "C1001";

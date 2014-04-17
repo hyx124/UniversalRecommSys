@@ -93,7 +93,8 @@ public class ARCFBolt extends AbstractConfigUpdateBolt{
 			String actionType = tuple.getStringByField("action_type");
 			String actionTime = tuple.getStringByField("action_time");
 						
-			if(!Utils.isBidValid(bid) || !Utils.isQNumValid(qq) || !Utils.isGroupIdVaild(groupId) || !Utils.isItemIdValid(itemId)){
+			if(!Utils.isBidValid(bid) || !Utils.isQNumValid(qq) 
+					|| !Utils.isGroupIdVaild(groupId) || !Utils.isItemIdValid(itemId)){
 				return;
 			}
 			
@@ -162,7 +163,6 @@ public class ARCFBolt extends AbstractConfigUpdateBolt{
 		
 		public Double computeCFWeight(Float itemCount1, Float itemCount2,
 				Float pairCount) {	
-			//CF
 			if(itemCount1 == 0 || itemCount2 == 0 || pairCount == 0){
 				return 0D;
 			}
@@ -203,7 +203,7 @@ public class ARCFBolt extends AbstractConfigUpdateBolt{
 			Long now = System.currentTimeMillis()/1000;
 			if(weightInfo != null){
 				for(GroupPairInfo.TimeSegment ts: weightInfo.getTsegsList()){
-					if(ts.getTimeId() > Utils.getDateByTime(now - dataExpireTime)){
+					if(ts.getTimeId() >= Utils.getDateByTime(now - dataExpireTime)){
 						sumCount += ts.getCount();
 					}
 				}
@@ -302,7 +302,7 @@ public class ARCFBolt extends AbstractConfigUpdateBolt{
 			if(weightInfo != null){
 				
 				for(GroupCountInfo.TimeSegment ts: weightInfo.getTsegsList()){
-					if(ts.getTimeId() > Utils.getDateByTime(now - dataExpireTime)){
+					if(ts.getTimeId() >= Utils.getDateByTime(now - dataExpireTime)){
 						sumCount += ts.getCount();
 					}
 				}
@@ -317,7 +317,6 @@ public class ARCFBolt extends AbstractConfigUpdateBolt{
 		public GetPairsListCallBack(UpdateKey key,GroupActionCombinerValue value) {
 			this.key = key ; 
 			this.value = value;
-			//this.itemCount = itemCount;
 		}
 
 		public void excute() {
@@ -338,7 +337,7 @@ public class ARCFBolt extends AbstractConfigUpdateBolt{
 			HashSet<String>  itemSet = new HashSet<String>();		
 			
 			for(UserActiveDetail.TimeSegment tsegs:oldValueHeap.getTsegsList()){
-				if(tsegs.getTimeId() > Utils.getDateByTime(value.getTime() - linkedTime)){
+				if(tsegs.getTimeId() >= Utils.getDateByTime(value.getTime() - linkedTime)){
 					for(UserActiveDetail.TimeSegment.ItemInfo item: tsegs.getItemsList()){
 						if(!item.getItem().equals(key.getItemId())){
 							itemSet.add(item.getItem());

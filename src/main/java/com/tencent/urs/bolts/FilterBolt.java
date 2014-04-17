@@ -293,13 +293,6 @@ public class FilterBolt extends AbstractConfigUpdateBolt {
 					clientEntry.getClient().notifyFuture(future, putCallBack, 
 							new UpdateCallBackContext(clientEntry,key,putValue.toByteArray(),putopt));
 
-					/*
-					if(mt!=null){
-						MonitorEntry mEntryPut = new MonitorEntry(Constants.SUCCESSCODE,Constants.SUCCESSCODE);
-						mEntryPut.addExtField("TDW_IDC", clientEntry.getGroupname());
-						mEntryPut.addExtField("tbl_name", "TopActions");
-						mt.addCountEntry(Constants.systemID, Constants.tde_put_interfaceID, mEntryPut, 1);
-					}*/
 				} catch (Exception e){
 					logger.error(e.getMessage(), e);
 				}

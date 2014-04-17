@@ -166,7 +166,6 @@ public class CtrStorBolt extends AbstractConfigUpdateBolt{
 							try{
 								new CtrUpdateCallBack(key,expireTimeValue).excute();
 							}catch(Exception e){
-								//mt.addCountEntry(systemID, interfaceID, item, count)
 							}
 						}
 						deadCombinerMap.clear();
@@ -269,12 +268,6 @@ public class CtrStorBolt extends AbstractConfigUpdateBolt{
 				ctrCache.set(key, new SoftReference<CtrInfo>(value), cacheExpireTime);
 			}
 			
-			/*
-			for(CtrInfo.TimeSegment ts: value.getTsegsList()){
-				logger.info("result,key="+key+",time="+ts.getTimeId()+",click="+ts.getClick()+",impress="+ts.getImpress()+",tableId="+nsTableId);
-			}*/
-				
-			
 			Future<Result<Void>> future = null;
 			for(ClientAttr clientEntry:mtClientList ){
 				TairOption putopt = new TairOption(clientEntry.getTimeout(),(short)0, dataExpireTime);
@@ -283,13 +276,6 @@ public class CtrStorBolt extends AbstractConfigUpdateBolt{
 					clientEntry.getClient().notifyFuture(future, putCallBack, 
 							new UpdateCallBackContext(clientEntry,key,value.toByteArray(),putopt));
 					
-					/*
-					if(mt!=null){
-						MonitorEntry mEntryPut = new MonitorEntry(Constants.SUCCESSCODE,Constants.SUCCESSCODE);
-						mEntryPut.addExtField("TDW_IDC", clientEntry.getGroupname());
-						mEntryPut.addExtField("tbl_name", "FIFO1");
-						mt.addCountEntry(Constants.systemID, Constants.tde_put_interfaceID, mEntryPut, 1);
-					}*/
 				} catch (Exception e){
 					logger.error(e.getMessage(), e);
 				}

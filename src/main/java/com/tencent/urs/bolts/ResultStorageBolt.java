@@ -79,9 +79,7 @@ public class ResultStorageBolt extends AbstractConfigUpdateBolt {
 
 	@Override
 	public void processEvent(String sid, Tuple tuple) {		
-		//bid,key,item_id,weight,alg_name,big_type,mid_type,small_type,free,price
 		try{
-			//String algName = tuple.getStringByField("alg_name");
 			String key = tuple.getStringByField("key");			
 			String itemId = tuple.getStringByField("item_id");
 			Double weight = tuple.getDoubleByField("weight");
@@ -223,7 +221,7 @@ public class ResultStorageBolt extends AbstractConfigUpdateBolt {
 			RecommendResult.Builder mergeValueBuilder = 
 					RecommendResult.newBuilder();
 			
-			
+			long now = System.currentTimeMillis()/1000;
 			for(String itemId:resMap.keySet()){
 				RecommendResult.Result eachNewValue = resMap.get(itemId);
 				
@@ -234,14 +232,15 @@ public class ResultStorageBolt extends AbstractConfigUpdateBolt {
 							break;
 						}
 															
-						if(!alreadyIn.contains(eachNewValue.getItem()) && eachNewValue.getWeight() >= eachItem.getWeight()){
+						if(!alreadyIn.contains(eachNewValue.getItem()) 
+								&& eachNewValue.getWeight() >= eachItem.getWeight()){
 							mergeValueBuilder.addResults(eachNewValue);
 							alreadyIn.add(eachNewValue.getItem());
 						}
 						
 						if(!alreadyIn.contains(eachItem.getItem()) 
 								&& !eachItem.getItem().equals(eachNewValue.getItem())
-								&& ( - eachItem.getUpdateTime()) < itemExpireTime	
+								&& eachItem.getUpdateTime() > (now - itemExpireTime)
 								&& eachItem.getWeight() > 0){
 
 								mergeValueBuilder.addResults(eachItem);

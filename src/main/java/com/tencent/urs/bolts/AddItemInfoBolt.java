@@ -112,6 +112,7 @@ public class AddItemInfoBolt extends AbstractConfigUpdateBolt {
 			if(sid.equals(Constants.actions_stream)){
 				String bid = tuple.getStringByField("bid");
 				String qq = tuple.getStringByField("qq");
+				String uid = tuple.getStringByField("uid");
 				String itemId = tuple.getStringByField("item_id");
 				
 				String actionType = tuple.getStringByField("action_type");
@@ -120,7 +121,7 @@ public class AddItemInfoBolt extends AbstractConfigUpdateBolt {
 				String platform = tuple.getStringByField("platform");
 				
 				streamId = Constants.actions_stream;
-				value = new Values(bid,itemId,qq,actionType,actionTime,platform,lbsInfo);	
+				value = new Values(bid,itemId,qq,uid,actionType,actionTime,platform,lbsInfo);	
 			}else if(sid.equals(Constants.alg_result_stream)){
 				String algName = this.tuple.getStringByField("alg_name");	
 				String key = tuple.getStringByField("key");
@@ -198,5 +199,4 @@ public class AddItemInfoBolt extends AbstractConfigUpdateBolt {
 
 		}
 	}
-	
 }

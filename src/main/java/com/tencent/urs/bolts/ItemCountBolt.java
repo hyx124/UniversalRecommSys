@@ -60,6 +60,7 @@ public class ItemCountBolt extends AbstractConfigUpdateBolt{
 	
 	private int dataExpireTime;
 	private int cacheExpireTime;
+	private int linkedTime;
 	private boolean debug;
 	
 	public ItemCountBolt(String config, ImmutableList<Output> outputField) {
@@ -93,6 +94,7 @@ public class ItemCountBolt extends AbstractConfigUpdateBolt{
 		dataExpireTime = config.getInt("data_expiretime",7*24*3600);
 		cacheExpireTime = config.getInt("cache_expiretime",3600);
 		debug = config.getBoolean("debug",false);
+		linkedTime = config.getInt("linked_time",24*3600);
 	}
 	
 	@Override
@@ -216,7 +218,8 @@ public class ItemCountBolt extends AbstractConfigUpdateBolt{
 				}else{
 					ClientAttr clientEntry = mtClientList.get(0);		
 					TairOption opt = new TairOption(clientEntry.getTimeout());
-					Future<Result<byte[]>> future = clientEntry.getClient().getAsync((short)nsGroupCountTableId,groupCountKey.getBytes(),opt);
+					Future<Result<byte[]>> future = clientEntry.getClient().getAsync(
+							(short)nsGroupCountTableId,groupCountKey.getBytes(),opt);
 					clientEntry.getClient().notifyFuture(future, this,clientEntry);	
 				}			
 				
@@ -241,14 +244,6 @@ public class ItemCountBolt extends AbstractConfigUpdateBolt{
 					future = clientEntry.getClient().putAsync((short)nsGroupCountTableId, key.getBytes(),value.toByteArray(), putopt);
 					clientEntry.getClient().notifyFuture(future, putCallBack, 
 							new UpdateCallBackContext(clientEntry,key,value.toByteArray(),putopt));
-					
-					/*
-					if(mt!=null){
-						MonitorEntry mEntryPut = new MonitorEntry(Constants.SUCCESSCODE,Constants.SUCCESSCODE);
-						mEntryPut.addExtField("TDW_IDC", clientEntry.getGroupname());
-						mEntryPut.addExtField("tbl_name", "FIFO1");
-						mt.addCountEntry(Constants.systemID, Constants.tde_put_interfaceID, mEntryPut, 1);
-					}*/
 				} catch (Exception e){
 					logger.error(e.getMessage(), e);
 				}
@@ -518,7 +513,8 @@ public class ItemCountBolt extends AbstractConfigUpdateBolt{
 			try {
 				ClientAttr clientEntry = mtClientList.get(0);		
 				TairOption opt = new TairOption(clientEntry.getTimeout());
-				Future<Result<byte[]>> future = clientEntry.getClient().getAsync((short)nsDetailTableId,userCheckKey.getBytes(),opt);
+				Future<Result<byte[]>> future = clientEntry.getClient().getAsync(
+						(short)nsDetailTableId,userCheckKey.getBytes(),opt);
 				clientEntry.getClient().notifyFuture(future, this,clientEntry);	
 			} catch (Exception e) {
 				logger.error(e.getMessage(), e);
@@ -529,7 +525,7 @@ public class ItemCountBolt extends AbstractConfigUpdateBolt{
 			Float newWeight = getWeightByType(key.getBid(),this.values.getType());		
 			Long timeId = Utils.getDateByTime(values.getTime());
 			for(TimeSegment ts:oldValueHeap.getTsegsList()){
-				if(ts.getTimeId() <  Utils.getDateByTime(values.getTime() - dataExpireTime)){
+				if(ts.getTimeId() <  Utils.getDateByTime(values.getTime() - linkedTime)){
 					continue;
 				}
 			

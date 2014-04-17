@@ -47,7 +47,6 @@ public class ActionDetailBolt extends AbstractConfigUpdateBolt{
 	private static final long serialVersionUID = 5958754435166536530L;
 	private List<ClientAttr> mtClientList;	
 	private MonitorTools mt;
-	//private DataCache<Recommend.UserActiveDetail> cacheMap;
 	private UpdateCallBack putCallBack;
 	private HashMap<String,ActionCombinerValue> liveCombinerMap;
 	
@@ -81,7 +80,6 @@ public class ActionDetailBolt extends AbstractConfigUpdateBolt{
 		
 		this.mtClientList = TDEngineClientFactory.createMTClientList(conf);
 		this.mt = MonitorTools.getMonitorInstance(conf);
-		//this.cacheMap = new DataCache<Recommend.UserActiveDetail>(conf);
 		this.liveCombinerMap = new HashMap<String,ActionCombinerValue>(1024);
 		this.putCallBack = new UpdateCallBack(mt, this.nsTableId, debug);
 		
@@ -182,12 +180,6 @@ public class ActionDetailBolt extends AbstractConfigUpdateBolt{
 		}
 
 		public void excute() {
-			/*Recommend.UserActiveDetail oldValue = null;
-			SoftReference<UserActiveDetail> sr = cacheMap.get(key);
-			if(sr != null){
-				oldValue =  sr.get();
-			}*/
-			
 			if(debug){
 				logger.info("get key="+key+",in tde");
 			}
@@ -317,7 +309,7 @@ public class ActionDetailBolt extends AbstractConfigUpdateBolt{
 			}); 
 			
 			for(Long timeId: sortList){
-				if(timeId < Utils.getDateByTime(time - dataExpireTime) || timeId > Utils.getDateByTime(time)){
+				if(timeId < Utils.getDateByTime(time - dataExpireTime)){
 					continue;
 				}
 				

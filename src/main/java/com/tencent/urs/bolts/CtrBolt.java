@@ -207,12 +207,6 @@ public class CtrBolt extends AbstractConfigUpdateBolt{
 				logger.error(e.getMessage(), e);
 			}
 		}
-			
-		
-		private Long getWinIdByTime(Long time){	
-			String expireId = new SimpleDateFormat("yyyyMMdd").format(time*1000L);
-			return Long.valueOf(expireId);
-		}
 		
 		@Override
 		public void handle(Future<?> future, Object context) {			
@@ -240,7 +234,7 @@ public class CtrBolt extends AbstractConfigUpdateBolt{
 			Double click_sum = 0D;
 			Double impress_sum = 0D;
 			for(CtrInfo.TimeSegment ts:oldCtr.getTsegsList()){
-				if(ts.getTimeId() >= getWinIdByTime(value - dataExpireTime)){
+				if(ts.getTimeId() >= Utils.getDateByTime(value - dataExpireTime)){
 					click_sum = click_sum + ts.getClick();
 					impress_sum = impress_sum + ts.getImpress();
 				}	

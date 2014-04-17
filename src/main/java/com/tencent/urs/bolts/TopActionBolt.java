@@ -1,16 +1,10 @@
 package com.tencent.urs.bolts;
 
-import java.lang.ref.SoftReference;
-import java.util.ArrayList;
-import java.util.Collections;
-import java.util.Comparator;
 import java.util.HashMap;
 import java.util.HashSet;
 import java.util.List;
 import java.util.Map;
-import java.util.Map.Entry;
 import java.util.Set;
-import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.Future;
 
 import org.apache.commons.configuration.XMLConfiguration;
@@ -28,13 +22,10 @@ import com.tencent.urs.asyncupdate.UpdateCallBack;
 import com.tencent.urs.asyncupdate.UpdateCallBackContext;
 import com.tencent.urs.combine.ActionCombinerValue;
 import com.tencent.urs.protobuf.Recommend;
-import com.tencent.urs.protobuf.Recommend.RecommendResult;
 import com.tencent.urs.protobuf.Recommend.UserActiveHistory;
-import com.tencent.urs.protobuf.Recommend.UserActiveHistory.ActiveRecord;
 import com.tencent.urs.tdengine.TDEngineClientFactory;
 import com.tencent.urs.tdengine.TDEngineClientFactory.ClientAttr;
 import com.tencent.urs.utils.Constants;
-import com.tencent.urs.utils.DataCache;
 import com.tencent.urs.utils.Utils;
 
 import backtype.storm.task.OutputCollector;
@@ -88,11 +79,8 @@ public class TopActionBolt extends AbstractConfigUpdateBolt {
 		try{
 			String bid = tuple.getStringByField("bid");
 			String qq = tuple.getStringByField("qq");
+			String uid = tuple.getStringByField("uid");
 			String itemId = tuple.getStringByField("item_id");			
-			
-			if(!Utils.isItemIdValid(itemId) || !Utils.isQNumValid(qq)){
-				return;
-			}
 			
 			String actionType = tuple.getStringByField("action_type");
 			String actionTime = tuple.getStringByField("action_time");
@@ -105,7 +93,7 @@ public class TopActionBolt extends AbstractConfigUpdateBolt {
 			Long itemTime = tuple.getLongByField("item_time");
 			String shopId = tuple.getStringByField("shop_id");
 			
-			if(Utils.isRecommendAction(actionType)){
+			if(!Utils.isItemIdValid(itemId) || Utils.isRecommendAction(actionType)){
 				return;
 			}
 			
@@ -124,8 +112,18 @@ public class TopActionBolt extends AbstractConfigUpdateBolt {
 			
 			ActionCombinerValue value = new ActionCombinerValue();
 			value.init(itemId,actBuilder.build());
-			String key = bid+"#"+qq+"#"+Constants.topN_alg_name;
-			combinerKeys(key, value);	
+			
+			if(Utils.isQNumValid(qq)){
+				String key = bid+"#"+qq+"#"+Constants.topN_alg_name;
+				combinerKeys(key, value);
+			}else if(!uid.equals("0") && !uid.equals("")){
+				String key = bid+"#"+uid+"#"+Constants.topN_Noqq_alg_name;
+				if(debug){
+					logger.info("input ,key="+key);
+				}
+				combinerKeys(key, value);
+			}
+				
 		}catch(Exception e){
 			logger.error(e.getMessage(), e);
 		}
@@ -200,26 +198,15 @@ public class TopActionBolt extends AbstractConfigUpdateBolt {
 				UserActiveHistory oldVal,
 				UserActiveHistory.Builder updatedBuilder){	
 			HashSet<String> alreadyIn = new HashSet<String>();
-			
-			List<Map.Entry<String, UserActiveHistory.ActiveRecord>> sortList =
-				    new ArrayList<Map.Entry<String, UserActiveHistory.ActiveRecord>>(newValList.getActRecodeMap().entrySet());
-			
-			Collections.sort(sortList, new Comparator<Map.Entry<String, UserActiveHistory.ActiveRecord>>() {   
-				@Override
-				public int compare(Entry<String, ActiveRecord> arg0,
-						Entry<String, ActiveRecord> arg1) {
-					 return (int)(arg1.getValue().getActTime() - arg0.getValue().getActTime());
-				}
-			}); 
-			
-			for(Map.Entry<String, UserActiveHistory.ActiveRecord> sortItem: sortList){
+		
+			for(String newItem: newValList.getActRecodeMap().keySet()){
 				if(updatedBuilder.getActRecordsCount() >= topNum){
 					break;
 				}
 				
-				if(!alreadyIn.contains(sortItem.getKey())){
-					updatedBuilder.addActRecords(sortItem.getValue());
-					alreadyIn.add(sortItem.getKey());
+				if(!alreadyIn.contains(newItem)){
+					updatedBuilder.addActRecords(newValList.getActRecodeMap().get(newItem));
+					alreadyIn.add(newItem);
 				}
 			}
 			
@@ -227,26 +214,16 @@ public class TopActionBolt extends AbstractConfigUpdateBolt {
 				for(Recommend.UserActiveHistory.ActiveRecord eachOldVal:oldVal.getActRecordsList()){
 					if(updatedBuilder.getActRecordsCount() >= topNum){
 						break;
-					}
-					
+					}			
 					if(alreadyIn.contains(eachOldVal.getItem())){
 						continue;
 					}				
-
 					updatedBuilder.addActRecords(eachOldVal);
 				}
 			}
 		}
 
-		private void Save(UserActiveHistory.Builder mergeValueBuilder){	
-			if(debug){
-				logger.info("in save,size="+mergeValueBuilder.getActRecordsCount());
-				for(Recommend.UserActiveHistory.ActiveRecord act:mergeValueBuilder.getActRecordsList()){
-					logger.info("new itemId = "+act.getItem()+",time="+act.getActTime()+",type="+act.getActType());
-				}
-			}
-			
-			
+		private void Save(UserActiveHistory.Builder mergeValueBuilder){		
 			UserActiveHistory putValue = mergeValueBuilder.build();
 			for(ClientAttr clientEntry:mtClientList ){
 				TairOption putopt = new TairOption(clientEntry.getTimeout(),(short)0, dataExpireTime);
