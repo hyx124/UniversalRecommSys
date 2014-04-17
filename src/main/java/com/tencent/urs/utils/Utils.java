@@ -90,8 +90,7 @@ public class Utils {
 		}
 		return true;
 	}
-	
-	
+		
 	public static boolean isPageIdValid(String pageId){
 		if(pageId.equals("")){
 			return false;
@@ -123,7 +122,6 @@ public class Utils {
 				return false;
 			}
 		}
-
 	}
 
 	public static Float getActionWeight(Integer actionType) {

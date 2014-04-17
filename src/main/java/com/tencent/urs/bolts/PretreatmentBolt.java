@@ -9,6 +9,8 @@ import org.apache.commons.configuration.XMLConfiguration;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
+import storm.trident.Stream;
+
 import com.google.common.collect.ImmutableList;
 import com.tencent.streaming.commons.bolts.config.AbstractConfigUpdateBolt;
 import com.tencent.streaming.commons.spouts.tdbank.Output;
@@ -72,7 +74,8 @@ public class PretreatmentBolt extends AbstractConfigUpdateBolt {
 			String qq = tuple.getStringByField("qq");
 			String uid = tuple.getStringByField("uid");		
 			
-			if(!topic.equals(Constants.actions_stream)){
+			if(!topic.equals(Constants.actions_stream) && !
+					topic.equals(Constants.recommend_action_stream)){
 				return ;
 			}
 			
@@ -89,7 +92,8 @@ public class PretreatmentBolt extends AbstractConfigUpdateBolt {
 			outputValues.add(tuple.getStringByField("platform"));	
 			outputValues.add(tuple.getStringByField("lbs_info"));	
 			
-			if(topic.equals(Constants.actions_stream)){
+			if(topic.equals(Constants.actions_stream) || 
+					topic.equals(Constants.recommend_action_stream)){
 				if(!Utils.isQNumValid(qq)){
 					if(!uid.equals("0") && !uid.equals("")){
 						new GetQQUpdateCallBack(uid,outputValues).excute();				
@@ -140,38 +144,35 @@ public class PretreatmentBolt extends AbstractConfigUpdateBolt {
 				outputValues.add("0");
 				emitData(outputValues);
 				qqCache.set(uid, new SoftReference<String>("0"),cacheExpireTime);
-				emitNoQQData();
 			}
 		}
 
 		public void excute() {
-				String qq = null;
-				SoftReference<String> sr = qqCache.get(uid);
-				if(sr != null){
-					qq = sr.get();
-				}
+			String qq = null;
+			SoftReference<String> sr = qqCache.get(uid);
+			if(sr != null){
+				qq = sr.get();
+			}
 				
-				if(qq != null ){
-					if(Utils.isQNumValid(qq)){
-						outputValues.add(qq);
-						new GetGroupIdUpdateCallBack(qq,outputValues).excute();
-					}else{
-						outputValues.add("0");
-						outputValues.add("0");
-						emitData(outputValues);
-						emitNoQQData();
-					}					
+			if(qq != null ){
+				if(Utils.isQNumValid(qq)){
+					outputValues.add(qq);
+					new GetGroupIdUpdateCallBack(qq,outputValues).excute();
 				}else{
-					try{
-						ClientAttr clientEntry = mtClientList.get(0);		
-						TairOption opt = new TairOption(clientEntry.getTimeout());
-						Future<Result<byte[]>> future = clientEntry.getClient().getAsync((short)nsTableUin,uid.getBytes(),opt);
-						clientEntry.getClient().notifyFuture(future, this,clientEntry);	
-					}catch(Exception e){
-						logger.error(e.getMessage(), e);
-					}
+					outputValues.add("0");
+					outputValues.add("0");
+					emitData(outputValues);
+				}					
+			}else{
+				try{
+					ClientAttr clientEntry = mtClientList.get(0);		
+					TairOption opt = new TairOption(clientEntry.getTimeout());
+					Future<Result<byte[]>> future = clientEntry.getClient().getAsync((short)nsTableUin,uid.getBytes(),opt);
+					clientEntry.getClient().notifyFuture(future, this,clientEntry);	
+				}catch(Exception e){
+					logger.error(e.getMessage(), e);
 				}
-
+			}
 		}
 	}
 	
@@ -230,14 +231,36 @@ public class PretreatmentBolt extends AbstractConfigUpdateBolt {
 	}
 	
 	private void emitData(Values outputValues) {
-		synchronized(collector){
-			this.collector.emit(Constants.actions_stream,outputValues);
-		}
+		String  streamTopic = outputValues.get(1).toString();
+		logger.info("streamTopic = "+streamTopic+",outputValues.size()="+outputValues.size());
+		synchronized(collector){		
+			if(streamTopic != null &&
+					streamTopic.equals(Constants.actions_stream)){
+				this.collector.emit(Constants.actions_stream,outputValues);
+			}else if(streamTopic != null && 
+					streamTopic.equals(Constants.recommend_action_stream)){
+				this.collector.emit(Constants.recommend_action_stream,outputValues);
+			}else {
+				this.collector.emit("no-stream-name",new Values(""));
+			}
+		}	
 	}
 	
-	private void emitNoQQData() {
-		synchronized(collector){
-			this.collector.emit("no——qq",new Values(""));
-		}
+	public static void main(String[] args){
+		Values outputValues = new Values();		
+
+		outputValues.add("adpos");
+		outputValues.add("action_type");
+		outputValues.add("action_time");
+		outputValues.add("item_id");
+		outputValues.add("action_result");	
+		outputValues.add("imei");	
+		outputValues.add("platform");	
+		outputValues.add("lbs_info");	
+		
+		System.out.println(outputValues.size());
+		System.out.println(outputValues.get(1).toString());
+		System.out.println(outputValues.size());
+		System.out.println(outputValues.size());
 	}
 }

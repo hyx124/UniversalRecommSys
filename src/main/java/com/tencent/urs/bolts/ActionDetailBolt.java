@@ -7,7 +7,6 @@ import com.tencent.urs.protobuf.Recommend.UserActiveDetail.TimeSegment.ItemInfo.
 import com.tencent.urs.protobuf.Recommend.UserActiveDetail.Builder;
 import com.tencent.urs.protobuf.Recommend.UserActiveHistory.ActiveRecord;
 
-import java.lang.ref.SoftReference;
 import java.util.ArrayList;
 import java.util.Collections;
 import java.util.Comparator;
@@ -15,7 +14,6 @@ import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
 import java.util.Set;
-import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.Future;
 
 import org.apache.commons.configuration.XMLConfiguration;
@@ -35,12 +33,12 @@ import com.tencent.tde.client.TairClient.TairOption;
 import com.tencent.tde.client.impl.MutiThreadCallbackClient.MutiClientCallBack;
 import com.tencent.urs.asyncupdate.UpdateCallBack;
 import com.tencent.urs.asyncupdate.UpdateCallBackContext;
+import com.tencent.urs.bolts.CtrBolt.CtrCombinerKey;
 import com.tencent.urs.combine.ActionCombinerValue;
 import com.tencent.urs.combine.UpdateKey;
 import com.tencent.urs.tdengine.TDEngineClientFactory;
 import com.tencent.urs.tdengine.TDEngineClientFactory.ClientAttr;
 import com.tencent.urs.utils.Constants;
-import com.tencent.urs.utils.DataCache;
 import com.tencent.urs.utils.Utils;
 
 public class ActionDetailBolt extends AbstractConfigUpdateBolt{
@@ -52,7 +50,6 @@ public class ActionDetailBolt extends AbstractConfigUpdateBolt{
 	
 	private int nsTableId;
 	private int dataExpireTime;
-	//private int cacheExpireTime;
 	private int topNum;
 	private boolean debug;
 	
@@ -67,7 +64,6 @@ public class ActionDetailBolt extends AbstractConfigUpdateBolt{
 	public void updateConfig(XMLConfiguration config) {
 		nsTableId = config.getInt("storage_table",512);
 		dataExpireTime = config.getInt("data_expiretime",7*24*3600);
-		//cacheExpireTime = config.getInt("cache_expiretime",3600);
 		topNum = config.getInt("topNum",100);
 		debug = config.getBoolean("debug",false);
 	}
@@ -107,17 +103,43 @@ public class ActionDetailBolt extends AbstractConfigUpdateBolt{
 			String actionTime = tuple.getStringByField("action_time");
 			String lbsInfo = tuple.getStringByField("lbs_info");
 			String platform = tuple.getStringByField("platform");
-						
-			Recommend.UserActiveHistory.ActiveRecord.Builder actBuilder =
-					Recommend.UserActiveHistory.ActiveRecord.newBuilder();
-			actBuilder.setItem(itemId).setActTime(Long.valueOf(actionTime)).setActType(Integer.valueOf(actionType))
-						.setLBSInfo(lbsInfo).setPlatForm(platform);
-
-			ActionCombinerValue value = new ActionCombinerValue();
-			value.init(itemId,actBuilder.build());
-			UpdateKey key = new UpdateKey(bid, Long.valueOf(qq), 0, adpos, itemId);
 			
-			combinerKeys(key.getDetailKey(),value);	
+			
+			if(sid.equals(Constants.actions_stream) && Utils.isRecommendAction(actionType)){
+				String pageId = tuple.getStringByField("item_id");
+				String actionResult = tuple.getStringByField("action_result");
+				String[] items = actionResult.split(";",-1);
+				if(Utils.isPageIdValid(pageId)){
+					for(String resultItem: items){
+						if(Utils.isItemIdValid(resultItem)){
+							Recommend.UserActiveHistory.ActiveRecord.Builder actBuilder =
+									Recommend.UserActiveHistory.ActiveRecord.newBuilder();
+							actBuilder.setItem(itemId).setActTime(Long.valueOf(actionTime)).setActType(Integer.valueOf(actionType))
+										.setLBSInfo(lbsInfo).setPlatForm(platform);
+							
+							ActionCombinerValue value = new ActionCombinerValue();
+							value.init(itemId,actBuilder.build());
+							UpdateKey key = new UpdateKey(bid, Long.valueOf(qq), 0, adpos, itemId);
+							
+							combinerKeys(key.getDetailKey(),value);	
+						}
+					}
+				}
+			}else if(sid.equals(Constants.recommend_action_stream) && !Utils.isRecommendAction(actionType)){
+				Recommend.UserActiveHistory.ActiveRecord.Builder actBuilder =
+						Recommend.UserActiveHistory.ActiveRecord.newBuilder();
+				actBuilder.setItem(itemId).setActTime(Long.valueOf(actionTime)).setActType(Integer.valueOf(actionType))
+							.setLBSInfo(lbsInfo).setPlatForm(platform);
+
+				ActionCombinerValue value = new ActionCombinerValue();
+				value.init(itemId,actBuilder.build());
+				UpdateKey key = new UpdateKey(bid, Long.valueOf(qq), 0, adpos, itemId);
+				
+				combinerKeys(key.getDetailKey(),value);	
+			}
+			
+			
+			
 		}catch(Exception e){
 			logger.error(e.getMessage(), e);
 		}

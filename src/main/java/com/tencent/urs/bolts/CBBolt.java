@@ -1,5 +1,7 @@
 package com.tencent.urs.bolts;
 
+import java.io.IOException;
+import java.io.UnsupportedEncodingException;
 import java.lang.ref.SoftReference;
 import java.util.HashSet;
 import java.util.List;
@@ -10,10 +12,11 @@ import org.apache.commons.configuration.XMLConfiguration;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
+import DataProcessor.NewsProcessor;
 import NewsApp.Newsapp.NewsAttr;
 import NewsApp.Newsapp.NewsCategory;
 import NewsApp.Newsapp.NewsIndex;
-import NewsProcessor.NewsClassifier;
+
 import backtype.storm.task.OutputCollector;
 import backtype.storm.task.TopologyContext;
 import backtype.storm.tuple.Tuple;
@@ -28,7 +31,6 @@ import com.tencent.tde.client.TairClient.TairOption;
 
 import com.tencent.urs.asyncupdate.UpdateCallBack;
 import com.tencent.urs.asyncupdate.UpdateCallBackContext;
-
 import com.tencent.urs.tdengine.TDEngineClientFactory;
 import com.tencent.urs.tdengine.TDEngineClientFactory.ClientAttr;
 import com.tencent.urs.utils.Constants;
@@ -41,7 +43,7 @@ public class CBBolt extends AbstractConfigUpdateBolt{
 	private MonitorTools mt;
 	private DataCache<NewsApp.Newsapp.NewsAttr> itemAttrCache;
 
-	private NewsClassifier classifier;
+	private NewsProcessor classifier;
 	private int nsCbIndexTableId;
 	private int dataExpireTime;
 	private int cacheExpireTime;
@@ -71,7 +73,16 @@ public class CBBolt extends AbstractConfigUpdateBolt{
 		this.mt = MonitorTools.getMonitorInstance(conf);
 		this.itemAttrCache = new DataCache<NewsApp.Newsapp.NewsAttr>(conf);
 		this.itemIndexCallBack = new UpdateCallBack(mt, this.nsCbIndexTableId,debug);
-		this.classifier = new NewsClassifier();
+		this.classifier = new NewsProcessor();
+		try {
+			this.classifier.Init("./conf/news_processor.conf");
+		} catch (IOException e) {
+			// TODO Auto-generated catch block
+			e.printStackTrace();
+		} catch (InterruptedException e) {
+			// TODO Auto-generated catch block
+			e.printStackTrace();
+		}
 
 	}
 	
@@ -265,22 +276,48 @@ public class CBBolt extends AbstractConfigUpdateBolt{
 		}
 	}
 	
-	public static void main(String[] args){
-		Object _lock = new Object();
-		long start1 = System.currentTimeMillis();
-		for(int i=0; i<100000000; i++){		
-			synchronized(_lock){
-				
-			}
+	public static void main(String[] args) throws IOException{
+		NewsProcessor test =  new NewsProcessor();
+		// /Users/xiangyu/Documents/Code/storm-stream/UniversalRecommSys/lib/libTCWordSeg.so:  
+		//	 no suitable image found.  Did find:  /Users/xiangyu/Documents/Code/storm-stream/UniversalRecommSys/lib/libTCWordSeg.so:
+		try {
+			test.Init("./conf/news_processor.conf");
+		} catch (IOException e) {
+			// TODO Auto-generated catch block
+			e.printStackTrace();
+		} catch (InterruptedException e) {
+			// TODO Auto-generated catch block
+			e.printStackTrace();
 		}
-		long end1 = System.currentTimeMillis();
-		System.out.println(end1-start1);
 		
-		long start2 = System.currentTimeMillis();
-		for(int i=0; i<100000000; i++){
+		ByteString bigTypeNameStr;
+		try {
+			bigTypeNameStr = ByteString.copyFrom("体育","UTF-8");
+			ByteString midTypeNameStr = ByteString.copyFrom("体育","UTF-8");
+			ByteString smallTypeNameStr = ByteString.copyFrom("体育","UTF-8");
+			ByteString textStr = ByteString.copyFrom("深圳【世界杯】托蒂落选大名单######","UTF-8");
+			
+			NewsAttr.Builder cbAppBuilder = NewsAttr.newBuilder();
+			genInputPbBuilder(cbAppBuilder,"123",Long.valueOf("123"),Long.valueOf("123"),Long.valueOf("123")
+					,bigTypeNameStr,midTypeNameStr,smallTypeNameStr,textStr);
+			cbAppBuilder.setIndexScore(Long.valueOf("133"));
+			cbAppBuilder.setFreshnessScore(Long.valueOf("133"));
+			
+			test.HierarchicalClassify(cbAppBuilder);
+			
+			for(NewsApp.Newsapp.NewsCategory cs:cbAppBuilder.getCategoryList()){
+				String tag = cs.getName().toStringUtf8();
+				if(cs.getName().isEmpty() || tag.equals("")){
+					continue;
+				}
+					
+				System.out.print(tag);
+			}
+		} catch (UnsupportedEncodingException e1) {
+			// TODO Auto-generated catch block
+			e1.printStackTrace();
+			return;
 		}
-		long end2 = System.currentTimeMillis();
-		System.out.println(end2-start2);
 	}
 	
 }
