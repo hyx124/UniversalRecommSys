@@ -171,7 +171,6 @@ public class TxNewsSpout extends TdbankSpout {
 		}else if(actType.equals("16") || actType.equals("17") || actType.equals("18")){
 			itemId = actionResult;
 		}else{
-			//this.collector.emit("actTypeErr-"+actType,new Values());	
 			return false;
 		}
 		
@@ -200,7 +199,11 @@ public class TxNewsSpout extends TdbankSpout {
 		Values outputValues = new Values();
 		outputValues.add(hashKey);
 		outputValues.add(bid);
-		outputValues.add(Constants.actions_stream);
+		if(Utils.isRecommendAction(actType)){
+			outputValues.add(Constants.recommend_action_stream);
+		}else{
+			outputValues.add(Constants.actions_stream);
+		}
 		outputValues.add(qq);
 		outputValues.add(uid);
 		outputValues.add(adpos);

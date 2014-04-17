@@ -28,6 +28,14 @@ public class UpdateKey{
 		return getKey.toString();
 	}
 	
+	public String getImpressDetailKey(){
+		
+		StringBuffer getKey = new StringBuffer(bid);		
+		getKey.append("#").append(uin)
+				.append("#").append("ImpressDetail");
+		return getKey.toString();
+	}
+	
 	//userCountKey = bid#item1#uin
 	public String getUserCountKey(){
 		StringBuffer getKey = new StringBuffer(bid);		

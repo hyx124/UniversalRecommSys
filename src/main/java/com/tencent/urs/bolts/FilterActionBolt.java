@@ -41,7 +41,7 @@ import com.tencent.urs.tdengine.TDEngineClientFactory.ClientAttr;
 import com.tencent.urs.utils.Constants;
 import com.tencent.urs.utils.Utils;
 
-public class ActionDetailBolt extends AbstractConfigUpdateBolt{
+public class FilterActionBolt extends AbstractConfigUpdateBolt{
 	private static final long serialVersionUID = 5958754435166536530L;
 	private List<ClientAttr> mtClientList;	
 	private MonitorTools mt;
@@ -54,9 +54,9 @@ public class ActionDetailBolt extends AbstractConfigUpdateBolt{
 	private boolean debug;
 	
 	private static Logger logger = LoggerFactory
-			.getLogger(ActionDetailBolt.class);
+			.getLogger(FilterActionBolt.class);
 	
-	public ActionDetailBolt(String config, ImmutableList<Output> outputField) {
+	public FilterActionBolt(String config, ImmutableList<Output> outputField) {
 		super(config, outputField,Constants.config_stream);
 	}
 
@@ -89,7 +89,6 @@ public class ActionDetailBolt extends AbstractConfigUpdateBolt{
 			String bid = tuple.getStringByField("bid");
 			String adpos = Constants.DEFAULT_ADPOS;		
 			String qq = tuple.getStringByField("qq");
-			String itemId = tuple.getStringByField("item_id");
 			
 			if(!Utils.isQNumValid(qq)){
 				return;
@@ -124,26 +123,11 @@ public class ActionDetailBolt extends AbstractConfigUpdateBolt{
 							ActionCombinerValue value = new ActionCombinerValue();
 							value.init(resultItem,actBuilder.build());
 							UpdateKey key = new UpdateKey(bid, Long.valueOf(qq), 0, adpos, resultItem);
-							
-							combinerKeys(key.getDetailKey(),value);	
+							combinerKeys(key.getImpressDetailKey(),value);	
 						}
 					}
 				}
-			}else if(sid.equals(Constants.actions_stream) && !Utils.isRecommendAction(actionType)){
-				Recommend.UserActiveHistory.ActiveRecord.Builder actBuilder =
-						Recommend.UserActiveHistory.ActiveRecord.newBuilder();
-				actBuilder.setItem(itemId).setActTime(Long.valueOf(actionTime)).setActType(Integer.valueOf(actionType))
-							.setLBSInfo(lbsInfo).setPlatForm(platform);
-
-				ActionCombinerValue value = new ActionCombinerValue();
-				value.init(itemId,actBuilder.build());
-				UpdateKey key = new UpdateKey(bid, Long.valueOf(qq), 0, adpos, itemId);
-				
-				combinerKeys(key.getDetailKey(),value);	
 			}
-			
-			
-			
 		}catch(Exception e){
 			logger.error(e.getMessage(), e);
 		}
@@ -206,10 +190,6 @@ public class ActionDetailBolt extends AbstractConfigUpdateBolt{
 		}
 
 		public void excute() {
-			if(debug){
-				logger.info("get key="+key+",in tde");
-			}
-				
 			ClientAttr clientEntry = mtClientList.get(0);		
 			TairOption opt = new TairOption(clientEntry.getTimeout());
 			Future<Result<byte[]>> future;

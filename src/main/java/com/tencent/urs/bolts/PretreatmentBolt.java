@@ -96,13 +96,13 @@ public class PretreatmentBolt extends AbstractConfigUpdateBolt {
 					topic.equals(Constants.recommend_action_stream)){
 				if(!Utils.isQNumValid(qq)){
 					if(!uid.equals("0") && !uid.equals("")){
-						new GetQQUpdateCallBack(uid,outputValues).excute();				
+						new GetQQUpdateCallBack(uid,topic,outputValues).excute();				
 					}else{
 						return;
 					}
 				}else{
 					outputValues.add(qq);
-					new GetGroupIdUpdateCallBack(qq,outputValues).excute();
+					new GetGroupIdUpdateCallBack(qq,topic,outputValues).excute();
 				}	
 			}
 		}catch(Exception e){
@@ -113,10 +113,12 @@ public class PretreatmentBolt extends AbstractConfigUpdateBolt {
 	
 	public class GetQQUpdateCallBack implements MutiClientCallBack{
 		private String uid;
+		private String topic;
 		private Values outputValues;
 		
-		public GetQQUpdateCallBack(String uid, Values outputValues){
+		public GetQQUpdateCallBack(String uid,String topic, Values outputValues){
 			this.uid = uid;
+			this.topic = topic;
 			this.outputValues = outputValues;
 		}
 		
@@ -131,7 +133,7 @@ public class PretreatmentBolt extends AbstractConfigUpdateBolt {
 					if(Utils.isQNumValid(qq)){
 						outputValues.add(qq);
 						qqCache.set(uid, new SoftReference<String>(qq),cacheExpireTime);	
-						new GetGroupIdUpdateCallBack(qq,outputValues).excute();
+						new GetGroupIdUpdateCallBack(qq,topic,outputValues).excute();
 						isGetQQByUid = true;
 					}
 				}
@@ -142,7 +144,7 @@ public class PretreatmentBolt extends AbstractConfigUpdateBolt {
 			if(!isGetQQByUid){
 				outputValues.add("0");
 				outputValues.add("0");
-				emitData(outputValues);
+				emitData(topic,outputValues);
 				qqCache.set(uid, new SoftReference<String>("0"),cacheExpireTime);
 			}
 		}
@@ -157,11 +159,11 @@ public class PretreatmentBolt extends AbstractConfigUpdateBolt {
 			if(qq != null ){
 				if(Utils.isQNumValid(qq)){
 					outputValues.add(qq);
-					new GetGroupIdUpdateCallBack(qq,outputValues).excute();
+					new GetGroupIdUpdateCallBack(qq,topic,outputValues).excute();
 				}else{
 					outputValues.add("0");
 					outputValues.add("0");
-					emitData(outputValues);
+					emitData(topic,outputValues);
 				}					
 			}else{
 				try{
@@ -178,10 +180,12 @@ public class PretreatmentBolt extends AbstractConfigUpdateBolt {
 	
 	public class GetGroupIdUpdateCallBack implements MutiClientCallBack{
 		private String qq;
+		private String topic;
 		private Values outputValues;
 		
-		public GetGroupIdUpdateCallBack(String qq,Values outputValues) {
+		public GetGroupIdUpdateCallBack(String qq,String topic,Values outputValues) {
 			this.qq = qq;
+			this.topic = topic;
 			this.outputValues = outputValues;
 		}
 
@@ -203,7 +207,7 @@ public class PretreatmentBolt extends AbstractConfigUpdateBolt {
 			}
 			outputValues.add(groupId);
 			groupIdCache.set(qq.toString(), new SoftReference<String>(groupId),cacheExpireTime);
-			emitData(outputValues);
+			emitData(topic,outputValues);
 			
 		}
 		
@@ -216,7 +220,7 @@ public class PretreatmentBolt extends AbstractConfigUpdateBolt {
 			
 			if(groupId != null){
 				outputValues.add(groupId);
-				emitData(outputValues);
+				emitData(topic,outputValues);
 			}else{
 				try{
 					ClientAttr clientEntry = mtClientList.get(0);		
@@ -230,37 +234,12 @@ public class PretreatmentBolt extends AbstractConfigUpdateBolt {
 		}
 	}
 	
-	private void emitData(Values outputValues) {
-		String  streamTopic = outputValues.get(1).toString();
-		logger.info("streamTopic = "+streamTopic+",outputValues.size()="+outputValues.size());
+	private void emitData(String topic,Values outputValues) {
 		synchronized(collector){		
-			if(streamTopic != null &&
-					streamTopic.equals(Constants.actions_stream)){
-				this.collector.emit(Constants.actions_stream,outputValues);
-			}else if(streamTopic != null && 
-					streamTopic.equals(Constants.recommend_action_stream)){
-				this.collector.emit(Constants.recommend_action_stream,outputValues);
-			}else {
-				this.collector.emit("no-stream-name",new Values(""));
-			}
+			this.collector.emit(topic,outputValues);
 		}	
 	}
 	
 	public static void main(String[] args){
-		Values outputValues = new Values();		
-
-		outputValues.add("adpos");
-		outputValues.add("action_type");
-		outputValues.add("action_time");
-		outputValues.add("item_id");
-		outputValues.add("action_result");	
-		outputValues.add("imei");	
-		outputValues.add("platform");	
-		outputValues.add("lbs_info");	
-		
-		System.out.println(outputValues.size());
-		System.out.println(outputValues.get(1).toString());
-		System.out.println(outputValues.size());
-		System.out.println(outputValues.size());
 	}
 }

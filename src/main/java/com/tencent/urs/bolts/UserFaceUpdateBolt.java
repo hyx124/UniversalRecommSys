@@ -115,10 +115,8 @@ public class UserFaceUpdateBolt extends AbstractConfigUpdateBolt{
 		try {
 			Result<byte[]> res = clientEntry.getClient().get((short)nsConfigTableId, key.getBytes(), opt);
 			if(res.isSuccess() && res.getResult() != null){
-				logger.info("get config from tde, value="+new String(res.getResult(),"UTF-8"));
+				//logger.info("get config from tde, value="+new String(res.getResult(),"UTF-8"));
 				return new String(res.getResult(),"UTF-8");
-			}else{
-				logger.info("get config from tde failed! not found key="+key);
 			}
 		} catch(Exception e){
 		}	
@@ -142,7 +140,7 @@ public class UserFaceUpdateBolt extends AbstractConfigUpdateBolt{
 					ConfigValue confValue = new ConfigValue(typeWeight,now);
 					actionWeightMap.put(actionType, confValue);
 				}
-				logger.info("get actionType from tde , type="+actionType+",value="+typeWeight);
+				//logger.info("get actionType from tde , type="+actionType+",value="+typeWeight);
 			}
 		}else{
 			typeWeight = getConfigValueFromTde(actionType);
@@ -154,7 +152,7 @@ public class UserFaceUpdateBolt extends AbstractConfigUpdateBolt{
 				ConfigValue confValue = new ConfigValue(typeWeight,now);
 				actionWeightMap.put(actionType, confValue);
 			}
-			logger.info("get actionType from tde failed, type="+actionType);
+			//logger.info("get actionType from tde failed, type="+actionType);
 		}
 		
 		if(typeWeight != null){
@@ -457,7 +455,6 @@ public class UserFaceUpdateBolt extends AbstractConfigUpdateBolt{
 								newUpBuilder.setType(up.getType());
 								newUpBuilder.setWeight(newWeight);
 								
-								//newQQFaceList.add(newUpBuilder.build());
 								insertToListByWeightDesc(newUpBuilder.build(),newQQFaceList);
 								alreadyIn.add(cate.getName().toStringUtf8());
 							}
@@ -478,7 +475,6 @@ public class UserFaceUpdateBolt extends AbstractConfigUpdateBolt{
 						newUpBuilder.setLevel(cate.getLevel());
 						newUpBuilder.setType(1);
 						newUpBuilder.setWeight(newWeight);
-						//newQQFaceList.add(newUpBuilder.build());
 						insertToListByWeightDesc(newUpBuilder.build(),newQQFaceList);
 						alreadyIn.add(cate.getName().toStringUtf8());
 					}
@@ -503,16 +499,6 @@ public class UserFaceUpdateBolt extends AbstractConfigUpdateBolt{
 			if(bidQQ.indexOf("389687043")>=0){
 				logger.info("2,user face,newQQFaceList.size="+newQQFaceList.size());
 			}
-			
-			/*Collections.sort(newQQFaceList, new Comparator<UserFace.UserPreference>() {   
-				@Override
-				public int compare(UserFace.UserPreference arg0,UserFace.UserPreference arg1) {
-					if(arg0.getWeight() > arg1.getWeight()){
-						return -1;
-					}
-					return 1;
-				}
-			});*/ 
 			
 			UserFace.Builder newQQFaceBuilder = UserFace.newBuilder();
 			newQQFaceBuilder.setProfile(qqFace.getProfile());
