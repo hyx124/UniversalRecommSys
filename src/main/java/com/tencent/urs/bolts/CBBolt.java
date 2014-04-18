@@ -76,12 +76,8 @@ public class CBBolt extends AbstractConfigUpdateBolt{
 		this.classifier = new NewsProcessor();
 		try {
 			this.classifier.Init("./conf/news_processor.conf");
-		} catch (IOException e) {
-			// TODO Auto-generated catch block
-			e.printStackTrace();
-		} catch (InterruptedException e) {
-			// TODO Auto-generated catch block
-			e.printStackTrace();
+		} catch (Exception e){
+			logger.error(e.getMessage(), e);
 		}
 
 	}

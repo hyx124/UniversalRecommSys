@@ -267,7 +267,7 @@ public class FilterBolt extends AbstractConfigUpdateBolt {
 					break;
 				}
 				
-				if(sortItem.getValue() > 0){
+				if(sortItem.getValue() >= 0.3){
 					UserActiveHistory.ActiveRecord.Builder actBuilder =
 							UserActiveHistory.ActiveRecord.newBuilder();
 	

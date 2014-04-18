@@ -106,27 +106,28 @@ public class ActionDetailBolt extends AbstractConfigUpdateBolt{
 			
 			
 			if(sid.equals(Constants.recommend_action_stream) && Utils.isRecommendAction(actionType)){
-				String pageId = tuple.getStringByField("item_id");
 				String actionResult = tuple.getStringByField("action_result");
 				String[] items = actionResult.split(";",-1);
-				if(Utils.isPageIdValid(pageId)){
-					for(String resultItem: items){
-						if(resultItem.endsWith("#1") || resultItem.endsWith("#2")){
-							resultItem = resultItem.substring(0,resultItem.length()-2);
-						}
+				for(String resultItem: items){
+					if(resultItem.endsWith("#1") || resultItem.endsWith("#2")){
+						resultItem = resultItem.substring(0,resultItem.length()-2);
+					}
 						
-						if(Utils.isItemIdValid(resultItem)){
-							Recommend.UserActiveHistory.ActiveRecord.Builder actBuilder =
-									Recommend.UserActiveHistory.ActiveRecord.newBuilder();
-							actBuilder.setItem(resultItem).setActTime(Long.valueOf(actionTime)).setActType(Integer.valueOf(actionType))
-										.setLBSInfo(lbsInfo).setPlatForm(platform);
+					if(Utils.isItemIdValid(resultItem)){
+						Recommend.UserActiveHistory.ActiveRecord.Builder actBuilder =
+								Recommend.UserActiveHistory.ActiveRecord.newBuilder();
+						actBuilder.setItem(resultItem).setActTime(Long.valueOf(actionTime)).setActType(Integer.valueOf(actionType))
+									.setLBSInfo(lbsInfo).setPlatForm(platform);
 							
-							ActionCombinerValue value = new ActionCombinerValue();
-							value.init(resultItem,actBuilder.build());
-							UpdateKey key = new UpdateKey(bid, Long.valueOf(qq), 0, adpos, resultItem);
+						ActionCombinerValue value = new ActionCombinerValue();
+						value.init(resultItem,actBuilder.build());
+						UpdateKey key = new UpdateKey(bid, Long.valueOf(qq), 0, adpos, resultItem);
 							
-							combinerKeys(key.getDetailKey(),value);	
+						if(qq.equals("389687043") || qq.equals("475182144")){
+							logger.info("--input impress to combiner---,itemId="+resultItem+",key="+key.getDetailKey());
 						}
+							
+						combinerKeys(key.getDetailKey(),value);	
 					}
 				}
 			}else if(sid.equals(Constants.actions_stream) && !Utils.isRecommendAction(actionType)){
@@ -135,11 +136,12 @@ public class ActionDetailBolt extends AbstractConfigUpdateBolt{
 				actBuilder.setItem(itemId).setActTime(Long.valueOf(actionTime)).setActType(Integer.valueOf(actionType))
 							.setLBSInfo(lbsInfo).setPlatForm(platform);
 
-				ActionCombinerValue value = new ActionCombinerValue();
-				value.init(itemId,actBuilder.build());
-				UpdateKey key = new UpdateKey(bid, Long.valueOf(qq), 0, adpos, itemId);
-				
-				combinerKeys(key.getDetailKey(),value);	
+				if(Utils.isItemIdValid(itemId)){
+					ActionCombinerValue value = new ActionCombinerValue();
+					value.init(itemId,actBuilder.build());
+					UpdateKey key = new UpdateKey(bid, Long.valueOf(qq), 0, adpos, itemId);	
+					combinerKeys(key.getDetailKey(),value);	
+				}
 			}
 			
 			
