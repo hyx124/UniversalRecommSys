@@ -108,23 +108,22 @@ public class FilterActionBolt extends AbstractConfigUpdateBolt{
 				String pageId = tuple.getStringByField("item_id");
 				String actionResult = tuple.getStringByField("action_result");
 				String[] items = actionResult.split(";",-1);
-				if(Utils.isPageIdValid(pageId)){
-					for(String resultItem: items){
-						if(resultItem.endsWith("#1") || resultItem.endsWith("#2")){
-							resultItem = resultItem.substring(0,resultItem.length()-2);
-						}
+				
+				for(String resultItem: items){
+					if(resultItem.endsWith("#1") || resultItem.endsWith("#2")){
+						resultItem = resultItem.substring(0,resultItem.length()-2);
+					}
 						
-						if(Utils.isItemIdValid(resultItem)){
-							Recommend.UserActiveHistory.ActiveRecord.Builder actBuilder =
-									Recommend.UserActiveHistory.ActiveRecord.newBuilder();
-							actBuilder.setItem(resultItem).setActTime(Long.valueOf(actionTime)).setActType(Integer.valueOf(actionType))
-										.setLBSInfo(lbsInfo).setPlatForm(platform);
+					if(Utils.isItemIdValid(resultItem)){
+						Recommend.UserActiveHistory.ActiveRecord.Builder actBuilder =
+								Recommend.UserActiveHistory.ActiveRecord.newBuilder();
+						actBuilder.setItem(resultItem).setActTime(Long.valueOf(actionTime)).setActType(Integer.valueOf(actionType))
+									.setLBSInfo(lbsInfo).setPlatForm(platform);
 							
-							ActionCombinerValue value = new ActionCombinerValue();
-							value.init(resultItem,actBuilder.build());
-							UpdateKey key = new UpdateKey(bid, Long.valueOf(qq), 0, adpos, resultItem);
-							combinerKeys(key.getImpressDetailKey(),value);	
-						}
+						ActionCombinerValue value = new ActionCombinerValue();
+						value.init(resultItem,actBuilder.build());
+						UpdateKey key = new UpdateKey(bid, Long.valueOf(qq), 0, adpos, resultItem);
+						combinerKeys(key.getImpressDetailKey(),value);	
 					}
 				}
 			}

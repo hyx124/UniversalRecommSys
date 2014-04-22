@@ -1,8 +1,12 @@
 package com.tencent.urs.bolts;
 
 import java.lang.ref.SoftReference;
+import java.util.ArrayList;
+import java.util.Collections;
+import java.util.Comparator;
 import java.util.HashMap;
 import java.util.HashSet;
+import java.util.LinkedList;
 import java.util.List;
 import java.util.Map;
 import java.util.Set;
@@ -29,6 +33,7 @@ import com.tencent.urs.utils.Constants;
 import com.tencent.urs.utils.DataCache;
 import com.tencent.urs.utils.Utils;
 
+import NewsApp.Newsapp.UserFace;
 import backtype.storm.task.OutputCollector;
 import backtype.storm.task.TopologyContext;
 import backtype.storm.tuple.Tuple;
@@ -72,7 +77,7 @@ public class ResultStorageBolt extends AbstractConfigUpdateBolt {
 	public void updateConfig(XMLConfiguration config) {
 		nsTableId = config.getInt("storage_table",520);
 		dataExpireTime = config.getInt("data_expiretime",10*24*3600);
-		itemExpireTime = config.getInt("item_expiretime",1*24*3600);
+		itemExpireTime = config.getInt("item_expiretime",6*3600);
 		cacheExpireTime = config.getInt("cache_expiretime",3600);
 		topNum = config.getInt("top_num",100);
 	}
@@ -87,9 +92,7 @@ public class ResultStorageBolt extends AbstractConfigUpdateBolt {
 			if(weight <= 0){
 				return;
 			}
-			
-			
-			
+
 			Long bigType = tuple.getLongByField("big_type");
 			Long midType = tuple.getLongByField("mid_type");
 			Long smallType = tuple.getLongByField("small_type");
@@ -100,10 +103,6 @@ public class ResultStorageBolt extends AbstractConfigUpdateBolt {
 			String shopId = tuple.getStringByField("shop_id");
 			
 			Long now = System.currentTimeMillis()/1000L;
-			
-			if(itemTime >0 && (now - itemTime) < 3*3600){
-				return;	
-			}
 			
 			RecommendResult.Result.Builder value =
 					RecommendResult.Result.newBuilder();
@@ -175,10 +174,18 @@ public class ResultStorageBolt extends AbstractConfigUpdateBolt {
 	public class putToTDEUpdateCallBack implements MutiClientCallBack{
 		private String key;
 		private HashMap<String,RecommendResult.Result> resMap;
+		private UpdateCallBack putCallBack;
+		private String algId;
 		
 		public putToTDEUpdateCallBack(String key, HashMap<String,RecommendResult.Result> value){
 			this.key = key;
 			this.resMap = value;
+			
+			String[] keyItems = key.split("#");
+			if(keyItems.length >= 5){
+				algId = keyItems[3];
+				putCallBack = new UpdateCallBack(mt, keyItems[3], false);
+			}
 		}
 		
 		@Override
@@ -217,46 +224,57 @@ public class ResultStorageBolt extends AbstractConfigUpdateBolt {
 			}
 		}
 
-		private void sortValues(RecommendResult oldValue) {
-			RecommendResult.Builder mergeValueBuilder = 
-					RecommendResult.newBuilder();
-			
+		private void insertToListByWeightDesc(RecommendResult.Result newVal,
+				LinkedList<RecommendResult.Result> topList) {
+			boolean insert = false;
 			long now = System.currentTimeMillis()/1000;
-			for(String itemId:resMap.keySet()){
-				RecommendResult.Result eachNewValue = resMap.get(itemId);
+			for (int idx = 0; idx < topList.size(); idx++) {
+				RecommendResult.Result oldVal = topList.get(idx);
+				if (!insert && newVal.getWeight() >= oldVal.getWeight()) {
+					topList.add(idx, newVal);
+					idx++;
+					insert = true;
+				}
 				
-				HashSet<String> alreadyIn = new HashSet<String>();
-				if(oldValue != null){
-					for(RecommendResult.Result eachItem:oldValue.getResultsList()){
-						if(mergeValueBuilder.getResultsCount() > topNum){
-							break;
-						}
-															
-						if(!alreadyIn.contains(eachNewValue.getItem()) 
-								&& eachNewValue.getWeight() >= eachItem.getWeight()){
-							mergeValueBuilder.addResults(eachNewValue);
-							alreadyIn.add(eachNewValue.getItem());
-						}
-						
-						if(!alreadyIn.contains(eachItem.getItem()) 
-								&& !eachItem.getItem().equals(eachNewValue.getItem())
-								&& eachItem.getUpdateTime() > (now - itemExpireTime)
-								&& eachItem.getWeight() > 0){
-
-								mergeValueBuilder.addResults(eachItem);
-								alreadyIn.add(eachItem.getItem());
-						}
+				if (oldVal.getItem().equals(newVal.getItem())) {
+					topList.remove(oldVal);
+					idx--;
+				}else if(algId.indexOf("3001") >= 0){
+					if((now - oldVal.getItemTime()) > 3600){
+						topList.remove(oldVal);
+						idx--;
+					}
+				}
+			}
+			
+			if (!insert && topList.size() < topNum) {
+				topList.add(newVal);
+			}
+		}
+		
+		private void sortValues(RecommendResult oldValue) {
+			LinkedList<RecommendResult.Result> topList;
+			
+			if(oldValue != null){
+				topList = 
+					new LinkedList<RecommendResult.Result>(oldValue.getResultsList());
+			}else{
+				topList = new LinkedList<RecommendResult.Result>();
+			}
+			
+			for(String newItemId :resMap.keySet()){
+				RecommendResult.Result eachNewValue = resMap.get(newItemId);
+				if(algId.indexOf("3001") >= 0){
+					if((eachNewValue.getUpdateTime() - eachNewValue.getItemTime()) > 3600){
+						continue;
 					}
 				}
 				
-				if(!alreadyIn.contains(eachNewValue.getItem())  
-						&& mergeValueBuilder.getResultsCount() < topNum){
-					mergeValueBuilder.addResults(eachNewValue);
-					alreadyIn.add(eachNewValue.getItem());
-				}	
+				insertToListByWeightDesc(eachNewValue, topList);
 			}
-			
-			
+					
+			RecommendResult.Builder mergeValueBuilder = RecommendResult.newBuilder();
+			mergeValueBuilder.addAllResults(topList);
 			saveValues(key,mergeValueBuilder);			
 		}
 
@@ -270,15 +288,6 @@ public class ResultStorageBolt extends AbstractConfigUpdateBolt {
 			for(ClientAttr clientEntry:mtClientList ){
 				TairOption putopt = new TairOption(clientEntry.getTimeout(),(short)0, dataExpireTime);
 				try {
-					UpdateCallBack putCallBack = null;
-					String[] keyItems = key.split("#");
-					if(keyItems.length >= 5){
-						putCallBack = new UpdateCallBack(mt, keyItems[3], false);
-					}else{
-						putCallBack = new UpdateCallBack(mt, key, false);
-					}
-					
-					
 					future = clientEntry.getClient().putAsync((short)nsTableId, 
 										key.getBytes(), putValue.toByteArray(), putopt);
 					clientEntry.getClient().notifyFuture(future, putCallBack, 
@@ -290,6 +299,10 @@ public class ResultStorageBolt extends AbstractConfigUpdateBolt {
 			}
 			
 		}
+	}
+	
+	public static void main(String[] args){	
+
 	}
 	
 }

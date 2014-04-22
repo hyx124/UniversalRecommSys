@@ -332,7 +332,11 @@ public class ActionDetailBolt extends AbstractConfigUpdateBolt{
 			Collections.sort(sortList, new Comparator<Long>() {   
 				@Override
 				public int compare(Long arg0,Long arg1) {
-					return (int)(arg1.longValue() - arg0.longValue());
+					if(arg1.longValue() > arg0.longValue()){
+						return 1;
+					}else{
+						return -1;
+					}
 				}
 			}); 
 			

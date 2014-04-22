@@ -4,7 +4,6 @@ import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
 import java.util.Set;
-import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.Future;
 
 import org.apache.commons.configuration.XMLConfiguration;
@@ -24,7 +23,6 @@ import com.tencent.streaming.commons.spouts.tdbank.Output;
 import com.tencent.tde.client.Result;
 import com.tencent.tde.client.TairClient.TairOption;
 import com.tencent.tde.client.impl.MutiThreadCallbackClient.MutiClientCallBack;
-import com.tencent.urs.combine.ActionCombinerValue;
 import com.tencent.urs.combine.GroupActionCombinerValue;
 import com.tencent.urs.combine.UpdateKey;
 import com.tencent.urs.protobuf.Recommend.GroupCountInfo;

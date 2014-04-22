@@ -53,7 +53,7 @@ message CateLevelInfo
 	optional string level = 3;				//业务帐号
 	optional uint32 fatherId = 4;			//父类ID
 }
-
+key=bid#itemid#1#B1001#0
 message RecommendResult
 {	
     message Result
@@ -165,6 +165,17 @@ message GroupPairInfo{
 		optional float count = 2;								//权重
 	}
     repeated TimeSegment tsegs  = 1;
+}
+
+message itemPoolInfo{
+	
+	message itemList {		
+		required uint64 itemId = 1;	
+		optional uint64 lifeTime = 2;
+		optional uint32 isforce = 3;					
+		optional uint32 count = 4;								//权重
+	}
+    	repeated itemList ads  = 1;
 }
 
 option optimize_for = LITE_RUNTIME;

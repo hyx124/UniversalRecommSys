@@ -1,5 +1,6 @@
 package com.tencent.urs.bolts;
 
+import java.lang.ref.SoftReference;
 import java.util.HashSet;
 import java.util.List;
 import java.util.Map;
@@ -24,6 +25,7 @@ import com.tencent.streaming.commons.spouts.tdbank.Output;
 import com.tencent.tde.client.Result;
 import com.tencent.tde.client.TairClient.TairOption;
 import com.tencent.tde.client.impl.MutiThreadCallbackClient.MutiClientCallBack;
+import com.tencent.urs.bolts.PretreatmentBolt.GetGroupIdUpdateCallBack;
 import com.tencent.urs.combine.GroupActionCombinerValue;
 import com.tencent.urs.combine.UpdateKey;
 import com.tencent.urs.protobuf.Recommend.GroupCountInfo;
@@ -32,6 +34,7 @@ import com.tencent.urs.protobuf.Recommend.UserActiveDetail;
 import com.tencent.urs.tdengine.TDEngineClientFactory;
 import com.tencent.urs.tdengine.TDEngineClientFactory.ClientAttr;
 import com.tencent.urs.utils.Constants;
+import com.tencent.urs.utils.DataCache;
 import com.tencent.urs.utils.Utils;
 
 public class ARCFBolt extends AbstractConfigUpdateBolt{
@@ -42,6 +45,8 @@ public class ARCFBolt extends AbstractConfigUpdateBolt{
 	private List<ClientAttr> mtClientList;	
 	private MonitorTools mt;
 	private ConcurrentHashMap<UpdateKey, GroupActionCombinerValue> combinerMap;
+	private DataCache<Float> itemCountCache;
+	private DataCache<Float> itemPairCache;
 	private OutputCollector collector;
 	private int nsGroupPairTableId;
 	private int nsGroupCountTableId;
@@ -66,7 +71,8 @@ public class ARCFBolt extends AbstractConfigUpdateBolt{
 		this.mtClientList = TDEngineClientFactory.createMTClientList(conf);
 		this.mt = MonitorTools.getMonitorInstance(conf);
 		this.combinerMap = new ConcurrentHashMap<UpdateKey,GroupActionCombinerValue>(1024);
-
+		this.itemCountCache = new DataCache<Float>(conf);
+		this.itemPairCache = new DataCache<Float>(conf);
 		int combinerExpireTime = Utils.getInt(conf, "combiner.expireTime",5)+3;
 		setCombinerTime(combinerExpireTime);
 	} 
@@ -152,10 +158,32 @@ public class ARCFBolt extends AbstractConfigUpdateBolt{
 
 		public void excute() {
 			try {		
-				ClientAttr clientEntry = mtClientList.get(0);		
-				TairOption opt = new TairOption(clientEntry.getTimeout());
-				Future<Result<byte[]>> future = clientEntry.getClient().getAsync((short)nsGroupPairTableId,getKey.toString().getBytes(),opt);
-				clientEntry.getClient().notifyFuture(future, this, clientEntry);			
+				Float thisItemPairCount = null;
+				SoftReference<Float> sr = itemPairCache.get(getKey);
+				if(sr != null){
+					thisItemPairCount = sr.get();
+				}
+					
+				if(thisItemPairCount != null ){
+
+					if(debug){
+						logger.info("step3,key"+getKey+"item1="+key.getItemId()+
+								",item2="+otherItem+"itemcount1="+itemCount1+
+								",itemcount2="+itemCount2+",paircount="+thisItemPairCount);
+					}
+					Double cf12Weight = computeCFWeight(itemCount1,itemCount2,thisItemPairCount);
+					Double cf21Weight = computeCFWeight(itemCount2,itemCount1,thisItemPairCount);
+					
+					doEmit(key.getBid(),key.getItemId(),key.getAdpos(),otherItem,String.valueOf(key.getGroupId()),cf12Weight);
+					doEmit(key.getBid(),otherItem,key.getAdpos(),key.getItemId(),String.valueOf(key.getGroupId()),cf21Weight);
+					
+				}else{
+					ClientAttr clientEntry = mtClientList.get(0);		
+					TairOption opt = new TairOption(clientEntry.getTimeout());
+					Future<Result<byte[]>> future = clientEntry.getClient().getAsync((short)nsGroupPairTableId,getKey.getBytes(),opt);
+					clientEntry.getClient().notifyFuture(future, this, clientEntry);	
+				}	
+		
 			} catch (Exception e){
 				logger.error(e.getMessage(), e);
 			}
@@ -185,7 +213,7 @@ public class ARCFBolt extends AbstractConfigUpdateBolt{
 				logger.error(e.getMessage(), e);
 			}
 			Float pairCount = getWeight(weightInfo);
-			
+			itemPairCache.set(getKey, new SoftReference<Float>(pairCount),5);
 			if(debug){
 				logger.info("step3,key"+getKey+"item1="+key.getItemId()+
 						",item2="+otherItem+"itemcount1="+itemCount1+
@@ -213,11 +241,9 @@ public class ARCFBolt extends AbstractConfigUpdateBolt{
 		}
 		
 		private void doEmit(String bid,String itemId,String adpos,String otherItem, String groupId, double weight){
-			
 			if(weight <= 0){
 				return;
 			}
-			
 			
 			String resultKey = Utils.getAlgKey(bid,itemId, adpos, Constants.cf_alg_name, groupId);	
 			Values values = new Values(bid,resultKey,otherItem,weight,Constants.cf_alg_name);
@@ -264,10 +290,24 @@ public class ARCFBolt extends AbstractConfigUpdateBolt{
 					return;
 				}
 		
-				ClientAttr clientEntry = mtClientList.get(0);		
-				TairOption opt = new TairOption(clientEntry.getTimeout());
-				Future<Result<byte[]>> future = clientEntry.getClient().getAsync((short)nsGroupCountTableId,getKey.getBytes(),opt);
-				clientEntry.getClient().notifyFuture(future, this,clientEntry);		
+				Float thisItemCount = null;
+				SoftReference<Float> sr = itemCountCache.get(getKey);
+				if(sr != null){
+					thisItemCount = sr.get();
+				}
+					
+				if(thisItemCount != null ){
+					if(step == 1){
+						new GetItemCountCallBack(key,otherItem,thisItemCount,2).excute();
+					}else if(step == 2){
+						new GetPairsCountCallBack(key,otherItem,itemCount,thisItemCount).excute();	
+					}		
+				}else{
+					ClientAttr clientEntry = mtClientList.get(0);		
+					TairOption opt = new TairOption(clientEntry.getTimeout());
+					Future<Result<byte[]>> future = clientEntry.getClient().getAsync((short)nsGroupCountTableId,getKey.getBytes(),opt);
+					clientEntry.getClient().notifyFuture(future, this,clientEntry);		
+				}
 			} catch (Exception e){
 				logger.error(e.getMessage(), e);
 			}
@@ -291,8 +331,10 @@ public class ARCFBolt extends AbstractConfigUpdateBolt{
 			
 			if(step == 1){
 				new GetItemCountCallBack(key,otherItem,count,2).excute();
+				itemCountCache.set(key.getGroupCountKey(), new SoftReference<Float>(count),5);
 			}else if(step == 2){
 				new GetPairsCountCallBack(key,otherItem,itemCount,count).excute();	
+				itemCountCache.set(key.getOtherGroupCountKey(otherItem), new SoftReference<Float>(count),5);
 			}
 		}
 		

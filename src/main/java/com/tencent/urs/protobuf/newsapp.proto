@@ -8,9 +8,9 @@ message UserFace
         required bytes preference	= 1 [default = ""];
         optional int32 type         = 2 [default = -1]; // 1：类目兴趣；2：tag兴趣
         optional int32 level        = 3 [default = -1]; // 类目兴趣的级别
-        optional float weight       = 4 [default =  0]; // 兴趣权值
-
+        optional float weight       = 4 [default =  0]; // 兴趣权值	
     }
+	
 	message UserProfile
 	{
 		optional bytes province = 1 [default = ""]; // 常登录省
