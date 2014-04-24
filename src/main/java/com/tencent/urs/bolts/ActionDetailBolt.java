@@ -33,7 +33,6 @@ import com.tencent.tde.client.TairClient.TairOption;
 import com.tencent.tde.client.impl.MutiThreadCallbackClient.MutiClientCallBack;
 import com.tencent.urs.asyncupdate.UpdateCallBack;
 import com.tencent.urs.asyncupdate.UpdateCallBackContext;
-import com.tencent.urs.bolts.CtrBolt.CtrCombinerKey;
 import com.tencent.urs.combine.ActionCombinerValue;
 import com.tencent.urs.combine.UpdateKey;
 import com.tencent.urs.tdengine.TDEngineClientFactory;
@@ -348,7 +347,7 @@ public class ActionDetailBolt extends AbstractConfigUpdateBolt{
 				Recommend.UserActiveDetail.TimeSegment.Builder timeBuilder =
 									Recommend.UserActiveDetail.TimeSegment.newBuilder();
 				timeBuilder.setTimeId(timeId);
-				int count=0;
+				int count = 0;
 				for(String item:detailMap.get(timeId).keySet()){
 					count++;
 					if(count > topNum){
@@ -358,11 +357,18 @@ public class ActionDetailBolt extends AbstractConfigUpdateBolt{
 					Recommend.UserActiveDetail.TimeSegment.ItemInfo.Builder itemBuilder =
 									Recommend.UserActiveDetail.TimeSegment.ItemInfo.newBuilder();
 					itemBuilder.setItem(item);
+					float maxWeight = 0;
 					for(Integer act: detailMap.get(timeId).get(item).keySet()){
 						ActType actValue = detailMap.get(timeId).get(item).get(act);
+						float actWeight = Utils.getActionWeight(actValue.getActType());
+						if(actWeight > maxWeight){
+							maxWeight = actWeight;
+						}
 						itemBuilder.addActs(actValue);
 					}
-					timeBuilder.addItems(itemBuilder);
+					if(maxWeight > 0){
+						timeBuilder.addItems(itemBuilder);
+					}
 				}
 				mergeValueBuilder.addTsegs(timeBuilder.build());
 			}

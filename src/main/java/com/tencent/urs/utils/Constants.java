@@ -8,6 +8,8 @@ public class Constants {
 	public static String category_action = "UserActionInfo";
 	public static String category_weight = "ActionWeightInfo";
 	public static String category_catelevel = "ItemCategoryInfo";
+	public static String category_adpool = "AdPool";
+	
 	
 	public static String actions_stream = "user_action";
 	public static String recommend_action_stream = "recommend_action";
@@ -15,6 +17,7 @@ public class Constants {
 	public static String item_info_stream = "item_detail_info";
 	public static String category_level_stream = "category_level_info";
 	public static String action_weight_stream = "action_weight_info";
+	public static String adpool_stream = "adpool_info";
 	public static String alg_result_stream = "computer_result";
 	
 	public static String user_pair_stream = "user_pair";

@@ -105,7 +105,6 @@ public class FilterBolt extends AbstractConfigUpdateBolt {
 				logger.info("input into combiner");
 			}
 			
-			
 			Recommend.UserActiveHistory.ActiveRecord.Builder actBuilder =
 					Recommend.UserActiveHistory.ActiveRecord.newBuilder();
 			actBuilder.setItem(itemId).setActType(Integer.valueOf(actionType));
@@ -164,7 +163,7 @@ public class FilterBolt extends AbstractConfigUpdateBolt {
 	}	
 
 	private float getFilterScoreByAct(Integer actType,Long count){
-		if(actType == 1 ){
+		if(actType == 1){
 			return count*0.1F;
 		}else if(actType > 1){
 			return count*1.0F;
@@ -173,7 +172,7 @@ public class FilterBolt extends AbstractConfigUpdateBolt {
 		}
 	}
 	
-	
+
 	private class CheckActionDetailCallBack implements MutiClientCallBack{
 		private final String key;
 		private ActionCombinerValue value;
@@ -243,8 +242,12 @@ public class FilterBolt extends AbstractConfigUpdateBolt {
 			Collections.sort(sortList, new Comparator<Map.Entry<String, Float>>() {   
 				@Override
 				public int compare(Entry<String, Float> arg0,
-						Entry<String, Float> arg1) {
-					 return (int)(arg1.getValue() - arg0.getValue());
+						Entry<String, Float> arg1) {					 
+					 if(arg1.getValue() > arg0.getValue()){
+						 return 1;
+					 }else{
+						 return -1;
+					 }
 				}
 			}); 
 			
@@ -341,6 +344,10 @@ public class FilterBolt extends AbstractConfigUpdateBolt {
 
 		private void refreshFilterTopList(HashMap<String,Float> newFilterScoreMap,
 				UserActiveHistory.Builder updatedBuilder){
+			
+			if(key.indexOf("389687043") > 0){
+				logger.info("do impress,newFilterScoreMap.size="+newFilterScoreMap.size());
+			}
 			List<Map.Entry<String, Float>> sortList =
 				    new ArrayList<Map.Entry<String, Float>>(newFilterScoreMap.entrySet());
 			
@@ -348,7 +355,11 @@ public class FilterBolt extends AbstractConfigUpdateBolt {
 				@Override
 				public int compare(Entry<String, Float> arg0,
 						Entry<String, Float> arg1) {
-					 return (int)(arg1.getValue() - arg0.getValue());
+					if(arg1.getValue() > arg0.getValue()){
+						 return 1;
+					 }else{
+						 return -1;
+					 }
 				}
 			}); 
 			
@@ -371,7 +382,7 @@ public class FilterBolt extends AbstractConfigUpdateBolt {
 			UserActiveHistory putValue = mergeValueBuilder.build();
 			
 			if(key.indexOf("389687043") > 0){
-				logger.info("save to tde,mergeValue.size="+mergeValueBuilder.getActRecordsCount());
+				logger.info("do impress,save to tde,mergeValue.size="+mergeValueBuilder.getActRecordsCount());
 			}
 			
 			for(ClientAttr clientEntry:mtClientList ){
@@ -398,14 +409,15 @@ public class FilterBolt extends AbstractConfigUpdateBolt {
 				if(result.isSuccess() && result.getResult()!=null){
 					UserActiveDetail oldValueHeap = UserActiveDetail.parseFrom(result.getResult());
 					HashMap<String,Float> newFilterScoreMap = getFilterScore(oldValueHeap);
-					refreshFilterTopList(newFilterScoreMap,mergeValueBuilder);			
-					save(key,mergeValueBuilder);
-					
+					refreshFilterTopList(newFilterScoreMap,mergeValueBuilder);	
+					if(key.indexOf("389687043") > 0){
+						logger.info("do impress,parse tde success");
+					}
 				}
 			} catch (Exception e) {
 				logger.error(e.getMessage(), e);
 			}
-		
+			save(key,mergeValueBuilder);
 		}
 	
 	}

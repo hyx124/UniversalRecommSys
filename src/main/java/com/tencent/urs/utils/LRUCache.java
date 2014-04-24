@@ -50,13 +50,18 @@ public class LRUCache<K, V> extends LinkedHashMap<K, V> {
 		lruCache.put("3", "3");
 		lruCache.put("4", "4");
 
-		//System.out.println(lruCache.get("2"));
-		//lruCache.get("2");
+		System.out.println(lruCache.get("2"));
+		lruCache.get("2");
 		lruCache.put("6", "6");
 		lruCache.put("5", "5");
 		lruCache.put("7", "7");
-		lruCache.put("8", "8");
-		System.out.println(lruCache.size());
+		lruCache.remove("7");
+		lruCache.remove("7");
+		System.out.println(lruCache.get(null));
+		System.out.println("key="+lruCache.keySet());
+		for(String key:lruCache.keySet()){
+			System.out.println("key="+key+",value="+lruCache.get(key));
+		}
 
 	}
 }

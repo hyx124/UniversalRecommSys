@@ -39,12 +39,10 @@ public class ItemPairStep2Bolt  extends AbstractConfigUpdateBolt{
 	private static final long serialVersionUID = -3578535683081183276L;
 	private List<ClientAttr> mtClientList;	
 	private MonitorTools mt;
-	private DataCache<Recommend.GroupPairInfo> groupPairCache;
 	private UpdateCallBack putCallBack;
 	private HashMap<String, HashMap<Long,Float>> liveCombinerMap;
 
 	private int dataExpireTime;
-	private int cacheExpireTime;
 	private int nsGroupPairTableId;
 	
 	private boolean debug;
@@ -61,7 +59,6 @@ public class ItemPairStep2Bolt  extends AbstractConfigUpdateBolt{
 		super.prepare(conf, context, collector);
 		this.updateConfig(super.config);
 
-		this.groupPairCache = new DataCache<Recommend.GroupPairInfo>(conf);
 		this.mtClientList = TDEngineClientFactory.createMTClientList(conf);
 		this.mt = MonitorTools.getMonitorInstance(conf);
 		this.liveCombinerMap = new HashMap<String,HashMap<Long,Float>>(1024);
@@ -76,7 +73,6 @@ public class ItemPairStep2Bolt  extends AbstractConfigUpdateBolt{
 	public void updateConfig(XMLConfiguration config) {
 		nsGroupPairTableId = config.getInt("group_pair_table",516);
 		dataExpireTime = config.getInt("data_expiretime",7*24*3600);
-		cacheExpireTime = config.getInt("cache_expiretime",3600);
 		debug = config.getBoolean("debug",false);
 	}
 
@@ -158,31 +154,16 @@ public class ItemPairStep2Bolt  extends AbstractConfigUpdateBolt{
 		
 		public void excute() {
 			try {
-				GroupPairInfo oldInfo = null;
-				/*SoftReference<GroupPairInfo> sr = groupPairCache.get(putKey);
-				if(sr != null){
-					oldInfo = sr.get();
-				}*/
-				
-				if(oldInfo != null){		
-					next(oldInfo);
-				}else{
-					ClientAttr clientEntry = mtClientList.get(0);		
-					TairOption opt = new TairOption(clientEntry.getTimeout());
-					Future<Result<byte[]>> future = clientEntry.getClient().getAsync((short)nsGroupPairTableId,putKey.getBytes(),opt);
-					clientEntry.getClient().notifyFuture(future, this,clientEntry);	
-				}			
-				
+				ClientAttr clientEntry = mtClientList.get(0);		
+				TairOption opt = new TairOption(clientEntry.getTimeout());
+				Future<Result<byte[]>> future = clientEntry.getClient().getAsync((short)nsGroupPairTableId,putKey.getBytes(),opt);
+				clientEntry.getClient().notifyFuture(future, this,clientEntry);	
 			} catch (Exception e) {
 				logger.error(e.getMessage(), e);
 			}
 		}
 
 		private void save(String key,GroupPairInfo newInfo){	
-			/*
-			synchronized(groupPairCache){
-				groupPairCache.set(key, new SoftReference<Recommend.GroupPairInfo>(newInfo), cacheExpireTime);
-			}*/
 			
 			Future<Result<Void>> future = null;
 			for(ClientAttr clientEntry:mtClientList ){

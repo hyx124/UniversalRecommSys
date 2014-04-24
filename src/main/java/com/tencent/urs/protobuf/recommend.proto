@@ -53,7 +53,7 @@ message CateLevelInfo
 	optional string level = 3;				//“µŒÒ’ ∫≈
 	optional uint32 fatherId = 4;			//∏∏¿‡ID
 }
-key=bid#itemid#1#B1001#0
+
 message RecommendResult
 {	
     message Result

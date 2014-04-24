@@ -119,7 +119,8 @@ public class CtrStorBolt extends AbstractConfigUpdateBolt{
 		try{
 			String bid = tuple.getStringByField("bid");
 			String adpos = tuple.getStringByField("adpos");
-					
+			String groupId = tuple.getStringByField("group_id");		
+			
 			String actionType = tuple.getStringByField("action_type");
 			String actionTime = tuple.getStringByField("action_time");
 					
@@ -132,7 +133,10 @@ public class CtrStorBolt extends AbstractConfigUpdateBolt{
 					for(String eachItem: items){
 						if(Utils.isItemIdValid(eachItem)){						
 							StringBuffer getKey = new StringBuffer(bid);		
-							getKey.append("#").append(adpos).append("#").append(pageId).append("#").append(eachItem);	
+							getKey.append("#").append(adpos)
+									.append("#").append(pageId)
+									.append("#").append(eachItem)
+									.append("#").append(groupId);
 
 							CtrCombinerValue vlaue = new CtrCombinerValue(Integer.valueOf(actionType),1L, Long.valueOf(actionTime));
 							combinerKeys(getKey.toString(),vlaue);

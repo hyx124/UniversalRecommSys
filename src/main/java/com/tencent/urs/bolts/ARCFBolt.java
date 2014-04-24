@@ -31,6 +31,7 @@ import com.tencent.urs.combine.UpdateKey;
 import com.tencent.urs.protobuf.Recommend.GroupCountInfo;
 import com.tencent.urs.protobuf.Recommend.GroupPairInfo;
 import com.tencent.urs.protobuf.Recommend.UserActiveDetail;
+import com.tencent.urs.protobuf.Recommend.UserActiveDetail.TimeSegment.ItemInfo.ActType;
 import com.tencent.urs.tdengine.TDEngineClientFactory;
 import com.tencent.urs.tdengine.TDEngineClientFactory.ClientAttr;
 import com.tencent.urs.utils.Constants;
@@ -375,12 +376,32 @@ public class ARCFBolt extends AbstractConfigUpdateBolt{
 			}
 		}
 		
+
+		private ActType getMaxActFromType(List<ActType> actList){
+			ActType maxIndex = null;
+			float maxWeight = 0F;
+			for(ActType act: actList){	
+				Float actWeight = Utils.getActionWeight(act.getActType());
+				
+				if(actWeight > maxWeight){
+					maxIndex = act;
+				}
+			}
+			return maxIndex;
+		}
+		
+		
 		private HashSet<String> getPairItems(UserActiveDetail oldValueHeap, String itemId){
 			HashSet<String>  itemSet = new HashSet<String>();		
 			
 			for(UserActiveDetail.TimeSegment tsegs:oldValueHeap.getTsegsList()){
 				if(tsegs.getTimeId() >= Utils.getDateByTime(value.getTime() - linkedTime)){
 					for(UserActiveDetail.TimeSegment.ItemInfo item: tsegs.getItemsList()){
+						ActType  maxType = getMaxActFromType(item.getActsList());
+						if(Utils.getActionWeight(maxType.getActType()) == 0){
+							continue;
+						}
+						
 						if(!item.getItem().equals(key.getItemId())){
 							itemSet.add(item.getItem());
 						}

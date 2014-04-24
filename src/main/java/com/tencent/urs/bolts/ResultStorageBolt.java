@@ -110,7 +110,9 @@ public class ResultStorageBolt extends AbstractConfigUpdateBolt {
 					.setMiddleType(midType)
 					.setSmallType(smallType)
 					.setPrice(price)
-					.setItem(itemId).setWeight(weight).setFreeFlag(charType.intValue())
+					.setItem(itemId)
+					.setWeight(weight)
+					.setFreeFlag(charType.intValue())
 					.setUpdateTime(now)
 					.setShopId(shopId)
 					.setItemTime(itemTime);
@@ -244,6 +246,11 @@ public class ResultStorageBolt extends AbstractConfigUpdateBolt {
 						topList.remove(oldVal);
 						idx--;
 					}
+				}else {
+					if((now - oldVal.getItemTime()) > itemExpireTime){
+						topList.remove(oldVal);
+						idx--;
+					}
 				}
 			}
 			
@@ -300,9 +307,4 @@ public class ResultStorageBolt extends AbstractConfigUpdateBolt {
 			
 		}
 	}
-	
-	public static void main(String[] args){	
-
-	}
-	
 }

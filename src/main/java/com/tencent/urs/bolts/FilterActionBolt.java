@@ -105,7 +105,6 @@ public class FilterActionBolt extends AbstractConfigUpdateBolt{
 			
 			
 			if(sid.equals(Constants.recommend_action_stream) && Utils.isRecommendAction(actionType)){
-				String pageId = tuple.getStringByField("item_id");
 				String actionResult = tuple.getStringByField("action_result");
 				String[] items = actionResult.split(";",-1);
 				
